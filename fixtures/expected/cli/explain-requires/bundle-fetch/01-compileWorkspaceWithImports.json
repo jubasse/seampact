@@ -1,0 +1,1674 @@
+{
+  "function": "compileWorkspaceWithImports",
+  "args": [
+    {
+      "reader": {
+        "root": "<root>/contract"
+      },
+      "entry": "api.yaml",
+      "fetch": {
+        "baseDirectory": "<root>/contract",
+        "localSources": "allow"
+      }
+    }
+  ],
+  "result": {
+    "ok": true,
+    "compiled": {
+      "files": [
+        "api.yaml"
+      ],
+      "diagnostics": [],
+      "locations": {},
+      "apis": [
+        {
+          "api": "shop",
+          "diagnostics": [
+            {
+              "severity": "warning",
+              "rule": "seampact/derive/bucket-limits",
+              "message": "The bucket 'perUser' sets no limit and window, so the server binds them.",
+              "fix": "Set limit and window on the bucket 'perUser', or bind them in the server.",
+              "origin": {
+                "layer": "api",
+                "pointer": "/buckets/perUser"
+              },
+              "related": []
+            }
+          ],
+          "locations": {
+            "api#": {
+              "file": "api.yaml",
+              "line": 1,
+              "column": 1,
+              "endLine": 28,
+              "endColumn": 1
+            },
+            "api#/api/name": {
+              "file": "api.yaml",
+              "line": 1,
+              "column": 8,
+              "endLine": 1,
+              "endColumn": 18
+            },
+            "api#/api/version": {
+              "file": "api.yaml",
+              "line": 1,
+              "column": 20,
+              "endLine": 1,
+              "endColumn": 30
+            },
+            "api#/api": {
+              "file": "api.yaml",
+              "line": 1,
+              "column": 1,
+              "endLine": 1,
+              "endColumn": 32
+            },
+            "api#/schemes/bearer/kind": {
+              "file": "api.yaml",
+              "line": 3,
+              "column": 13,
+              "endLine": 3,
+              "endColumn": 25
+            },
+            "api#/schemes/bearer": {
+              "file": "api.yaml",
+              "line": 3,
+              "column": 3,
+              "endLine": 3,
+              "endColumn": 27
+            },
+            "api#/schemes": {
+              "file": "api.yaml",
+              "line": 2,
+              "column": 1,
+              "endLine": 4,
+              "endColumn": 1
+            },
+            "api#/identities/user/schemes/read/0": {
+              "file": "api.yaml",
+              "line": 5,
+              "column": 29,
+              "endLine": 5,
+              "endColumn": 35
+            },
+            "api#/identities/user/schemes/read": {
+              "file": "api.yaml",
+              "line": 5,
+              "column": 22,
+              "endLine": 5,
+              "endColumn": 36
+            },
+            "api#/identities/user/schemes/write/0": {
+              "file": "api.yaml",
+              "line": 5,
+              "column": 46,
+              "endLine": 5,
+              "endColumn": 52
+            },
+            "api#/identities/user/schemes/write": {
+              "file": "api.yaml",
+              "line": 5,
+              "column": 38,
+              "endLine": 5,
+              "endColumn": 53
+            },
+            "api#/identities/user/schemes": {
+              "file": "api.yaml",
+              "line": 5,
+              "column": 11,
+              "endLine": 5,
+              "endColumn": 55
+            },
+            "api#/identities/user/principal": {
+              "file": "api.yaml",
+              "line": 5,
+              "column": 57,
+              "endLine": 5,
+              "endColumn": 81
+            },
+            "api#/identities/user": {
+              "file": "api.yaml",
+              "line": 5,
+              "column": 3,
+              "endLine": 5,
+              "endColumn": 83
+            },
+            "api#/identities": {
+              "file": "api.yaml",
+              "line": 4,
+              "column": 1,
+              "endLine": 6,
+              "endColumn": 1
+            },
+            "api#/schemas/UserPrincipal/type": {
+              "file": "api.yaml",
+              "line": 7,
+              "column": 20,
+              "endLine": 7,
+              "endColumn": 32
+            },
+            "api#/schemas/UserPrincipal/required/0": {
+              "file": "api.yaml",
+              "line": 7,
+              "column": 45,
+              "endLine": 7,
+              "endColumn": 51
+            },
+            "api#/schemas/UserPrincipal/required": {
+              "file": "api.yaml",
+              "line": 7,
+              "column": 34,
+              "endLine": 7,
+              "endColumn": 52
+            },
+            "api#/schemas/UserPrincipal/properties/userId/type": {
+              "file": "api.yaml",
+              "line": 7,
+              "column": 78,
+              "endLine": 7,
+              "endColumn": 90
+            },
+            "api#/schemas/UserPrincipal/properties/userId": {
+              "file": "api.yaml",
+              "line": 7,
+              "column": 68,
+              "endLine": 7,
+              "endColumn": 92
+            },
+            "api#/schemas/UserPrincipal/properties": {
+              "file": "api.yaml",
+              "line": 7,
+              "column": 54,
+              "endLine": 7,
+              "endColumn": 94
+            },
+            "api#/schemas/UserPrincipal": {
+              "file": "api.yaml",
+              "line": 7,
+              "column": 3,
+              "endLine": 7,
+              "endColumn": 96
+            },
+            "api#/schemas": {
+              "file": "api.yaml",
+              "line": 6,
+              "column": 1,
+              "endLine": 8,
+              "endColumn": 1
+            },
+            "api#/rights/shop.open": {
+              "file": "api.yaml",
+              "line": 9,
+              "column": 3,
+              "endLine": 9,
+              "endColumn": 16
+            },
+            "api#/rights/staff/params/level/type": {
+              "file": "api.yaml",
+              "line": 10,
+              "column": 31,
+              "endLine": 10,
+              "endColumn": 44
+            },
+            "api#/rights/staff/params/level": {
+              "file": "api.yaml",
+              "line": 10,
+              "column": 22,
+              "endLine": 10,
+              "endColumn": 46
+            },
+            "api#/rights/staff/params": {
+              "file": "api.yaml",
+              "line": 10,
+              "column": 12,
+              "endLine": 10,
+              "endColumn": 48
+            },
+            "api#/rights/staff": {
+              "file": "api.yaml",
+              "line": 10,
+              "column": 3,
+              "endLine": 10,
+              "endColumn": 50
+            },
+            "api#/rights": {
+              "file": "api.yaml",
+              "line": 8,
+              "column": 1,
+              "endLine": 11,
+              "endColumn": 1
+            },
+            "api#/rules/throttle/bucket": {
+              "file": "api.yaml",
+              "line": 12,
+              "column": 15,
+              "endLine": 12,
+              "endColumn": 27
+            },
+            "api#/rules/throttle": {
+              "file": "api.yaml",
+              "line": 12,
+              "column": 3,
+              "endLine": 12,
+              "endColumn": 29
+            },
+            "api#/rules/audit": {
+              "file": "api.yaml",
+              "line": 13,
+              "column": 3,
+              "endLine": 13,
+              "endColumn": 12
+            },
+            "api#/rules/note/params/reason?/type": {
+              "file": "api.yaml",
+              "line": 14,
+              "column": 32,
+              "endLine": 14,
+              "endColumn": 44
+            },
+            "api#/rules/note/params/reason?": {
+              "file": "api.yaml",
+              "line": 14,
+              "column": 21,
+              "endLine": 14,
+              "endColumn": 46
+            },
+            "api#/rules/note/params": {
+              "file": "api.yaml",
+              "line": 14,
+              "column": 11,
+              "endLine": 14,
+              "endColumn": 48
+            },
+            "api#/rules/note": {
+              "file": "api.yaml",
+              "line": 14,
+              "column": 3,
+              "endLine": 14,
+              "endColumn": 50
+            },
+            "api#/rules": {
+              "file": "api.yaml",
+              "line": 11,
+              "column": 1,
+              "endLine": 15,
+              "endColumn": 1
+            },
+            "api#/buckets/perUser/key/0": {
+              "file": "api.yaml",
+              "line": 16,
+              "column": 20,
+              "endLine": 16,
+              "endColumn": 36
+            },
+            "api#/buckets/perUser/key": {
+              "file": "api.yaml",
+              "line": 16,
+              "column": 14,
+              "endLine": 16,
+              "endColumn": 37
+            },
+            "api#/buckets/perUser": {
+              "file": "api.yaml",
+              "line": 16,
+              "column": 3,
+              "endLine": 16,
+              "endColumn": 39
+            },
+            "api#/buckets": {
+              "file": "api.yaml",
+              "line": 15,
+              "column": 1,
+              "endLine": 17,
+              "endColumn": 1
+            },
+            "api#/requirements/seniorStaff/right": {
+              "file": "api.yaml",
+              "line": 18,
+              "column": 18,
+              "endLine": 18,
+              "endColumn": 30
+            },
+            "api#/requirements/seniorStaff/params/level": {
+              "file": "api.yaml",
+              "line": 18,
+              "column": 42,
+              "endLine": 18,
+              "endColumn": 50
+            },
+            "api#/requirements/seniorStaff/params": {
+              "file": "api.yaml",
+              "line": 18,
+              "column": 32,
+              "endLine": 18,
+              "endColumn": 52
+            },
+            "api#/requirements/seniorStaff": {
+              "file": "api.yaml",
+              "line": 18,
+              "column": 3,
+              "endLine": 18,
+              "endColumn": 54
+            },
+            "api#/requirements/writeThrottle/rule": {
+              "file": "api.yaml",
+              "line": 19,
+              "column": 20,
+              "endLine": 19,
+              "endColumn": 34
+            },
+            "api#/requirements/writeThrottle/bucket": {
+              "file": "api.yaml",
+              "line": 19,
+              "column": 36,
+              "endLine": 19,
+              "endColumn": 51
+            },
+            "api#/requirements/writeThrottle": {
+              "file": "api.yaml",
+              "line": 19,
+              "column": 3,
+              "endLine": 19,
+              "endColumn": 53
+            },
+            "api#/requirements": {
+              "file": "api.yaml",
+              "line": 17,
+              "column": 1,
+              "endLine": 20,
+              "endColumn": 1
+            },
+            "api#/surfaces/app/prefix": {
+              "file": "api.yaml",
+              "line": 22,
+              "column": 5,
+              "endLine": 22,
+              "endColumn": 24
+            },
+            "api#/surfaces/app/identity": {
+              "file": "api.yaml",
+              "line": 23,
+              "column": 5,
+              "endLine": 23,
+              "endColumn": 19
+            },
+            "api#/surfaces/app/requires/0/right": {
+              "file": "api.yaml",
+              "line": 24,
+              "column": 18,
+              "endLine": 24,
+              "endColumn": 30
+            },
+            "api#/surfaces/app/requires/0/params/level": {
+              "file": "api.yaml",
+              "line": 24,
+              "column": 42,
+              "endLine": 24,
+              "endColumn": 50
+            },
+            "api#/surfaces/app/requires/0/params": {
+              "file": "api.yaml",
+              "line": 24,
+              "column": 32,
+              "endLine": 24,
+              "endColumn": 52
+            },
+            "api#/surfaces/app/requires/0": {
+              "file": "api.yaml",
+              "line": 24,
+              "column": 16,
+              "endLine": 24,
+              "endColumn": 54
+            },
+            "api#/surfaces/app/requires": {
+              "file": "api.yaml",
+              "line": 24,
+              "column": 5,
+              "endLine": 24,
+              "endColumn": 55
+            },
+            "api#/surfaces/app/routes/first/method": {
+              "file": "api.yaml",
+              "line": 26,
+              "column": 16,
+              "endLine": 26,
+              "endColumn": 27
+            },
+            "api#/surfaces/app/routes/first": {
+              "file": "api.yaml",
+              "line": 26,
+              "column": 7,
+              "endLine": 26,
+              "endColumn": 29
+            },
+            "api#/surfaces/app/routes/second/method": {
+              "file": "api.yaml",
+              "line": 27,
+              "column": 17,
+              "endLine": 27,
+              "endColumn": 28
+            },
+            "api#/surfaces/app/routes/second": {
+              "file": "api.yaml",
+              "line": 27,
+              "column": 7,
+              "endLine": 27,
+              "endColumn": 30
+            },
+            "api#/surfaces/app/routes": {
+              "file": "api.yaml",
+              "line": 25,
+              "column": 5,
+              "endLine": 28,
+              "endColumn": 1
+            },
+            "api#/surfaces/app": {
+              "file": "api.yaml",
+              "line": 21,
+              "column": 3,
+              "endLine": 28,
+              "endColumn": 1
+            },
+            "api#/surfaces": {
+              "file": "api.yaml",
+              "line": 20,
+              "column": 1,
+              "endLine": 28,
+              "endColumn": 1
+            }
+          },
+          "ir": {
+            "api": {
+              "compat": {
+                "policy": "none"
+              },
+              "docs": {},
+              "documents": {},
+              "extensions": {},
+              "id": "shop",
+              "kind": "product",
+              "maturity": "experimental",
+              "name": {
+                "role": "schema",
+                "segments": [
+                  "shop"
+                ]
+              },
+              "origin": {
+                "layer": "api",
+                "pointer": "/api"
+              },
+              "pathVersion": {
+                "origin": {
+                  "layer": "api",
+                  "pointer": "/api/version"
+                },
+                "value": "prefix"
+              },
+              "surfaces": {
+                "app": {
+                  "name": {
+                    "role": "schema",
+                    "segments": [
+                      "app"
+                    ]
+                  },
+                  "origin": {
+                    "layer": "api",
+                    "pointer": "/surfaces/app"
+                  },
+                  "pathVersion": "prefix",
+                  "prefix": "/v1"
+                }
+              },
+              "version": {
+                "kind": "path",
+                "number": 1
+              },
+              "wire": {
+                "int64": "string",
+                "outputEnums": "enum",
+                "urls": "relative"
+              }
+            },
+            "buckets": {},
+            "conventions": {},
+            "enums": {},
+            "errors": {
+              "api.forbidden": {
+                "code": "api.forbidden",
+                "default": "forbidden",
+                "docs": {},
+                "family": "api",
+                "http": {
+                  "status": 403
+                },
+                "nature": "refused",
+                "origin": {
+                  "layer": "core",
+                  "pointer": "/errors/api.forbidden"
+                },
+                "params": "ApiForbiddenParams"
+              },
+              "api.internal": {
+                "code": "api.internal",
+                "default": "undeclaredStatus",
+                "docs": {},
+                "family": "api",
+                "http": {
+                  "status": 500
+                },
+                "nature": "failed",
+                "origin": {
+                  "layer": "core",
+                  "pointer": "/errors/api.internal"
+                }
+              },
+              "api.schema_invalid": {
+                "code": "api.schema_invalid",
+                "default": "schemaInvalid",
+                "docs": {},
+                "family": "api",
+                "http": {
+                  "status": 400
+                },
+                "nature": "refused",
+                "origin": {
+                  "layer": "core",
+                  "pointer": "/errors/api.schema_invalid"
+                },
+                "params": "ApiSchemaInvalidParams"
+              },
+              "api.unauthenticated": {
+                "code": "api.unauthenticated",
+                "default": "unauthenticated",
+                "docs": {},
+                "family": "api",
+                "http": {
+                  "status": 401
+                },
+                "nature": "refused",
+                "origin": {
+                  "layer": "core",
+                  "pointer": "/errors/api.unauthenticated"
+                }
+              }
+            },
+            "extensionKeys": {},
+            "features": [],
+            "formats": {
+              "bare": {
+                "absent": "omit",
+                "error": {
+                  "body": {
+                    "kind": "object",
+                    "members": [
+                      {
+                        "name": {
+                          "kind": "text",
+                          "text": "type"
+                        },
+                        "value": {
+                          "kind": "slot",
+                          "path": [],
+                          "slot": "code"
+                        }
+                      },
+                      {
+                        "name": {
+                          "kind": "text",
+                          "text": "title"
+                        },
+                        "value": {
+                          "kind": "slot",
+                          "path": [],
+                          "slot": "title"
+                        }
+                      },
+                      {
+                        "name": {
+                          "kind": "text",
+                          "text": "status"
+                        },
+                        "value": {
+                          "kind": "slot",
+                          "path": [],
+                          "slot": "status"
+                        }
+                      },
+                      {
+                        "name": {
+                          "kind": "text",
+                          "text": "detail"
+                        },
+                        "value": {
+                          "kind": "slot",
+                          "path": [],
+                          "slot": "detail"
+                        }
+                      },
+                      {
+                        "name": {
+                          "kind": "text",
+                          "text": "instance"
+                        },
+                        "value": {
+                          "kind": "slot",
+                          "path": [],
+                          "slot": "instance"
+                        }
+                      },
+                      {
+                        "name": {
+                          "kind": "text",
+                          "text": "code"
+                        },
+                        "value": {
+                          "kind": "slot",
+                          "path": [],
+                          "slot": "code"
+                        }
+                      },
+                      {
+                        "name": {
+                          "kind": "text",
+                          "text": "nature"
+                        },
+                        "value": {
+                          "kind": "slot",
+                          "path": [],
+                          "slot": "nature"
+                        }
+                      },
+                      {
+                        "name": {
+                          "kind": "text",
+                          "text": "traceId"
+                        },
+                        "value": {
+                          "kind": "slot",
+                          "path": [],
+                          "slot": "traceId"
+                        }
+                      }
+                    ],
+                    "merge": "params"
+                  },
+                  "headers": [],
+                  "media": "application/problem+json"
+                },
+                "id": "bare",
+                "media": "application/json",
+                "meta": {},
+                "origin": {
+                  "layer": "core",
+                  "pointer": "/formats/bare"
+                },
+                "success": {
+                  "item": {
+                    "body": {
+                      "kind": "slot",
+                      "path": [],
+                      "slot": "payload"
+                    },
+                    "headers": []
+                  },
+                  "list": {
+                    "body": {
+                      "kind": "slot",
+                      "path": [],
+                      "slot": "payload"
+                    },
+                    "headers": []
+                  },
+                  "page": {
+                    "body": {
+                      "kind": "slot",
+                      "path": [],
+                      "slot": "items"
+                    },
+                    "headers": []
+                  },
+                  "table": {
+                    "body": {
+                      "kind": "slot",
+                      "path": [],
+                      "slot": "payload"
+                    },
+                    "headers": []
+                  }
+                }
+              }
+            },
+            "headers": {},
+            "identities": {
+              "user": {
+                "docs": {},
+                "errors": [],
+                "extensions": {},
+                "headers": [],
+                "id": "user",
+                "kind": "credential",
+                "origin": {
+                  "layer": "api",
+                  "pointer": "/identities/user"
+                },
+                "principal": {
+                  "kind": "schema",
+                  "schema": "UserPrincipal"
+                },
+                "schemes": {
+                  "optionalRead": [],
+                  "read": [
+                    "bearer"
+                  ],
+                  "write": [
+                    "bearer"
+                  ]
+                }
+              }
+            },
+            "irRevision": 6,
+            "irVersion": 1,
+            "kinds": [
+              "httpOperation"
+            ],
+            "lint": {
+              "allows": [],
+              "rules": {}
+            },
+            "natures": {},
+            "operations": [
+              {
+                "access": {
+                  "identity": "user",
+                  "kind": "identity",
+                  "origin": {
+                    "layer": "api",
+                    "pointer": "/surfaces/app/identity"
+                  },
+                  "schemes": [
+                    "bearer"
+                  ]
+                },
+                "bindings": [],
+                "callerKinds": [
+                  "identified"
+                ],
+                "docs": {},
+                "errors": [
+                  {
+                    "code": "api.schema_invalid",
+                    "derivedFrom": {
+                      "derivation": "input.invalid",
+                      "from": [
+                        {
+                          "layer": "api",
+                          "pointer": "/surfaces/app/routes/first"
+                        }
+                      ]
+                    },
+                    "roles": [
+                      {
+                        "params": {
+                          "kind": "object",
+                          "members": [
+                            {
+                              "name": {
+                                "kind": "text",
+                                "text": "issues"
+                              },
+                              "value": {
+                                "kind": "slot",
+                                "path": [],
+                                "slot": "issues"
+                              }
+                            }
+                          ]
+                        },
+                        "role": "schemaInvalid"
+                      }
+                    ]
+                  },
+                  {
+                    "code": "api.unauthenticated",
+                    "derivedFrom": {
+                      "derivation": "identity.authenticate",
+                      "from": [
+                        {
+                          "layer": "api",
+                          "pointer": "/surfaces/app/identity"
+                        }
+                      ]
+                    },
+                    "roles": [
+                      {
+                        "role": "unauthenticated"
+                      }
+                    ]
+                  },
+                  {
+                    "code": "api.forbidden",
+                    "derivedFrom": {
+                      "derivation": "requirement.errors",
+                      "from": [
+                        {
+                          "layer": "api",
+                          "pointer": "/surfaces/app/requires/0"
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "code": "api.internal",
+                    "derivedFrom": {
+                      "derivation": "response.undeclared",
+                      "from": [
+                        {
+                          "layer": "api",
+                          "pointer": "/surfaces/app/routes/first"
+                        }
+                      ]
+                    },
+                    "roles": [
+                      {
+                        "role": "undeclaredStatus"
+                      }
+                    ]
+                  }
+                ],
+                "examples": {},
+                "extensions": {},
+                "features": [],
+                "fieldRights": [],
+                "format": "bare",
+                "id": "first",
+                "internal": false,
+                "kind": "httpOperation",
+                "maturity": {
+                  "level": "experimental",
+                  "origin": {
+                    "layer": "api",
+                    "pointer": "/api"
+                  },
+                  "source": "api"
+                },
+                "method": "get",
+                "name": {
+                  "role": "operation",
+                  "segments": [
+                    "first"
+                  ]
+                },
+                "origin": {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/routes/first"
+                },
+                "params": {
+                  "header": [
+                    {
+                      "derivedFrom": {
+                        "derivation": "identity.authenticate",
+                        "from": [
+                          {
+                            "layer": "api",
+                            "pointer": "/surfaces/app/identity"
+                          },
+                          {
+                            "layer": "api",
+                            "pointer": "/schemes/bearer"
+                          }
+                        ]
+                      },
+                      "name": "Authorization",
+                      "required": true,
+                      "type": {
+                        "kind": "scalar",
+                        "refinements": {},
+                        "type": "string"
+                      }
+                    }
+                  ],
+                  "path": [],
+                  "query": []
+                },
+                "path": "/v1/first",
+                "principalRequires": [],
+                "requires": [
+                  {
+                    "kind": "right",
+                    "origin": {
+                      "layer": "api",
+                      "pointer": "/surfaces/app/requires/0"
+                    },
+                    "params": {
+                      "level": 2
+                    },
+                    "right": "staff"
+                  }
+                ],
+                "responses": [
+                  {
+                    "derivedFrom": {
+                      "derivation": "response.format",
+                      "from": [
+                        {
+                          "layer": "core",
+                          "pointer": "/formats/bare"
+                        }
+                      ]
+                    },
+                    "headers": [],
+                    "origin": {
+                      "layer": "api",
+                      "pointer": "/surfaces/app/routes/first"
+                    },
+                    "shape": "empty",
+                    "status": 204
+                  }
+                ],
+                "safe": true,
+                "scopes": [],
+                "surface": "app",
+                "tags": [],
+                "unknownQuery": {
+                  "policy": "refuse"
+                },
+                "upstream": []
+              },
+              {
+                "access": {
+                  "identity": "user",
+                  "kind": "identity",
+                  "origin": {
+                    "layer": "api",
+                    "pointer": "/surfaces/app/identity"
+                  },
+                  "schemes": [
+                    "bearer"
+                  ]
+                },
+                "bindings": [],
+                "callerKinds": [
+                  "identified"
+                ],
+                "docs": {},
+                "errors": [
+                  {
+                    "code": "api.schema_invalid",
+                    "derivedFrom": {
+                      "derivation": "input.invalid",
+                      "from": [
+                        {
+                          "layer": "api",
+                          "pointer": "/surfaces/app/routes/second"
+                        }
+                      ]
+                    },
+                    "roles": [
+                      {
+                        "params": {
+                          "kind": "object",
+                          "members": [
+                            {
+                              "name": {
+                                "kind": "text",
+                                "text": "issues"
+                              },
+                              "value": {
+                                "kind": "slot",
+                                "path": [],
+                                "slot": "issues"
+                              }
+                            }
+                          ]
+                        },
+                        "role": "schemaInvalid"
+                      }
+                    ]
+                  },
+                  {
+                    "code": "api.unauthenticated",
+                    "derivedFrom": {
+                      "derivation": "identity.authenticate",
+                      "from": [
+                        {
+                          "layer": "api",
+                          "pointer": "/surfaces/app/identity"
+                        }
+                      ]
+                    },
+                    "roles": [
+                      {
+                        "role": "unauthenticated"
+                      }
+                    ]
+                  },
+                  {
+                    "code": "api.forbidden",
+                    "derivedFrom": {
+                      "derivation": "requirement.errors",
+                      "from": [
+                        {
+                          "layer": "api",
+                          "pointer": "/surfaces/app/requires/0"
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "code": "api.internal",
+                    "derivedFrom": {
+                      "derivation": "response.undeclared",
+                      "from": [
+                        {
+                          "layer": "api",
+                          "pointer": "/surfaces/app/routes/second"
+                        }
+                      ]
+                    },
+                    "roles": [
+                      {
+                        "role": "undeclaredStatus"
+                      }
+                    ]
+                  }
+                ],
+                "examples": {},
+                "extensions": {},
+                "features": [],
+                "fieldRights": [],
+                "format": "bare",
+                "id": "second",
+                "internal": false,
+                "kind": "httpOperation",
+                "maturity": {
+                  "level": "experimental",
+                  "origin": {
+                    "layer": "api",
+                    "pointer": "/api"
+                  },
+                  "source": "api"
+                },
+                "method": "get",
+                "name": {
+                  "role": "operation",
+                  "segments": [
+                    "second"
+                  ]
+                },
+                "origin": {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/routes/second"
+                },
+                "params": {
+                  "header": [
+                    {
+                      "derivedFrom": {
+                        "derivation": "identity.authenticate",
+                        "from": [
+                          {
+                            "layer": "api",
+                            "pointer": "/surfaces/app/identity"
+                          },
+                          {
+                            "layer": "api",
+                            "pointer": "/schemes/bearer"
+                          }
+                        ]
+                      },
+                      "name": "Authorization",
+                      "required": true,
+                      "type": {
+                        "kind": "scalar",
+                        "refinements": {},
+                        "type": "string"
+                      }
+                    }
+                  ],
+                  "path": [],
+                  "query": []
+                },
+                "path": "/v1/second",
+                "principalRequires": [],
+                "requires": [
+                  {
+                    "kind": "right",
+                    "origin": {
+                      "layer": "api",
+                      "pointer": "/surfaces/app/requires/0"
+                    },
+                    "params": {
+                      "level": 2
+                    },
+                    "right": "staff"
+                  }
+                ],
+                "responses": [
+                  {
+                    "derivedFrom": {
+                      "derivation": "response.format",
+                      "from": [
+                        {
+                          "layer": "core",
+                          "pointer": "/formats/bare"
+                        }
+                      ]
+                    },
+                    "headers": [],
+                    "origin": {
+                      "layer": "api",
+                      "pointer": "/surfaces/app/routes/second"
+                    },
+                    "shape": "empty",
+                    "status": 204
+                  }
+                ],
+                "safe": true,
+                "scopes": [],
+                "surface": "app",
+                "tags": [],
+                "unknownQuery": {
+                  "policy": "refuse"
+                },
+                "upstream": []
+              }
+            ],
+            "packs": [],
+            "pagings": {},
+            "rights": {
+              "staff": {
+                "docs": {},
+                "errors": [
+                  "api.forbidden"
+                ],
+                "extensions": {},
+                "id": "staff",
+                "origin": {
+                  "layer": "api",
+                  "pointer": "/rights/staff"
+                },
+                "params": "StaffParams",
+                "subject": {
+                  "kind": "none"
+                }
+              }
+            },
+            "rules": {},
+            "scalars": {},
+            "schemas": {
+              "ApiForbiddenParams": {
+                "directions": [
+                  "output"
+                ],
+                "docs": {},
+                "examples": [],
+                "extensions": {},
+                "id": "ApiForbiddenParams",
+                "kind": "object",
+                "name": {
+                  "role": "params",
+                  "segments": [
+                    "api",
+                    "forbidden"
+                  ]
+                },
+                "origin": {
+                  "layer": "core",
+                  "pointer": "/errors/api.forbidden/params"
+                },
+                "properties": [
+                  {
+                    "deprecated": false,
+                    "docs": {},
+                    "extensions": {},
+                    "name": "pointer",
+                    "nullable": false,
+                    "optional": true,
+                    "origin": {
+                      "layer": "core",
+                      "pointer": "/errors/api.forbidden/params/pointer"
+                    },
+                    "sensitive": false,
+                    "type": {
+                      "kind": "scalar",
+                      "refinements": {},
+                      "type": "string"
+                    }
+                  }
+                ]
+              },
+              "ApiSchemaInvalidIssue": {
+                "directions": [
+                  "output"
+                ],
+                "docs": {},
+                "examples": [],
+                "extensions": {},
+                "id": "ApiSchemaInvalidIssue",
+                "kind": "object",
+                "name": {
+                  "role": "schema",
+                  "segments": [
+                    "api",
+                    "schema",
+                    "invalid",
+                    "issue"
+                  ]
+                },
+                "origin": {
+                  "layer": "core",
+                  "pointer": "/errors/api.schema_invalid/params/issues/items"
+                },
+                "properties": [
+                  {
+                    "deprecated": false,
+                    "docs": {},
+                    "extensions": {},
+                    "name": "in",
+                    "nullable": false,
+                    "optional": false,
+                    "origin": {
+                      "layer": "core",
+                      "pointer": "/errors/api.schema_invalid/params/issues/items/properties/in"
+                    },
+                    "sensitive": false,
+                    "type": {
+                      "kind": "scalar",
+                      "refinements": {
+                        "pattern": {
+                          "normalized": "^(?:path|query|header|body)$",
+                          "source": "^(?:path|query|header|body)$"
+                        }
+                      },
+                      "type": "string"
+                    }
+                  },
+                  {
+                    "deprecated": false,
+                    "docs": {},
+                    "extensions": {},
+                    "name": "pointer",
+                    "nullable": false,
+                    "optional": false,
+                    "origin": {
+                      "layer": "core",
+                      "pointer": "/errors/api.schema_invalid/params/issues/items/properties/pointer"
+                    },
+                    "sensitive": false,
+                    "type": {
+                      "kind": "scalar",
+                      "refinements": {},
+                      "type": "string"
+                    }
+                  },
+                  {
+                    "deprecated": false,
+                    "docs": {},
+                    "extensions": {},
+                    "name": "rule",
+                    "nullable": false,
+                    "optional": false,
+                    "origin": {
+                      "layer": "core",
+                      "pointer": "/errors/api.schema_invalid/params/issues/items/properties/rule"
+                    },
+                    "sensitive": false,
+                    "type": {
+                      "kind": "scalar",
+                      "refinements": {},
+                      "type": "string"
+                    }
+                  }
+                ]
+              },
+              "ApiSchemaInvalidParams": {
+                "directions": [
+                  "output"
+                ],
+                "docs": {},
+                "examples": [],
+                "extensions": {},
+                "id": "ApiSchemaInvalidParams",
+                "kind": "object",
+                "name": {
+                  "role": "params",
+                  "segments": [
+                    "api",
+                    "schema",
+                    "invalid"
+                  ]
+                },
+                "origin": {
+                  "layer": "core",
+                  "pointer": "/errors/api.schema_invalid/params"
+                },
+                "properties": [
+                  {
+                    "deprecated": false,
+                    "docs": {},
+                    "extensions": {},
+                    "name": "issues",
+                    "nullable": false,
+                    "optional": false,
+                    "origin": {
+                      "layer": "core",
+                      "pointer": "/errors/api.schema_invalid/params/issues"
+                    },
+                    "sensitive": false,
+                    "type": {
+                      "items": {
+                        "kind": "ref",
+                        "schema": "ApiSchemaInvalidIssue"
+                      },
+                      "kind": "array"
+                    }
+                  }
+                ]
+              },
+              "StaffParams": {
+                "directions": [
+                  "input"
+                ],
+                "docs": {},
+                "examples": [],
+                "extensions": {},
+                "id": "StaffParams",
+                "kind": "object",
+                "name": {
+                  "role": "params",
+                  "segments": [
+                    "staff"
+                  ]
+                },
+                "origin": {
+                  "layer": "api",
+                  "pointer": "/rights/staff/params"
+                },
+                "properties": [
+                  {
+                    "deprecated": false,
+                    "docs": {},
+                    "extensions": {},
+                    "name": "level",
+                    "nullable": false,
+                    "optional": false,
+                    "origin": {
+                      "layer": "api",
+                      "pointer": "/rights/staff/params/level"
+                    },
+                    "sensitive": false,
+                    "type": {
+                      "kind": "scalar",
+                      "refinements": {},
+                      "type": "integer"
+                    }
+                  }
+                ]
+              },
+              "UserPrincipal": {
+                "directions": [
+                  "output"
+                ],
+                "docs": {},
+                "examples": [],
+                "extensions": {},
+                "id": "UserPrincipal",
+                "kind": "object",
+                "name": {
+                  "role": "schema",
+                  "segments": [
+                    "user",
+                    "principal"
+                  ]
+                },
+                "origin": {
+                  "layer": "api",
+                  "pointer": "/schemas/UserPrincipal"
+                },
+                "properties": [
+                  {
+                    "deprecated": false,
+                    "docs": {},
+                    "extensions": {},
+                    "name": "userId",
+                    "nullable": false,
+                    "optional": false,
+                    "origin": {
+                      "layer": "api",
+                      "pointer": "/schemas/UserPrincipal/properties/userId"
+                    },
+                    "sensitive": false,
+                    "type": {
+                      "kind": "scalar",
+                      "refinements": {},
+                      "type": "string"
+                    }
+                  }
+                ]
+              }
+            },
+            "schemes": {
+              "bearer": {
+                "id": "bearer",
+                "kind": "bearer",
+                "origin": {
+                  "layer": "api",
+                  "pointer": "/schemes/bearer"
+                }
+              }
+            },
+            "scopes": {},
+            "services": {}
+          },
+          "sourceMap": {
+            "irRevision": 6,
+            "locations": {
+              "api#/api": {
+                "column": 1,
+                "endColumn": 32,
+                "endLine": 1,
+                "file": "api.yaml",
+                "line": 1
+              },
+              "api#/api/version": {
+                "column": 20,
+                "endColumn": 30,
+                "endLine": 1,
+                "file": "api.yaml",
+                "line": 1
+              },
+              "api#/identities/user": {
+                "column": 3,
+                "endColumn": 83,
+                "endLine": 5,
+                "file": "api.yaml",
+                "line": 5
+              },
+              "api#/rights/staff": {
+                "column": 3,
+                "endColumn": 50,
+                "endLine": 10,
+                "file": "api.yaml",
+                "line": 10
+              },
+              "api#/rights/staff/params": {
+                "column": 12,
+                "endColumn": 48,
+                "endLine": 10,
+                "file": "api.yaml",
+                "line": 10
+              },
+              "api#/rights/staff/params/level": {
+                "column": 22,
+                "endColumn": 46,
+                "endLine": 10,
+                "file": "api.yaml",
+                "line": 10
+              },
+              "api#/schemas/UserPrincipal": {
+                "column": 3,
+                "endColumn": 96,
+                "endLine": 7,
+                "file": "api.yaml",
+                "line": 7
+              },
+              "api#/schemas/UserPrincipal/properties/userId": {
+                "column": 68,
+                "endColumn": 92,
+                "endLine": 7,
+                "file": "api.yaml",
+                "line": 7
+              },
+              "api#/schemes/bearer": {
+                "column": 3,
+                "endColumn": 27,
+                "endLine": 3,
+                "file": "api.yaml",
+                "line": 3
+              },
+              "api#/surfaces/app": {
+                "column": 3,
+                "endColumn": 1,
+                "endLine": 28,
+                "file": "api.yaml",
+                "line": 21
+              },
+              "api#/surfaces/app/identity": {
+                "column": 5,
+                "endColumn": 19,
+                "endLine": 23,
+                "file": "api.yaml",
+                "line": 23
+              },
+              "api#/surfaces/app/requires/0": {
+                "column": 16,
+                "endColumn": 54,
+                "endLine": 24,
+                "file": "api.yaml",
+                "line": 24
+              },
+              "api#/surfaces/app/routes/first": {
+                "column": 7,
+                "endColumn": 29,
+                "endLine": 26,
+                "file": "api.yaml",
+                "line": 26
+              },
+              "api#/surfaces/app/routes/second": {
+                "column": 7,
+                "endColumn": 30,
+                "endLine": 27,
+                "file": "api.yaml",
+                "line": 27
+              }
+            }
+          },
+          "declared": [
+            {
+              "catalogue": "schemas",
+              "id": "UserPrincipal",
+              "origin": {
+                "layer": "api",
+                "pointer": "/schemas/UserPrincipal"
+              },
+              "reached": true
+            },
+            {
+              "catalogue": "schemes",
+              "id": "bearer",
+              "origin": {
+                "layer": "api",
+                "pointer": "/schemes/bearer"
+              },
+              "reached": true
+            },
+            {
+              "catalogue": "identities",
+              "id": "user",
+              "origin": {
+                "layer": "api",
+                "pointer": "/identities/user"
+              },
+              "reached": true
+            },
+            {
+              "catalogue": "rights",
+              "id": "shop.open",
+              "origin": {
+                "layer": "api",
+                "pointer": "/rights/shop.open"
+              },
+              "reached": false
+            },
+            {
+              "catalogue": "rights",
+              "id": "staff",
+              "origin": {
+                "layer": "api",
+                "pointer": "/rights/staff"
+              },
+              "reached": true
+            },
+            {
+              "catalogue": "rules",
+              "id": "throttle",
+              "origin": {
+                "layer": "api",
+                "pointer": "/rules/throttle"
+              },
+              "reached": false
+            },
+            {
+              "catalogue": "rules",
+              "id": "audit",
+              "origin": {
+                "layer": "api",
+                "pointer": "/rules/audit"
+              },
+              "reached": false
+            },
+            {
+              "catalogue": "rules",
+              "id": "note",
+              "origin": {
+                "layer": "api",
+                "pointer": "/rules/note"
+              },
+              "reached": false
+            },
+            {
+              "catalogue": "requirements",
+              "id": "seniorStaff",
+              "origin": {
+                "layer": "api",
+                "pointer": "/requirements/seniorStaff"
+              },
+              "reached": false
+            },
+            {
+              "catalogue": "requirements",
+              "id": "writeThrottle",
+              "origin": {
+                "layer": "api",
+                "pointer": "/requirements/writeThrottle"
+              },
+              "reached": false
+            },
+            {
+              "catalogue": "buckets",
+              "id": "perUser",
+              "origin": {
+                "layer": "api",
+                "pointer": "/buckets/perUser"
+              },
+              "reached": false
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

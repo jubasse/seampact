@@ -1,0 +1,10 @@
+# Where the contract is and what seampact generates from it.
+outDir: src/__generated__
+sources:
+  shop:
+    path: ./contract
+targets:
+  # The TypeScript types of the api (npm package @seampact/codegen-ts). Add a server or a client target beside it.
+  - id: types
+    use: "@seampact/codegen-ts"
+    apis: [shop]

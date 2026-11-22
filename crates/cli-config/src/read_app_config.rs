@@ -60,13 +60,9 @@ pub struct LoadedAppConfig {
 
 /// The config read, or the problems that stop it.
 #[derive(Debug, Clone, PartialEq)]
-#[expect(
-    clippy::large_enum_variant,
-    reason = "the outcome is returned once and read at once; the design note fixes its shape"
-)]
 pub enum ReadAppConfigOutcome {
     /// The `config` member.
-    Read(LoadedAppConfig),
+    Read(Box<LoadedAppConfig>),
     /// The `problems` member.
     Refused(Vec<CliProblem>),
 }
@@ -105,7 +101,7 @@ pub fn read_app_config(
 
     match find_root_config(file, display_name)? {
         RootDiscovery::Refused(problems) => Ok(ReadAppConfigOutcome::Refused(problems)),
-        RootDiscovery::None => Ok(ReadAppConfigOutcome::Read(alone.loaded)),
+        RootDiscovery::None => Ok(ReadAppConfigOutcome::Read(Box::new(alone.loaded))),
         RootDiscovery::Found {
             root,
             listed: false,
@@ -463,12 +459,12 @@ fn fold_root_config(
 
     sources.extend(app.loaded.sources.clone());
 
-    Ok(ReadAppConfigOutcome::Read(LoadedAppConfig {
+    Ok(ReadAppConfigOutcome::Read(Box::new(LoadedAppConfig {
         allow_local: app_allow_local.or(root.allow_local),
         sources,
         root_file: Some(root.file.clone()),
         ..app.loaded
-    }))
+    })))
 }
 
 fn unlisted_app_outcome(
@@ -513,5 +509,5 @@ fn unlisted_app_outcome(
         return Ok(ReadAppConfigOutcome::Refused(problems));
     }
 
-    Ok(ReadAppConfigOutcome::Read(app.loaded))
+    Ok(ReadAppConfigOutcome::Read(Box::new(app.loaded)))
 }

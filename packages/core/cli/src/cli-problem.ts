@@ -1,4 +1,5 @@
 import type { Refusal } from "@seampact/codegen-core";
+import { diagnosticInert } from "@seampact/compiler";
 import { type ContractPositions, contractPosition } from "./commands/contract-position.js";
 
 // One refusal or diagnostic the CLI prints on stderr, as
@@ -15,12 +16,28 @@ export interface CliProblem {
   docs?: string;
 }
 
-export function formatProblem(problem: CliProblem): string {
-  const position = problem.position === undefined ? "" : `${problem.position}: `;
-  const where = problem.where === undefined ? "" : `${problem.where}: `;
-  const docs = problem.docs === undefined ? "" : ` Docs: ${problem.docs}`;
+// Past this many characters a field of a printed problem is cut: its text can come from a hostile tree.
+export const PROBLEM_FIELD_LIMIT = 1000;
 
-  return `${position}${problem.code}: ${where}${problem.message} Fix: ${problem.fix}${docs}`;
+const PROBLEM_CUT_MARK = "\u2026";
+
+// A field cut past the limit, then written inert, so authored text never reaches the terminal as an escape sequence.
+function printableField(text: string): string {
+  const characters = Array.from(text);
+  const kept =
+    characters.length > PROBLEM_FIELD_LIMIT
+      ? `${characters.slice(0, PROBLEM_FIELD_LIMIT).join("")}${PROBLEM_CUT_MARK}`
+      : text;
+
+  return diagnosticInert(kept);
+}
+
+export function formatProblem(problem: CliProblem): string {
+  const position = problem.position === undefined ? "" : `${printableField(problem.position)}: `;
+  const where = problem.where === undefined ? "" : `${printableField(problem.where)}: `;
+  const docs = problem.docs === undefined ? "" : ` Docs: ${printableField(problem.docs)}`;
+
+  return `${position}${printableField(problem.code)}: ${where}${printableField(problem.message)} Fix: ${printableField(problem.fix)}${docs}`;
 }
 
 // The entry and api a problem of `generate` belongs to.

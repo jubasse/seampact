@@ -1,0 +1,7 @@
+{
+  "exit": 0,
+  "stdout": "# seampact explain shop.first\noperationId: first                               # api.yaml:26\nsurface: app\nmethod: get\npath: /v1/first\nidentity: user                                   # api.yaml:23\nschemes: [bearer]\nrequires:\n  - { params: { level: 2 }, right: staff }       # api.yaml:24\nparams:\n  header.Authorization: { type: string, required: true }  # identity.authenticate, api.yaml:23, api.yaml:3\nunknownQuery: refuse\nresponses:\n  - { status: 204, shape: empty }                # response.format, built in, api.yaml:26\nerrors:\n  - { status: 400, code: api.schema_invalid }    # input.invalid, api.yaml:26\n  - { status: 401, code: api.unauthenticated }   # identity.authenticate, api.yaml:23\n  - { status: 403, code: api.forbidden }         # requirement.errors, api.yaml:24\n  - { status: 500, code: api.internal }          # response.undeclared, api.yaml:26\nmaturity: { level: experimental, source: api }   # api.yaml:1\nformat: bare\n# not shown yet: errors.roles\n",
+  "stderr": "In source 'shop' (<root>/contract):\napi.yaml:16:3: warning seampact/derive/bucket-limits: The bucket 'perUser' sets no limit and window, so the server binds them. Fix: Set limit and window on the bucket 'perUser', or bind them in the server.\n",
+  "written": {},
+  "removed": []
+}

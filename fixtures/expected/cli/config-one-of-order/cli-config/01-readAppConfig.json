@@ -1,0 +1,24 @@
+{
+  "function": "readAppConfig",
+  "args": [
+    "<root>/seampact.config.yaml",
+    "seampact.config.yaml"
+  ],
+  "result": {
+    "status": "refused",
+    "problems": [
+      {
+        "code": "config.schema",
+        "message": "A source takes one form: 'path', 'package' with 'version', 'release', 'git' or 'maven'; 'integrity' goes with a bundle form only.",
+        "fix": "Keep the keys of one form (ADR 0011 'The app config').",
+        "where": "seampact.config.yaml:2:3 sources.k"
+      },
+      {
+        "code": "config.schema",
+        "message": "The value must be string.",
+        "fix": "Correct the value as the config schema states (ADR 0011 'The app config').",
+        "where": "seampact.config.yaml:3:5 sources.k.package"
+      }
+    ]
+  }
+}

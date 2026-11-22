@@ -11,7 +11,7 @@ use seampact_load::{LoadOptions, LoadReader, load_workspace};
 use crate::EditorSchemasError;
 use crate::editor_names::{EditorDeclaration, editor_names};
 use crate::specialise::editor_schema_files;
-use crate::write_editor_schemas::{EditorSchemasPlan, io_error};
+use crate::write_editor_schemas::{EditorSchemasPlan, TEMPORARY_SUFFIX, io_error};
 
 /// Where `compile --editor-schemas` writes when `workspace.editorSchemas` names nothing.
 pub const DEFAULT_EDITOR_SCHEMAS_DIRECTORY: &str = ".seampact/schemas";
@@ -97,14 +97,17 @@ pub fn plan_editor_schemas(
 
     for file in &files {
         let target = directory.join(&file.file_name);
+        let temporary = Utf8PathBuf::from(format!("{target}{TEMPORARY_SUFFIX}"));
 
-        if is_symbolic_link(&target)? {
-            return Ok(refused(
-                source,
-                format!(
-                    "The editor schema {target} is a symbolic link, and writing it would overwrite its target."
-                ),
-            ));
+        for written in [target, temporary] {
+            if is_symbolic_link(&written)? {
+                return Ok(refused(
+                    source,
+                    format!(
+                        "The editor schema {written} is a symbolic link, and writing it would overwrite its target."
+                    ),
+                ));
+            }
         }
     }
 

@@ -10,8 +10,9 @@ use std::time::Duration;
 
 use seampact_json::JsonValue;
 use seampact_oracle::{
-    Compilation, Fixture, FixtureGlob, HalfInput, HalfOutput, OracleSubject, RecordedCall,
-    RuleIdRegistry, Selection, SubjectAnswer, run_oracle,
+    ComparedFile, Compilation, DIFFERENCES_FILE, DifferenceLedger, Fixture, FixtureGlob, HalfInput,
+    HalfOutput, MatchOutcome, Mismatch, MismatchKind, OracleSubject, OutputFile, OutputKind,
+    RecordedCall, RuleIdRegistry, Selection, SubjectAnswer, read_differences, run_oracle,
 };
 use support::{
     ExpectedFilesSubject, SCRATCH_FIXTURE, repository_root, scratch_repository, unchanged,
@@ -602,4 +603,106 @@ fn a_subject_within_the_time_limit_passes() {
     let verdict = run_oracle(&repository_root(), &selection, &subject).unwrap();
 
     assert!(verdict.passed(), "{verdict}");
+}
+
+/// The committed differences judging a changed text of a CLI case: the case's expected value at
+/// `pointer` of the output, against the Rust CLI's wording.
+fn committed_outcome_for_cli_text(
+    fixture: &str,
+    output: OutputKind,
+    pointer: &str,
+    expected: &str,
+    actual: &str,
+) -> MatchOutcome {
+    let root = repository_root();
+    let differences = read_differences(&root, &root.join(DIFFERENCES_FILE)).unwrap();
+    let file = OutputFile {
+        output,
+        api: None,
+        half: None,
+    };
+    let compared = ComparedFile {
+        fixture,
+        file: &file,
+    };
+    let mismatch = Mismatch {
+        pointer: Some(pointer.to_owned()),
+        kind: MismatchKind::Value,
+        expected: Some(serde_json::Value::String(expected.to_owned())),
+        actual: Some(serde_json::Value::String(actual.to_owned())),
+    };
+    let mut ledger = DifferenceLedger::new(differences.differences);
+
+    ledger.record_compared(compared);
+    ledger.take(compared, &mismatch)
+}
+
+#[test]
+fn the_config_yaml_syntax_wording_of_the_rust_cli_is_accepted_by_the_committed_differences() {
+    for fixture in ["cli/config-yaml-tab", "cli/config-yaml-flow"] {
+        assert_eq!(
+            committed_outcome_for_cli_text(
+                fixture,
+                OutputKind::CliStderr,
+                "/stderr/0",
+                "config.yaml.syntax: broken.config.txt:2:1: Flow map in block collection must be sufficiently indented and end with a }. Fix: Correct the YAML at that position.",
+                "config.yaml.syntax: broken.config.txt:2:1: invalid indentation in flow construct. Fix: Correct the YAML at that position.",
+            ),
+            MatchOutcome::Accepted,
+            "{fixture}"
+        );
+        assert_eq!(
+            committed_outcome_for_cli_text(
+                fixture,
+                OutputKind::CliConfig,
+                "/result/problems/0/message",
+                "Flow map in block collection must be sufficiently indented and end with a }.",
+                "invalid indentation in flow construct.",
+            ),
+            MatchOutcome::Accepted,
+            "{fixture}"
+        );
+    }
+}
+
+#[test]
+fn the_tab_indentation_column_of_the_rust_cli_is_accepted_by_the_committed_differences() {
+    assert_eq!(
+        committed_outcome_for_cli_text(
+            "cli/config-yaml-tab",
+            OutputKind::CliConfig,
+            "/result/problems/0/where",
+            "broken.config.txt:2:1",
+            "broken.config.txt:2:2",
+        ),
+        MatchOutcome::Accepted
+    );
+}
+
+#[test]
+fn the_baseline_parse_wording_of_the_rust_cli_is_accepted_by_the_committed_differences() {
+    assert_eq!(
+        committed_outcome_for_cli_text(
+            "cli/diff-against-not-json",
+            OutputKind::CliStderr,
+            "/stderr/0",
+            "diff.against.invalid: '<root>/baseline/notes.ir.json' is not JSON (Unexpected token 'o', \"not json\" is not valid JSON). Fix: Pass `--against` an IR file.",
+            "diff.against.invalid: '<root>/baseline/notes.ir.json' is not JSON (expected ident at line 1 column 2). Fix: Pass `--against` an IR file.",
+        ),
+        MatchOutcome::Accepted
+    );
+}
+
+#[test]
+fn the_baseline_schema_wording_of_the_rust_cli_is_accepted_by_the_committed_differences() {
+    assert_eq!(
+        committed_outcome_for_cli_text(
+            "cli/diff-against-invalid-ir",
+            OutputKind::CliStderr,
+            "/stderr/0",
+            "diff.against.invalid: '<root>/baseline/notes.ir.json' is not valid under the IR JSON Schema: at '' must have required property 'irVersion'.",
+            "diff.against.invalid: '<root>/baseline/notes.ir.json' is not valid under the IR JSON Schema: at '' \"irVersion\" is a required property.",
+        ),
+        MatchOutcome::Accepted
+    );
 }

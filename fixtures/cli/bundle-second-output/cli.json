@@ -1,0 +1,1 @@
+{ "argv": ["bundle", "--out", "bundle-out", "--tarball", "bundle.tgz"] }

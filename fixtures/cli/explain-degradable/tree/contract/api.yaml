@@ -1,0 +1,23 @@
+api: { name: lifecycle, version: 1 }
+conventions:
+  degradedHeader: X-Degraded
+schemas:
+  Task: { type: object, properties: { id: { type: string }, stats: { type: object, properties: { views: { type: integer } } } }, required: [id] }
+surfaces:
+  app:
+    prefix: /v{version}
+    access: { public: "Tasks are public." }
+    routes:
+      getTask: { method: get, path: 'tasks/{id}', pathParams: { id: { type: string } }, output: Task, degradable: [stats] }
+      legacyTask:
+        method: get
+        path: 'legacy/tasks/{id}'
+        pathParams: { id: { type: string } }
+        output: Task
+        deprecated: { since: '2026-06-01', sunset: '2027-01-31', successor: getTask }
+      legacyLink:
+        method: get
+        path: 'legacy/links/{id}'
+        pathParams: { id: { type: string } }
+        responses: { 302: {} }
+        deprecated: { since: '2026-06-01', sunset: '2027-01-31' }

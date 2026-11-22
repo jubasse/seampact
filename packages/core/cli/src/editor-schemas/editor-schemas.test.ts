@@ -172,6 +172,21 @@ test("a symlinked schema file is refused and its target is left alone", async ()
   expect(readFileSync(target, "utf8")).toBe("keep");
 });
 
+test("a symlinked temporary schema file is refused and its target is left alone", async () => {
+  const app = makeReferenceApp();
+  const target = join(app, "precious.txt");
+  const directory = join(app, "a", DEFAULT_EDITOR_SCHEMAS_DIRECTORY);
+
+  writeFileSync(target, "PRECIOUS");
+  mkdirSync(directory, { recursive: true });
+  symlinkSync(target, join(directory, "node.schema.json.tmp"));
+  const result = await run(app, ["compile", "--editor-schemas"]);
+
+  expect(result.exitCode).toBe(EXIT_REFUSED);
+  expect(result.err).toContain("compile.editor-schemas.outside");
+  expect(readFileSync(target, "utf8")).toBe("PRECIOUS");
+});
+
 test("a role's bound code is a name position, listing the declared and core codes", async () => {
   const app = makeReferenceApp();
   const directory = join(app, "a", DEFAULT_EDITOR_SCHEMAS_DIRECTORY);

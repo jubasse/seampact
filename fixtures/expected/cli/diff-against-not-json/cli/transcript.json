@@ -1,0 +1,7 @@
+{
+  "exit": 1,
+  "stdout": "",
+  "stderr": "diff.against.invalid: '<root>/baseline/notes.ir.json' is not JSON (Unexpected token 'o', \"not json\" is not valid JSON). Fix: Pass `--against` an IR file, or a directory of `<api>.ir.json` files as `seampact compile --out` writes them.\n",
+  "written": {},
+  "removed": []
+}

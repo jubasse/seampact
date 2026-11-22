@@ -1,4 +1,5 @@
 src/cli_problem.rs#format_problem	packages/core/cli/src/cli-problem.ts#formatProblem
+src/cli_problem.rs#printable_field	packages/core/cli/src/cli-problem.ts#printableField
 src/cli_io.rs#print_problems	packages/core/cli/src/cli-io.ts#printProblems
 src/cli_io.rs#print_warnings	packages/core/cli/src/cli-io.ts#printWarnings
 src/cli_problem.rs#entry_where	packages/core/cli/src/cli-problem.ts#entryWhere

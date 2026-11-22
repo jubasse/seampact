@@ -1,0 +1,4 @@
+sources:
+  "A b":
+    path: ./contract
+targets: []

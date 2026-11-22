@@ -1,0 +1,7 @@
+{
+  "exit": 0,
+  "stdout": "# seampact explain lifecycle.getTask\noperationId: getTask                             # api.yaml:11\nsurface: app\nmethod: get\npath: /v1/tasks/{id}\naccess: { public: \"Tasks are public.\" }          # api.yaml:9\nparams:\n  path.id: { type: string, required: true }      # api.yaml:11\nunknownQuery: refuse\nresponses:\n  - { status: 200, shape: item, body: Task }     # response.format, built in, api.yaml:11\nerrors:\n  - { status: 400, code: api.schema_invalid }    # input.invalid, api.yaml:11\n  - { status: 500, code: api.internal }          # response.undeclared, api.yaml:11\ndegradable: { header: X-Degraded, paths: [stats] }  # api.yaml:11\nmaturity: { level: experimental, source: api }   # api.yaml:1\nformat: bare\n# not shown yet: errors.roles\n",
+  "stderr": "",
+  "written": {},
+  "removed": []
+}

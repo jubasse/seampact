@@ -126,7 +126,12 @@ fn schema_error_problem(
             key_path,
         )),
         SchemaKeyword::Pattern => {
-            let (message, fix) = pattern_sentences(&path);
+            let (message, fix) = pattern_sentences(&path).unwrap_or_else(|| {
+                (
+                    format!("The value {}.", failure.message),
+                    SCHEMA_FIX.to_owned(),
+                )
+            });
 
             Ok((problem_at(message, &fix, &path)?, key_path))
         }
@@ -142,33 +147,33 @@ fn schema_error_problem(
     }
 }
 
-// The sentence of a `pattern` failure: the key's own rule, else the generic one.
-fn pattern_sentences(path: &[KeyPathSegment]) -> (String, String) {
+// The sentence of a `pattern` failure: the key's own rule, none when the key has no rule of its own.
+fn pattern_sentences(path: &[KeyPathSegment]) -> Option<(String, String)> {
     if is_framework_route_path(path) {
-        return (
+        return Some((
             FRAMEWORK_ROUTE_PATH_RULE.to_owned(),
             format!(
                 "Write a route parameter as '*' and a catch-all as '**' {CONFIG_DOCS_SECTION}."
             ),
-        );
+        ));
     }
 
     if segment_from_end(path, 2) == Some("allowUntested") {
-        return (
+        return Some((
             ALLOW_UNTESTED_RULE.to_owned(),
             ALLOW_UNTESTED_FIX.to_owned(),
-        );
+        ));
     }
 
     match segment_from_end(path, 1) {
-        Some("mount") => (
+        Some("mount") => Some((
             MOUNT_RULE.to_owned(),
             format!(
                 "Write the path prefix the api is served under, such as '/api' {CONFIG_DOCS_SECTION}."
             ),
-        ),
-        Some("use") => (TARGET_USE_RULE.to_owned(), TARGET_USE_FIX.to_owned()),
-        _ => (String::new(), SCHEMA_FIX.to_owned()),
+        )),
+        Some("use") => Some((TARGET_USE_RULE.to_owned(), TARGET_USE_FIX.to_owned())),
+        _ => None,
     }
 }
 

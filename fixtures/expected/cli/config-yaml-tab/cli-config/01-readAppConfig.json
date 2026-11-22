@@ -1,0 +1,18 @@
+{
+  "function": "readAppConfig",
+  "args": [
+    "<root>/broken.config.txt",
+    "broken.config.txt"
+  ],
+  "result": {
+    "status": "refused",
+    "problems": [
+      {
+        "code": "config.yaml.syntax",
+        "message": "Tabs are not allowed as indentation.",
+        "fix": "Correct the YAML at that position.",
+        "where": "broken.config.txt:2:1"
+      }
+    ]
+  }
+}

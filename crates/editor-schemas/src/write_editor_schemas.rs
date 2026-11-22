@@ -8,10 +8,10 @@ use camino::{Utf8Path, Utf8PathBuf};
 use crate::EditorSchemasError;
 use crate::specialise::EditorSchemaFile;
 
-const TEMPORARY_SUFFIX: &str = ".tmp";
+pub(crate) const TEMPORARY_SUFFIX: &str = ".tmp";
 
-/// A checked write: the directory is inside the workspace root by real path, and no target file
-/// is a symlink.
+/// A checked write: the directory is inside the workspace root by real path, and no target or
+/// temporary file is a symlink.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EditorSchemasPlan {
     /// The directory the files go in.

@@ -1,0 +1,7 @@
+{
+  "exit": 0,
+  "stdout": "Linted 1 api(s): 0 error(s), 1 warning(s).\n",
+  "stderr": "In source 'notes', api 'notes':\napi.yaml:23:3: warning seampact/unused-declaration: The declaration 'Unused' in schemas is reached by no operation, identity or convention. Fix: Remove 'Unused', use it, or allow seampact/unused-declaration on it with a reason.\n",
+  "written": {},
+  "removed": []
+}

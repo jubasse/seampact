@@ -1,0 +1,7 @@
+{
+  "exit": 1,
+  "stdout": "",
+  "stderr": "config.schema: seampact.config.yaml:2:3 sources.k: A source takes one form: 'path', 'package' with 'version', 'release', 'git' or 'maven'; 'integrity' goes with a bundle form only. Fix: Keep the keys of one form (ADR 0011 'The app config').\nconfig.schema: seampact.config.yaml:3:5 sources.k.package: The value must be string. Fix: Correct the value as the config schema states (ADR 0011 'The app config').\n",
+  "written": {},
+  "removed": []
+}

@@ -7,22 +7,29 @@ import { discoverFixtures, readExcluded } from "./fixtures.ts";
 import { declaredRuleIds } from "./rule-ids.ts";
 import { discoverTargets } from "./targets.ts";
 
+// The whole corpus takes longer than the default test timeout.
+const WHOLE_CORPUS_TIMEOUT_MS = 300_000;
+
 // 1.x CI keeps the expected outputs current while the TS compiler lives: `node scripts/oracle/cli.ts write` after
 // a change that moves them. The check runs as the CLI does: the recorded CLI calls need Node's own module loader.
-test("every fixture and tool case compiles to its expected outputs", () => {
-  const run = spawnSync(
-    process.execPath,
-    [fileURLToPath(new URL("cli.ts", import.meta.url)), "check"],
-    {
-      encoding: "utf8",
-    },
-  );
-  const [counts = ""] = run.stdout.split("\n");
+test(
+  "every fixture and tool case compiles to its expected outputs",
+  () => {
+    const run = spawnSync(
+      process.execPath,
+      [fileURLToPath(new URL("cli.ts", import.meta.url)), "check"],
+      {
+        encoding: "utf8",
+      },
+    );
+    const [counts = ""] = run.stdout.split("\n");
 
-  expect(counts).toMatch(/^oracle: (\d+) fixtures, \1 match, 0 differ$/);
-  expect(run.stdout.trim().split("\n")).toHaveLength(1);
-  expect(run.status).toBe(0);
-});
+    expect(counts).toMatch(/^oracle: (\d+) fixtures, \1 match, 0 differ$/);
+    expect(run.stdout.trim().split("\n")).toHaveLength(1);
+    expect(run.status).toBe(0);
+  },
+  WHOLE_CORPUS_TIMEOUT_MS,
+);
 
 test("the rule ids built from a template or a map are declared", () => {
   expect(declaredRuleIds()).toEqual(

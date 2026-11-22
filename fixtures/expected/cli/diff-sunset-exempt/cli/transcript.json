@@ -1,0 +1,7 @@
+{
+  "exit": 0,
+  "stdout": "notes v1: compat.policy additive-only (before additive-only, after additive-only), gate clients\nbreaking clients legacy /operations/1: operation.removed removed (legacy) [exempt: sunsetPassed]\ndeprecation legacy: sunsetPassed, since 2024-01-01, sunset 2025-01-01 (past sunset)\ngate passed\n",
+  "stderr": "",
+  "written": {},
+  "removed": []
+}

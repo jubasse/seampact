@@ -74,13 +74,9 @@ pub struct LoadedRootConfig {
 
 /// The config read, or the problems that stop it.
 #[derive(Debug, Clone, PartialEq)]
-#[expect(
-    clippy::large_enum_variant,
-    reason = "the outcome is returned once and read at once; the design note fixes its shape"
-)]
 pub enum ReadRootConfigOutcome {
     /// The `config` member.
-    Read(LoadedRootConfig),
+    Read(Box<LoadedRootConfig>),
     /// The `problems` member.
     Refused(Vec<CliProblem>),
 }
@@ -186,7 +182,7 @@ fn resolve_root_config(
         _ => None,
     };
 
-    Ok(ReadRootConfigOutcome::Read(LoadedRootConfig {
+    Ok(ReadRootConfigOutcome::Read(Box::new(LoadedRootConfig {
         file: file.to_path_buf(),
         display_name: parsed.display_name.clone(),
         apps,
@@ -197,7 +193,7 @@ fn resolve_root_config(
             .get("checks")
             .cloned()
             .unwrap_or_else(|| JsonValue::Object(JsonObject::new())),
-    }))
+    })))
 }
 
 fn workspace_apps(
