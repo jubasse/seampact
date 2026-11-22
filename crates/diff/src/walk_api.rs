@@ -3,14 +3,18 @@
 use std::collections::{HashMap, HashSet};
 
 use seampact_diff_table::{DiffKind, DiffPosition, IrDefinition};
-use seampact_ir::{Api, ContractIr, PackRef};
+use seampact_ir::{Api, ContractIr, PackRef, Surface, SurfaceId};
+use seampact_js::cmp_utf16;
+use seampact_json::JsonValue;
 
 use crate::DiffError;
 use crate::change_sink::{ChangeReach, ElementOrigin, NO_POSITION, RawChange};
-use crate::not_ported::not_ported_yet;
-use crate::walk_context::{ChangeSite, MemberComparisons, WalkContext, compare_members, emit_at};
-use crate::walk_json::{object_members, text_value};
+use crate::walk_context::{
+    ChangeSite, MemberComparisons, WalkContext, compare_kept_order, compare_members, emit_at,
+};
+use crate::walk_json::{object_members, pointer_join, text_value};
 use crate::walk_maturity::compare_maturity_level;
+use crate::walk_reach::{INT64_REACH_KEY, OUTPUT_ENUMS_REACH_KEY, common_reaches};
 
 /// The names of the packs whose version differs between the two sides, or that only one has.
 pub(crate) fn changed_pack_names(before: &[PackRef], after: &[PackRef]) -> HashSet<String> {
@@ -227,46 +231,301 @@ fn surface_follows_path_version(ir: &ContractIr, surface_id: &str) -> bool {
         .is_some_and(|surface| surface.path_version == ir.api.path_version.value)
 }
 
-/// Compares the wire member of the two apis.
-///
-/// # Errors
-///
-/// Not ported yet.
+/// A change of one wire form: a type change at the uses that reach it, else an annotation.
+fn emit_wire_change(
+    context: &mut WalkContext<'_>,
+    site: &ChangeSite<'_>,
+    pointer: &str,
+    wire_case: &str,
+    reaches: &[ChangeReach],
+    values: (Option<&JsonValue>, Option<&JsonValue>),
+) {
+    let used = reaches.iter().any(|reach| !reach.operations.is_empty());
+    let (kind, case_name) = if used {
+        (DiffKind::TypeChanged, wire_case.to_owned())
+    } else {
+        (DiffKind::Annotation, format!("wire.{wire_case}"))
+    };
+    let used_site = ChangeSite {
+        reaches: if used { reaches } else { &NO_POSITION },
+        origin: site.origin.clone(),
+    };
+
+    emit_at(
+        context,
+        &used_site,
+        RawChange {
+            kind,
+            case_name,
+            pointer: pointer.to_owned(),
+            before: values.0.cloned(),
+            after: values.1.cloned(),
+            origin: None,
+            facts: Vec::new(),
+        },
+    );
+}
+
+/// Compares the wire member of the two apis; each form changes at the uses that reach it.
 fn compare_wire(
-    _context: &mut WalkContext<'_>,
-    _site: &ChangeSite<'_>,
-    _pointer: &str,
-    _before: &Api,
-    _after: &Api,
-    _common_operations: &[String],
+    context: &mut WalkContext<'_>,
+    site: &ChangeSite<'_>,
+    pointer: &str,
+    before: &Api,
+    after: &Api,
+    common_operations: &[String],
 ) -> Result<(), DiffError> {
-    Err(not_ported_yet("compareWire"))
+    // Every response may carry a URL the target writes ($self, the paging roles, the successor link).
+    let output_of_every_operation = [ChangeReach {
+        position: DiffPosition::Output,
+        operations: common_operations.to_vec(),
+        facts: Vec::new(),
+    }];
+    let mut comparisons = MemberComparisons::new();
+
+    comparisons.insert(
+        "int64",
+        Box::new(|context, member_pointer, before_value, after_value| {
+            let reaches =
+                common_reaches(&context.before_reach, &context.after_reach, INT64_REACH_KEY);
+
+            emit_wire_change(
+                context,
+                site,
+                member_pointer,
+                "int64Wire",
+                &reaches,
+                (before_value, after_value),
+            );
+
+            Ok(())
+        }),
+    );
+    comparisons.insert(
+        "outputEnums",
+        Box::new(|context, member_pointer, before_value, after_value| {
+            let reaches: Vec<ChangeReach> = common_reaches(
+                &context.before_reach,
+                &context.after_reach,
+                OUTPUT_ENUMS_REACH_KEY,
+            )
+            .into_iter()
+            .filter(|reach| reach.position == DiffPosition::Output)
+            .collect();
+
+            emit_wire_change(
+                context,
+                site,
+                member_pointer,
+                "outputEnums",
+                &reaches,
+                (before_value, after_value),
+            );
+
+            Ok(())
+        }),
+    );
+    comparisons.insert(
+        "urls",
+        Box::new(|context, member_pointer, before_value, after_value| {
+            emit_wire_change(
+                context,
+                site,
+                member_pointer,
+                "urls",
+                &output_of_every_operation,
+                (before_value, after_value),
+            );
+
+            Ok(())
+        }),
+    );
+
+    compare_members(
+        context,
+        site,
+        IrDefinition::ApiWire,
+        pointer,
+        Some(&object_members(&before.wire)?),
+        Some(&object_members(&after.wire)?),
+        &comparisons,
+    )
 }
 
-/// Compares the surfaces of the two apis.
-///
-/// # Errors
-///
-/// Not ported yet.
+/// Compares the surfaces of the two apis by id, in UTF-16 order of the ids.
 fn compare_surfaces(
-    _context: &mut WalkContext<'_>,
-    _site: &ChangeSite<'_>,
-    _pointer: &str,
-    _before: &Api,
-    _after: &Api,
+    context: &mut WalkContext<'_>,
+    site: &ChangeSite<'_>,
+    pointer: &str,
+    before: &Api,
+    after: &Api,
 ) -> Result<(), DiffError> {
-    Err(not_ported_yet("compareSurfaces"))
+    let mut surface_ids: Vec<&str> = before
+        .surfaces
+        .keys()
+        .chain(after.surfaces.keys())
+        .map(SurfaceId::as_str)
+        .collect();
+
+    surface_ids.sort_by(|left, right| cmp_utf16(left, right));
+    surface_ids.dedup();
+
+    for id in surface_ids {
+        let surface_pointer = pointer_join(pointer, &[id]);
+
+        // A surface holds no wire of its own: its operations are added or removed with it.
+        let (Some(before_surface), Some(after_surface)) =
+            (before.surfaces.get(id), after.surfaces.get(id))
+        else {
+            emit_at(
+                context,
+                site,
+                RawChange::new(DiffKind::Annotation, "surfaces", surface_pointer),
+            );
+
+            continue;
+        };
+
+        compare_surface(
+            context,
+            site,
+            &surface_pointer,
+            id,
+            (before_surface, after_surface),
+        )?;
+    }
+
+    Ok(())
 }
 
-/// Compares the two lists of packs.
-///
-/// # Errors
-///
-/// Not ported yet.
-pub(crate) fn compare_packs(
-    _context: &mut WalkContext<'_>,
-    _before: &[PackRef],
-    _after: &[PackRef],
+/// Compares one surface kept by both apis: its route members change the operations it holds.
+fn compare_surface(
+    context: &mut WalkContext<'_>,
+    site: &ChangeSite<'_>,
+    pointer: &str,
+    id: &str,
+    surfaces: (&Surface, &Surface),
 ) -> Result<(), DiffError> {
-    Err(not_ported_yet("comparePacks"))
+    let (before, after) = surfaces;
+    let before_ids: HashSet<&str> = context
+        .before
+        .operations
+        .iter()
+        .filter(|operation| operation.surface.as_str() == id)
+        .map(|operation| operation.id.as_str())
+        .collect();
+    let operations: Vec<String> = context
+        .after
+        .operations
+        .iter()
+        .filter(|operation| operation.surface.as_str() == id)
+        .filter(|operation| before_ids.contains(operation.id.as_str()))
+        .map(|operation| operation.id.as_str().to_owned())
+        .collect();
+    let origin = Some(ElementOrigin::from(&after.origin));
+    let surface_reaches = [ChangeReach {
+        position: DiffPosition::None,
+        operations,
+        facts: Vec::new(),
+    }];
+    let surface_site = ChangeSite {
+        reaches: &surface_reaches,
+        origin: origin.clone(),
+    };
+    let mut comparisons = MemberComparisons::new();
+
+    for (member, route_case) in [("prefix", "surfacePrefix"), ("pathVersion", "pathVersion")] {
+        comparisons.insert(
+            member,
+            Box::new(|context, member_pointer, before_value, after_value| {
+                emit_at(
+                    context,
+                    &surface_site,
+                    RawChange::new(
+                        DiffKind::OperationRoute,
+                        route_case,
+                        member_pointer.to_owned(),
+                    )
+                    .between(before_value.cloned(), after_value.cloned()),
+                );
+
+                Ok(())
+            }),
+        );
+    }
+
+    compare_members(
+        context,
+        &ChangeSite {
+            reaches: site.reaches,
+            origin,
+        },
+        IrDefinition::Surface,
+        pointer,
+        Some(&object_members(before)?),
+        Some(&object_members(after)?),
+        &comparisons,
+    )
+}
+
+/// Compares the two lists of packs: added and removed by name, a version moved, then the order.
+pub(crate) fn compare_packs(context: &mut WalkContext<'_>, before: &[PackRef], after: &[PackRef]) {
+    let site = ChangeSite {
+        reaches: &NO_POSITION,
+        origin: None,
+    };
+
+    for (index, pack) in after.iter().enumerate() {
+        let pointer = pointer_join("", &["packs", &index.to_string()]);
+        let Some(before_pack) = before.iter().find(|candidate| candidate.name == pack.name) else {
+            emit_at(
+                context,
+                &site,
+                RawChange::new(DiffKind::PackUpgraded, "added", pointer)
+                    .between(None, Some(text_value(&pack.name))),
+            );
+
+            continue;
+        };
+
+        if before_pack.version != pack.version {
+            emit_at(
+                context,
+                &site,
+                RawChange::new(DiffKind::PackUpgraded, "version", pointer).between(
+                    Some(text_value(&before_pack.version)),
+                    Some(text_value(&pack.version)),
+                ),
+            );
+        }
+    }
+
+    for (index, pack) in before.iter().enumerate() {
+        if after.iter().any(|candidate| candidate.name == pack.name) {
+            continue;
+        }
+
+        emit_at(
+            context,
+            &site,
+            RawChange::new(
+                DiffKind::PackUpgraded,
+                "removed",
+                pointer_join("", &["packs", &index.to_string()]),
+            )
+            .between(Some(text_value(&pack.name)), None),
+        );
+    }
+
+    let before_names: Vec<&str> = before.iter().map(|pack| pack.name.as_str()).collect();
+    let after_names: Vec<&str> = after.iter().map(|pack| pack.name.as_str()).collect();
+
+    compare_kept_order(
+        context,
+        &site,
+        "/packs",
+        "packs",
+        &before_names,
+        &after_names,
+    );
 }

@@ -18,7 +18,7 @@ use crate::walk_context::{
 };
 use crate::walk_json::{member_names, object_members, pointer_join, text_value};
 use crate::walk_reach::{common_reaches, declaration_reach_key};
-use crate::walk_type_use::{BoundSide, compare_bound, compare_type_use};
+use crate::walk_type_use::{BoundSide, compare_bound, compare_schema_ref, compare_type_use};
 
 /// A declaration catalogue of the IR.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -597,21 +597,6 @@ fn compare_scheme_lists(
             RawChange::new(DiffKind::Identity, "schemeRoles", pointer.to_owned()),
         );
     }
-}
-
-/// Compares the reference of a declaration to a schema.
-///
-/// # Errors
-///
-/// Not ported yet.
-fn compare_schema_ref(
-    _context: &mut WalkContext<'_>,
-    _site: &ChangeSite<'_>,
-    _pointer: &str,
-    _before: Option<&SchemaRef>,
-    _after: Option<&SchemaRef>,
-) -> Result<(), DiffError> {
-    Err(not_ported_yet("compareSchemaRef"))
 }
 
 /// Compares the guest reason of two rights.

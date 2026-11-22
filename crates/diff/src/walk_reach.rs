@@ -51,10 +51,10 @@ pub(crate) struct ReachEntry {
 pub(crate) type ReachIndex = IndexMap<String, IndexMap<String, ReachEntry>>;
 
 /// The reach key of the int64 wire form.
-const INT64_REACH_KEY: &str = "wire/int64";
+pub(crate) const INT64_REACH_KEY: &str = "wire/int64";
 
 /// The reach key of the output enum wire form.
-const OUTPUT_ENUMS_REACH_KEY: &str = "wire/outputEnums";
+pub(crate) const OUTPUT_ENUMS_REACH_KEY: &str = "wire/outputEnums";
 
 /// The `format` of a scalar use that reaches the int64 wire form.
 const INT64_FORMAT: &str = "int64";

@@ -5,7 +5,6 @@ use seampact_ir::{InputField, InputProof, Operation, OperationInput};
 
 use crate::DiffError;
 use crate::change_sink::RawChange;
-use crate::not_ported::not_ported_yet;
 use crate::walk_context::{
     ChangeSite, KeyedListComparison, MemberComparisons, WalkContext, compare_keyed_list,
     compare_members, emit_at,
@@ -120,19 +119,43 @@ pub(crate) fn compare_body(
     )
 }
 
-/// Compares the fields of two input bodies.
-///
-/// # Errors
-///
-/// Not ported yet.
+/// Compares the fields of two input bodies by name: a field added or removed follows its property.
 fn compare_input_fields(
-    _context: &mut WalkContext<'_>,
-    _site: &ChangeSite<'_>,
-    _pointer: &str,
-    _before: &[InputField],
-    _after: &[InputField],
+    context: &mut WalkContext<'_>,
+    site: &ChangeSite<'_>,
+    pointer: &str,
+    before: &[InputField],
+    after: &[InputField],
 ) -> Result<(), DiffError> {
-    Err(not_ported_yet("compareInputFields"))
+    let follows_property =
+        |context: &mut WalkContext<'_>, entry_pointer: &str, field: &InputField| {
+            emit_at(
+                context,
+                site,
+                RawChange::new(DiffKind::Annotation, "fields", entry_pointer.to_owned())
+                    .between(None, Some(text_value(&field.name))),
+            );
+
+            Ok(())
+        };
+    let comparison = KeyedListComparison {
+        key_of: Box::new(|field: &InputField| Ok(field.name.clone())),
+        added: Box::new(follows_property),
+        removed: Box::new(follows_property),
+        kept: Box::new(|context, entry_pointer, before_field, after_field| {
+            compare_members(
+                context,
+                site,
+                IrDefinition::InputField,
+                entry_pointer,
+                Some(&object_members(before_field)?),
+                Some(&object_members(after_field)?),
+                &MemberComparisons::new(),
+            )
+        }),
+    };
+
+    compare_keyed_list(context, pointer, before, after, &comparison)
 }
 
 /// Compares the proofs of two input bodies by name.
