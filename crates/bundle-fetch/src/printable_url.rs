@@ -91,3 +91,71 @@ fn as_the_url_parser_reads_it(text: &str) -> String {
 fn is_control_or_space(character: char) -> bool {
     character <= LAST_CONTROL_OR_SPACE
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const PRINTED_FORMS: [(&str, &str); 17] = [
+        (
+            "https://user:SECRET@Host.example:8443/a/b?token=S2#frag",
+            "https://host.example:8443/a/b",
+        ),
+        ("https://host.example", "https://host.example/"),
+        (
+            "git@github.com:owner/repo.git",
+            "git@github.com:owner/repo.git",
+        ),
+        ("/local/path", "/local/path"),
+        ("https://u:SECRET@h:99999/x?t=S2", "https://h:99999/x"),
+        ("gopher://u:SECRET@h:99999/r", "gopher://h:99999/r"),
+        ("https://u:SECRET@[::1/x#f", "https://[::1/x"),
+        ("https://h:abc/x?t=S2", "https://h:abc/x"),
+        (" \thttps://u:SECRET@h:99999/x", "https://h:99999/x"),
+        ("https:/u:SECRET@h:99999/x", "https:/h:99999/x"),
+        ("https:\\\\u:SECRET@h:99999/x", "https:\\\\h:99999/x"),
+        ("https:u:SECRET@h:99999/x", "https:h:99999/x"),
+        ("https://u:SECRET#?x@h:99999/x?t=S2", "https://h:99999/x"),
+        ("\u{0}https://u:SECRET@h:99999/x?t=S2", "https://h:99999/x"),
+        (
+            "\u{1} https://u:SECRET@h:99999/x?t=S2\u{1f}",
+            "https://h:99999/x",
+        ),
+        ("ht\ttps://u:SECRET@h:99999/x?t=S2", "https://h:99999/x"),
+        ("https://u:SE\nCRET@h:99999/x?t=S2", "https://h:99999/x"),
+    ];
+
+    #[test]
+    fn a_url_is_printed_without_credentials_query_and_fragment() {
+        for (written, printed) in PRINTED_FORMS {
+            let actual = printable_url(written);
+
+            assert_eq!(actual, printed, "written {written:?}");
+            assert!(
+                !actual.contains("SECRET") && !actual.contains("S2"),
+                "written {written:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn an_error_text_that_repeats_the_url_shows_its_printable_form() {
+        let url = "https://x-access-token:SECRET@github.com/o/r.git";
+
+        assert_eq!(
+            with_printable_url(&format!("Command failed: git fetch {url} v1"), url),
+            "Command failed: git fetch https://github.com/o/r.git v1"
+        );
+    }
+
+    #[test]
+    fn only_an_ascii_letter_starts_a_scheme() {
+        for written in [
+            "\u{e9}x://u:SECRET@h:99999/x",
+            "\u{212a}://u:SECRET@h:99999/x",
+            "1x:u:SECRET@h:99999/x",
+        ] {
+            assert_eq!(printable_url(written), written, "written {written:?}");
+        }
+    }
+}

@@ -92,3 +92,108 @@ fn installed_version(directory: &Utf8Path) -> Result<Option<String>, BundleFetch
         _ => None,
     })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn installed(manifest: Option<&str>, version: &str) -> InstalledPackage {
+        let project = tempfile::tempdir().unwrap();
+        let root = Utf8Path::from_path(project.path()).unwrap();
+
+        if let Some(manifest) = manifest {
+            let package = root.join("node_modules/@scope/notes");
+
+            fs::create_dir_all(&package).unwrap();
+            fs::write(package.join(PACKAGE_MANIFEST), manifest).unwrap();
+        }
+
+        let source = PackageBundleSource {
+            package: "@scope/notes".to_owned(),
+            version: version.to_owned(),
+        };
+        let result = installed_bundle_package(&source, root).unwrap();
+
+        // The project path is a temporary one: make the failure text stable.
+        match result {
+            InstalledPackage::Failed(mut failure) => {
+                failure.message = failure.message.replace(root.as_str(), "<root>");
+                failure.file = failure
+                    .file
+                    .map(|file| file.replace(root.as_str(), "<root>"));
+
+                InstalledPackage::Failed(failure)
+            }
+            InstalledPackage::Directory(directory) => InstalledPackage::Directory(directory),
+        }
+    }
+
+    fn failure_of(result: InstalledPackage) -> BundleSourceFailure {
+        match result {
+            InstalledPackage::Failed(failure) => failure,
+            InstalledPackage::Directory(directory) => panic!("expected a failure, got {directory}"),
+        }
+    }
+
+    #[test]
+    fn a_package_that_is_not_installed_is_named() {
+        let failure = failure_of(installed(None, "1.0.0"));
+
+        assert_eq!(failure.code, BundleSourceFailureCode::PackageMissing);
+        assert_eq!(
+            failure.message,
+            "The bundle package '@scope/notes' is not installed in the project of <root>."
+        );
+        assert_eq!(
+            failure.fix,
+            "Install it with your package manager, at version 1.0.0."
+        );
+    }
+
+    #[test]
+    fn a_package_at_another_version_names_both_versions() {
+        let failure = failure_of(installed(Some(r#"{"version":"2.0.0"}"#), "1.0.0"));
+
+        assert_eq!(failure.code, BundleSourceFailureCode::PackageVersion);
+        assert_eq!(
+            failure.message,
+            "The installed bundle package '@scope/notes' is at version '2.0.0'; the source names 1.0.0."
+        );
+        assert_eq!(failure.expected.as_deref(), Some("1.0.0"));
+        assert_eq!(failure.actual.as_deref(), Some("2.0.0"));
+        assert!(
+            failure
+                .file
+                .as_deref()
+                .is_some_and(|file| file.ends_with("node_modules/@scope/notes/package.json"))
+        );
+    }
+
+    #[test]
+    fn a_manifest_without_a_usable_version_reads_as_none() {
+        for manifest in [
+            "{}",
+            r#"{"version":3}"#,
+            "[]",
+            "not json",
+            "\u{feff}{\"version\":\"1.0.0\"}",
+        ] {
+            let failure = failure_of(installed(Some(manifest), "1.0.0"));
+
+            assert!(
+                failure.message.contains("is at version (none);"),
+                "manifest {manifest:?}: {}",
+                failure.message
+            );
+            assert_eq!(failure.actual, None, "manifest {manifest:?}");
+        }
+    }
+
+    #[test]
+    fn a_package_at_the_named_version_is_the_bundle_directory() {
+        assert!(matches!(
+            installed(Some(r#"{"version":"1.0.0"}"#), "1.0.0"),
+            InstalledPackage::Directory(directory) if directory.ends_with("node_modules/@scope/notes")
+        ));
+    }
+}

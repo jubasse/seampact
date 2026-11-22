@@ -208,3 +208,121 @@ pub(crate) fn git_failed(source: &GitBundleSource, failure: &GitFailure) -> Bund
         "Check the URL, the tag and your access to the repository, and that `git` is on the PATH.",
     )
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn environment(entries: &[(&str, &str)]) -> Environment {
+        entries
+            .iter()
+            .map(|(name, value)| ((*name).to_owned(), (*value).to_owned()))
+            .collect()
+    }
+
+    #[test]
+    fn the_variables_that_locate_a_repository_are_dropped() {
+        let inherited = environment(&[("GIT_DIR", "/x"), ("GIT_WORK_TREE", "/y"), ("HOME", "/h")]);
+        let env = git_environment(&inherited, LocalSourcePolicy::Allow);
+
+        assert_eq!(env.get("GIT_DIR"), None);
+        assert_eq!(env.get("GIT_WORK_TREE"), None);
+        assert_eq!(env.get("HOME").map(String::as_str), Some("/h"));
+    }
+
+    #[test]
+    fn local_sources_decide_the_protocols_and_the_prompts_are_off() {
+        let allowed = git_environment(&Environment::new(), LocalSourcePolicy::Allow);
+        let refused = git_environment(&Environment::new(), LocalSourcePolicy::Refuse);
+
+        assert_eq!(
+            allowed.get("GIT_ALLOW_PROTOCOL").map(String::as_str),
+            Some("https:ssh:file")
+        );
+        assert_eq!(
+            refused.get("GIT_ALLOW_PROTOCOL").map(String::as_str),
+            Some("https:ssh")
+        );
+        assert_eq!(
+            refused.get("GIT_TERMINAL_PROMPT").map(String::as_str),
+            Some("0")
+        );
+        assert_eq!(
+            refused.get("GIT_SSH_COMMAND").map(String::as_str),
+            Some("ssh -o BatchMode=yes")
+        );
+    }
+
+    #[test]
+    fn an_ssh_command_the_user_set_stays() {
+        let env = git_environment(
+            &environment(&[("GIT_SSH_COMMAND", "ssh -i key")]),
+            LocalSourcePolicy::Refuse,
+        );
+
+        assert_eq!(
+            env.get("GIT_SSH_COMMAND").map(String::as_str),
+            Some("ssh -i key")
+        );
+    }
+
+    #[test]
+    fn a_failure_reads_as_the_trimmed_error_stream_or_the_timeout() {
+        assert_eq!(
+            git_failure_reason(&GitFailure::Stderr("\u{feff} fatal: no tag\n ".to_owned())),
+            "fatal: no tag"
+        );
+        assert_eq!(
+            git_failure_reason(&GitFailure::Stderr("\u{85}x\u{85}".to_owned())),
+            "\u{85}x\u{85}",
+            "U+0085 is no ECMAScript white space"
+        );
+        assert_eq!(
+            git_failure_reason(&GitFailure::TimedOut),
+            "it took over 60000 ms"
+        );
+    }
+
+    #[test]
+    fn a_tag_that_does_not_exist_fails_with_what_git_says_and_no_credentials() {
+        let directory = tempfile::tempdir().unwrap();
+        let root = camino::Utf8Path::from_path(directory.path()).unwrap();
+        let runner = GitRunner::new(root.join("repository"), LocalSourcePolicy::Allow);
+
+        runner.run(&["init", "--quiet", "--bare"], None).unwrap();
+
+        let failure = runner
+            .run(
+                &[
+                    "fetch",
+                    "--quiet",
+                    "--depth",
+                    "1",
+                    "--",
+                    "file:///does/not/exist.git",
+                    "refs/tags/v1",
+                ],
+                Some(FETCH_TIMEOUT),
+            )
+            .unwrap_err();
+        let source = GitBundleSource {
+            url: "https://u:SECRET@h/r.git".to_owned(),
+            tag: "v1".to_owned(),
+            directory: None,
+        };
+        let failed = git_failed(&source, &failure);
+
+        assert_eq!(failed.code, BundleSourceFailureCode::GitFailed);
+        assert!(
+            failed
+                .message
+                .starts_with("Fetching tag 'v1' of 'https://h/r.git' with git failed: '"),
+            "{}",
+            failed.message
+        );
+        assert!(
+            matches!(failure, GitFailure::Stderr(ref stderr) if !stderr.is_empty()),
+            "{failure:?}"
+        );
+    }
+}

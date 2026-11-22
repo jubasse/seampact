@@ -133,15 +133,15 @@ fn file_url(
     resolved: &Utf8PathBuf,
     keeps_trailing_slash: bool,
 ) -> Result<String, BundleFetchError> {
-    let path = if keeps_trailing_slash && !resolved.as_str().ends_with('/') {
-        format!("{resolved}/")
+    let url = if keeps_trailing_slash {
+        Url::from_directory_path(resolved)
     } else {
-        resolved.to_string()
+        Url::from_file_path(resolved)
     };
 
-    Url::from_file_path(&path).map(String::from).map_err(|()| {
+    url.map(String::from).map_err(|()| {
         InternalError::new(format!(
-            "bundle: the repository path '{path}' is no file URL."
+            "bundle: the repository path '{resolved}' is no file URL."
         ))
         .into()
     })
@@ -178,4 +178,131 @@ fn bad_tag(tag: &str) -> BundleSourceFailure {
         format!("The git tag {} is not a tag name.", quote_text(tag)),
         "Name the tag the bundle was committed under.",
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn git(url: &str, tag: &str, directory: Option<&str>) -> GitBundleSource {
+        GitBundleSource {
+            url: url.to_owned(),
+            tag: tag.to_owned(),
+            directory: directory.map(str::to_owned),
+        }
+    }
+
+    fn code_of(
+        source: &GitBundleSource,
+        policy: LocalSourcePolicy,
+    ) -> Option<BundleSourceFailureCode> {
+        git_source_problem(source, policy).map(|failure| failure.code)
+    }
+
+    #[test]
+    fn a_repository_is_local_unless_it_is_a_remote_scheme_or_scp_like() {
+        for (url, local) in [
+            ("file:///repo.git", true),
+            ("FILE://host/repo.git", true),
+            ("../repo.git", true),
+            ("/abs/repo.git", true),
+            ("C:\\repo.git", true),
+            ("C:/repo.git", true),
+            ("a:repo.git", true),
+            ("https://h/repo.git", false),
+            ("ssh://git@h/repo.git", false),
+            ("git@github.com:owner/repo.git", false),
+            ("host:repo.git", false),
+            // One code point before the colon, as in JavaScript's `u` flag: no scp-like host.
+            ("\u{1f600}:repo.git", true),
+            ("\u{1f600}\u{1f600}:repo.git", false),
+        ] {
+            assert_eq!(is_local_repository(url), local, "url {url:?}");
+        }
+    }
+
+    #[test]
+    fn a_source_is_refused_for_its_scheme_its_locality_its_directory_or_its_tag() {
+        let allow = LocalSourcePolicy::Allow;
+        let refuse = LocalSourcePolicy::Refuse;
+
+        assert_eq!(code_of(&git("https://h/r.git", "v1", None), allow), None);
+        assert_eq!(
+            code_of(&git("ssh://h/r.git", "v1", Some("bundle/")), allow),
+            None
+        );
+        assert_eq!(code_of(&git("file:///r.git", "v1", None), allow), None);
+        assert_eq!(
+            code_of(&git("ext::sh -c x://y", "v1", None), allow),
+            None,
+            "no scheme before `://`"
+        );
+        assert_eq!(
+            code_of(&git("HTTP://h/r.git", "v1", None), allow),
+            Some(BundleSourceFailureCode::GitUrl)
+        );
+        assert_eq!(
+            code_of(&git("git://h/r.git", "v1", None), allow),
+            Some(BundleSourceFailureCode::GitUrl)
+        );
+        assert_eq!(
+            code_of(&git("file:///r.git", "v1", None), refuse),
+            Some(BundleSourceFailureCode::SourceLocal)
+        );
+        assert_eq!(
+            code_of(&git("../r.git", "v1", None), refuse),
+            Some(BundleSourceFailureCode::SourceLocal)
+        );
+        assert_eq!(code_of(&git("https://h/r.git", "v1", None), refuse), None);
+        assert_eq!(
+            code_of(&git("https://h/r.git", "v1", Some("../x")), allow),
+            Some(BundleSourceFailureCode::GitDirectory)
+        );
+        assert_eq!(
+            code_of(&git("https://h/r.git", "-v1", None), allow),
+            Some(BundleSourceFailureCode::GitTag)
+        );
+        assert_eq!(
+            code_of(&git("https://h/r.git", "a..b", None), allow),
+            Some(BundleSourceFailureCode::GitTag)
+        );
+    }
+
+    #[test]
+    fn a_directory_is_a_plain_relative_path_with_one_trailing_slash() {
+        for (directory, prefix) in [
+            (None, Some("")),
+            (Some("bundle"), Some("bundle/")),
+            (Some("a/b///"), Some("a/b/")),
+            (Some(""), None),
+            (Some("/"), None),
+            (Some("/abs"), None),
+            (Some("a//b"), None),
+            (Some("./a"), None),
+            (Some("a/.."), None),
+            (Some("a\\b"), None),
+        ] {
+            assert_eq!(
+                bundle_directory_prefix(directory).as_deref(),
+                prefix,
+                "directory {directory:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_local_path_becomes_a_file_url_resolved_against_the_base_directory() {
+        let base = Utf8Path::new("/work/app/./sub");
+
+        for (url, expected) in [
+            ("../repo.git", "file:///work/app/repo.git"),
+            ("/abs/../repo.git", "file:///repo.git"),
+            ("repo dir/", "file:///work/app/sub/repo%20dir/"),
+            ("https://h/r.git", "https://h/r.git"),
+            ("file:///r.git", "file:///r.git"),
+            ("git@h:o/r.git", "git@h:o/r.git"),
+        ] {
+            assert_eq!(repository_url(url, base).unwrap(), expected, "url {url:?}");
+        }
+    }
 }

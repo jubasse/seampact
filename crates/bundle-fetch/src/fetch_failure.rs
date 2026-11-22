@@ -153,3 +153,38 @@ pub fn bundle_source_text(source: &BundleSource) -> String {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use seampact_bundle::{GitBundleSource, ReleaseBundleSource};
+
+    use super::*;
+
+    #[test]
+    fn a_source_text_for_messages_never_holds_the_token_of_its_url() {
+        let token_url = "https://x-access-token:SECRET@github.com/o/r.git?t=S2";
+        let git = BundleSource {
+            form: BundleSourceForm::Git(GitBundleSource {
+                url: token_url.to_owned(),
+                tag: "v1".to_owned(),
+                directory: None,
+            }),
+            integrity: None,
+        };
+        let release = BundleSource {
+            form: BundleSourceForm::Release(ReleaseBundleSource {
+                url: token_url.to_owned(),
+            }),
+            integrity: None,
+        };
+
+        assert_eq!(
+            bundle_source_text(&git),
+            "git 'https://github.com/o/r.git' tag 'v1'"
+        );
+        assert_eq!(
+            bundle_source_text(&release),
+            "release 'https://github.com/o/r.git'"
+        );
+    }
+}

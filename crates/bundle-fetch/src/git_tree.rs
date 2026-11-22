@@ -206,3 +206,101 @@ fn without_last_character(line: &str) -> &str {
         .and_then(|(last, _)| line.get(..last))
         .unwrap_or("")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn entry(mode: &str, object_type: &str, path: &str) -> String {
+        format!("{mode} {object_type} 0123456789abcdef0123456789abcdef01234567\t{path}\0")
+    }
+
+    fn refusal_code(listing: &str, prefix: &str) -> Option<BundleSourceFailureCode> {
+        match tree_files(listing, prefix) {
+            TreeFiles::Refused(failure) => Some(failure.code),
+            TreeFiles::Files(_) => None,
+        }
+    }
+
+    #[test]
+    fn the_blobs_below_the_prefix_are_kept_in_order_and_the_rest_is_skipped() {
+        let listing = [
+            entry("100644", "blob", "README.md"),
+            entry("100644", "blob", "bundle/seampact-bundle.json"),
+            entry("100755", "blob", "bundle/ir/notes.json"),
+            entry("120000", "blob", "other/link"),
+        ]
+        .concat();
+        let TreeFiles::Files(files) = tree_files(&listing, "bundle/") else {
+            panic!("the tree is accepted");
+        };
+
+        assert_eq!(
+            files
+                .iter()
+                .map(|file| file.path.as_str())
+                .collect::<Vec<_>>(),
+            ["seampact-bundle.json", "ir/notes.json"]
+        );
+    }
+
+    #[test]
+    fn a_link_a_submodule_a_bad_path_or_a_case_duplicate_refuses_the_tree() {
+        let archive = |code| Some(BundleSourceFailureCode::Bundle(code));
+
+        assert_eq!(
+            refusal_code(&entry("120000", "blob", "ir/a.json"), ""),
+            archive(BundleFailureCode::ArchiveEntryType)
+        );
+        assert_eq!(
+            refusal_code(&entry("160000", "commit", "sub"), ""),
+            archive(BundleFailureCode::ArchiveEntryType)
+        );
+        assert_eq!(
+            refusal_code(&entry("100644", "blob", "ir/a b.json"), ""),
+            archive(BundleFailureCode::ArchiveEntryPath)
+        );
+        assert_eq!(
+            refusal_code(
+                &[
+                    entry("100644", "blob", "ir/a.json"),
+                    entry("100644", "blob", "ir/A.json")
+                ]
+                .concat(),
+                ""
+            ),
+            archive(BundleFailureCode::ArchiveEntryDuplicate)
+        );
+        assert_eq!(
+            refusal_code(&entry("100644", "blob", "seampact-bundle.json"), ""),
+            None
+        );
+    }
+
+    #[test]
+    fn more_files_than_the_cap_refuse_the_tree() {
+        let listing: String = (0..=BUNDLE_ENTRIES_MAX)
+            .map(|index| entry("100644", "blob", &format!("ir/f{index}.json")))
+            .collect();
+
+        assert_eq!(
+            refusal_code(&listing, ""),
+            Some(BundleSourceFailureCode::Bundle(
+                BundleFailureCode::ArchiveTooManyEntries
+            ))
+        );
+    }
+
+    #[test]
+    fn a_line_without_a_tab_reads_its_whole_text_as_the_path() {
+        assert_eq!(without_last_character("abc"), "ab");
+        assert_eq!(without_last_character("a\u{1f600}"), "a");
+        assert_eq!(without_last_character(""), "");
+        assert_eq!(
+            refusal_code("no tab here\0", ""),
+            Some(BundleSourceFailureCode::Bundle(
+                BundleFailureCode::ArchiveEntryType
+            ))
+        );
+    }
+}

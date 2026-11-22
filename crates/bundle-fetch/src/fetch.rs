@@ -274,3 +274,144 @@ fn read_cache_entry(
         integrity,
     })
 }
+
+#[cfg(test)]
+mod tests {
+    use std::fs;
+    use std::io::Cursor;
+    use std::time::Duration;
+
+    use seampact_bundle::BundleFailureCode;
+    use url::Url;
+
+    use super::*;
+    use crate::release_get::{ReleaseGetError, ReleaseResponse};
+
+    const PIN: &str = "sha256-m1Dx5GL/JzlteMx5ojBeXbRHBV8Wx7YgA3+v5h4xLDs=";
+    const PIN_ENTRY: &str =
+        "bundles/sha256-9b50f1e462ff27396d78cc79a2305e5db447055f16c7b620037fafe61e312c3b";
+
+    /// Answers every request with the same body.
+    struct FixedBody(Vec<u8>);
+
+    impl ReleaseGet for FixedBody {
+        fn get(&self, _url: &Url, _timeout: Duration) -> Result<ReleaseResponse, ReleaseGetError> {
+            Ok(ReleaseResponse {
+                status: 200,
+                location: None,
+                body: Box::new(Cursor::new(self.0.clone())),
+            })
+        }
+    }
+
+    fn source(form: BundleSourceForm, integrity: Option<&str>) -> BundleSource {
+        BundleSource {
+            form,
+            integrity: integrity.map(str::to_owned),
+        }
+    }
+
+    fn fetch(source: &BundleSource, cache: &Utf8Path, get: &dyn ReleaseGet) -> BundleFetchResult {
+        let options = BundleFetchOptions {
+            base_directory: cache.to_path_buf(),
+            local_sources: LocalSourcePolicy::Refuse,
+            cache_directory: Some(cache.join("cache")),
+            release_get: get,
+        };
+
+        fetch_bundle(source, &options).unwrap()
+    }
+
+    fn codes(result: &BundleFetchResult) -> Vec<&'static str> {
+        match result {
+            BundleFetchResult::Failed { failures, .. } => failures
+                .iter()
+                .map(|failure| failure.code.as_str())
+                .collect(),
+            BundleFetchResult::Fetched { .. } => Vec::new(),
+        }
+    }
+
+    #[test]
+    fn a_maven_source_is_left_to_the_jvm_plugins() {
+        let directory = tempfile::tempdir().unwrap();
+        let cache = Utf8Path::from_path(directory.path()).unwrap();
+        let result = fetch(
+            &source(
+                BundleSourceForm::Maven("org.example:notes:1.0.0".to_owned()),
+                None,
+            ),
+            cache,
+            &FixedBody(Vec::new()),
+        );
+
+        assert_eq!(codes(&result), ["bundle.maven-jvm-only"]);
+    }
+
+    #[test]
+    fn a_release_that_is_not_https_is_refused_before_any_request() {
+        let directory = tempfile::tempdir().unwrap();
+        let cache = Utf8Path::from_path(directory.path()).unwrap();
+        let release = BundleSourceForm::Release(ReleaseBundleSource {
+            url: "http://h/x.tgz".to_owned(),
+        });
+
+        assert_eq!(
+            codes(&fetch(
+                &source(release, None),
+                cache,
+                &FixedBody(Vec::new())
+            )),
+            ["bundle.release-url"]
+        );
+    }
+
+    #[test]
+    fn a_release_that_is_no_tarball_gives_the_archive_readers_first_failure() {
+        let directory = tempfile::tempdir().unwrap();
+        let cache = Utf8Path::from_path(directory.path()).unwrap();
+        let release = BundleSourceForm::Release(ReleaseBundleSource {
+            url: "https://h/x.tgz".to_owned(),
+        });
+        let result = fetch(
+            &source(release, Some(PIN)),
+            cache,
+            &FixedBody(b"not a tarball".to_vec()),
+        );
+
+        assert_eq!(codes(&result), [BundleFailureCode::ArchiveInvalid.as_str()]);
+        assert!(
+            !cache.join("cache").join(PIN_ENTRY).exists(),
+            "nothing is cached"
+        );
+    }
+
+    #[test]
+    fn a_cache_entry_changed_after_it_was_cached_is_reported_then_checked() {
+        let directory = tempfile::tempdir().unwrap();
+        let cache = Utf8Path::from_path(directory.path()).unwrap();
+        let entry = cache.join("cache").join(PIN_ENTRY);
+
+        fs::create_dir_all(&entry).unwrap();
+
+        let release = BundleSourceForm::Release(ReleaseBundleSource {
+            url: "https://h/x.tgz".to_owned(),
+        });
+        let result = fetch(&source(release, Some(PIN)), cache, &FixedBody(Vec::new()));
+        let BundleFetchResult::Failed { failures, .. } = &result else {
+            panic!("an empty cache entry fails the check");
+        };
+
+        assert_eq!(
+            codes(&result),
+            [
+                "bundle.cache-invalid",
+                BundleFailureCode::ManifestMissing.as_str()
+            ]
+        );
+        assert_eq!(
+            failures.first().and_then(|failure| failure.file.as_deref()),
+            Some(entry.as_str())
+        );
+    }
+}
