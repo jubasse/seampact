@@ -1,11 +1,7 @@
 //! The seampact CLI, ported from `packages/core/cli/src`: argument parsing, dispatch, help, the
 //! problem printer and the commands; the binary `seampact` calls [`run_cli`].
 
-#![allow(
-    dead_code,
-    reason = "functions reached only by stubs until the last brief of the crate"
-)]
-
+#[allow(dead_code, reason = "reached only by generate and check, layer 3.3")]
 mod api_refs;
 mod args;
 mod bundle_command;
@@ -15,6 +11,7 @@ mod command;
 mod compile_command;
 mod compile_sources;
 mod config_location;
+#[allow(dead_code, reason = "reached only by generate and check, layer 3.3")]
 mod contract_position;
 mod diff_baseline;
 mod diff_command;

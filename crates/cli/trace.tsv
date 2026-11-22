@@ -11,8 +11,8 @@ src/run_cli.rs#run_init	packages/core/cli/src/run-cli.ts#runInit
 src/run_cli.rs#run_compile	packages/core/cli/src/run-cli.ts#runCompile
 -	packages/core/cli/src/run-cli.ts#runGenerate	skip: generate and check are layer 3.3 commands
 -	packages/core/cli/src/run-cli.ts#runCheck	skip: generate and check are layer 3.3 commands
--	packages/core/cli/src/run-cli.ts#pluginRunOf	pending: brief 3
--	packages/core/cli/src/run-cli.ts#nativeEntryPolicy	pending: brief 3
+-	packages/core/cli/src/run-cli.ts#pluginRunOf	skip: layer 3.3 generate
+-	packages/core/cli/src/run-cli.ts#nativeEntryPolicy	skip: layer 3.3 generate
 src/run_cli.rs#run_lint	packages/core/cli/src/run-cli.ts#runLint
 src/run_cli.rs#run_diff	packages/core/cli/src/run-cli.ts#runDiff
 src/run_cli.rs#run_explain	packages/core/cli/src/run-cli.ts#runExplain
@@ -80,8 +80,8 @@ src/init_modelines.rs#posix_relative	packages/core/cli/src/commands/init-command
 src/init_command.rs#planned_ignore	packages/core/cli/src/commands/init-command.ts#plannedIgnore
 src/init_command.rs#write_ignore	packages/core/cli/src/commands/init-command.ts#writeIgnore
 src/init_command.rs#file_exists_problem	packages/core/cli/src/commands/init-command.ts#fileExistsProblem
-src/init_command.rs#ignore_file_link_problem	packages/core/cli/src/commands/init-command.ts#ignoreFileLinkProblem	pending: brief 3
-src/init_command.rs#no_path_source_problem	packages/core/cli/src/commands/init-command.ts#noPathSourceProblem	pending: brief 3
+src/init_command.rs#ignore_file_link_problem	packages/core/cli/src/commands/init-command.ts#ignoreFileLinkProblem
+src/init_command.rs#no_path_source_problem	packages/core/cli/src/commands/init-command.ts#noPathSourceProblem
 src/cli_io.rs#refuse	packages/core/cli/src/commands/init-command.ts#refuse
 -	packages/core/cli/src/commands/diff-baseline.ts#validator	skip: check_open_ir builds its validators once
 src/diff_baseline.rs#read_baseline	packages/core/cli/src/commands/diff-baseline.ts#readBaseline
@@ -110,15 +110,15 @@ src/explain_view.rs#written	packages/core/cli/src/commands/explain-view.ts#lineT
 src/explain_view.rs#block	packages/core/cli/src/commands/explain-view.ts#block
 src/explain_view.rs#member_line	packages/core/cli/src/commands/explain-view.ts#memberLine
 src/explain_view.rs#access_lines	packages/core/cli/src/commands/explain-view.ts#accessLines
-src/explain_values.rs#csrf_value	packages/core/cli/src/commands/explain-view.ts#csrfValue	pending: brief 3
-src/explain_values.rs#idempotency_value	packages/core/cli/src/commands/explain-view.ts#idempotencyValue	pending: brief 3
+src/explain_values.rs#csrf_value	packages/core/cli/src/commands/explain-view.ts#csrfValue
+src/explain_values.rs#idempotency_value	packages/core/cli/src/commands/explain-view.ts#idempotencyValue
 src/explain_values.rs#unknown_query_value	packages/core/cli/src/commands/explain-view.ts#unknownQueryValue
-src/explain_values.rs#concurrency_value	packages/core/cli/src/commands/explain-view.ts#concurrencyValue	pending: brief 3
-src/explain_values.rs#paging_value	packages/core/cli/src/commands/explain-view.ts#pagingValue	pending: brief 3
-src/explain_values.rs#deprecated_value	packages/core/cli/src/commands/explain-view.ts#deprecatedValue	pending: brief 3
+src/explain_values.rs#concurrency_value	packages/core/cli/src/commands/explain-view.ts#concurrencyValue
+src/explain_values.rs#paging_value	packages/core/cli/src/commands/explain-view.ts#pagingValue
+src/explain_values.rs#deprecated_value	packages/core/cli/src/commands/explain-view.ts#deprecatedValue
 src/explain_values.rs#maturity_value	packages/core/cli/src/commands/explain-view.ts#maturityValue
-src/explain_values.rs#subject_defaulted	packages/core/cli/src/commands/explain-view.ts#subjectDefaulted	pending: brief 3
-src/explain_values.rs#requirement_value	packages/core/cli/src/commands/explain-view.ts#requirementValue	pending: brief 3
+src/explain_values.rs#subject_defaulted	packages/core/cli/src/commands/explain-view.ts#subjectDefaulted
+src/explain_values.rs#requirement_value	packages/core/cli/src/commands/explain-view.ts#requirementValue
 src/explain_view.rs#input_lines	packages/core/cli/src/commands/explain-view.ts#inputLines
 src/explain_view.rs#param_lines	packages/core/cli/src/commands/explain-view.ts#paramLines
 src/explain_values.rs#response_value	packages/core/cli/src/commands/explain-view.ts#responseValue
@@ -127,15 +127,15 @@ src/explain_not_shown.rs#nested_not_shown	packages/core/cli/src/commands/explain
 src/explain_not_shown.rs#not_shown_line	packages/core/cli/src/commands/explain-view.ts#notShownLine
 src/explain_not_shown.rs#is_empty_value	packages/core/cli/src/commands/explain-view.ts#isEmptyValue
 src/explain_flow.rs#type_text	packages/core/cli/src/commands/explain-view.ts#typeText
-src/explain_values.rs#source_text	packages/core/cli/src/commands/explain-view.ts#sourceText	pending: brief 3
+src/explain_values.rs#source_text	packages/core/cli/src/commands/explain-view.ts#sourceText
 src/explain_values.rs#without_provenance	packages/core/cli/src/commands/explain-view.ts#withoutProvenance
 -	packages/core/cli/src/commands/explain-view.ts#recordOf	skip: a JsonObject is already the record of its members in key order
 src/explain_origin.rs#provenance	packages/core/cli/src/commands/explain-view.ts#provenance
 src/explain_origin.rs#origin_text	packages/core/cli/src/commands/explain-view.ts#originText
 src/explain_flow.rs#flow	packages/core/cli/src/commands/explain-view.ts#flow
-src/contract_position.rs#contract_position	packages/core/cli/src/commands/contract-position.ts#contractPosition	pending: brief 3
--	packages/core/cli/src/commands/contract-position.ts#nodesAlong	pending: brief 3
--	packages/core/cli/src/commands/contract-position.ts#childOf	pending: brief 3
--	packages/core/cli/src/commands/contract-position.ts#locatedOrigin	pending: brief 3
+src/contract_position.rs#contract_position	packages/core/cli/src/commands/contract-position.ts#contractPosition
+src/contract_position.rs#nodes_along	packages/core/cli/src/commands/contract-position.ts#nodesAlong
+src/contract_position.rs#child_of	packages/core/cli/src/commands/contract-position.ts#childOf
+src/contract_position.rs#located_origin	packages/core/cli/src/commands/contract-position.ts#locatedOrigin
 src/contract_position.rs#origin_position	packages/core/cli/src/commands/contract-position.ts#originPosition
 src/local_bundle.rs#verify_local_bundle	packages/core/cli/src/commands/local-bundle.ts#verifyLocalBundle

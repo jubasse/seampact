@@ -4,7 +4,6 @@ use seampact_cli_config::CliProblem;
 use seampact_ir::OperationId;
 use seampact_target::Refusal;
 
-use crate::CliError;
 use crate::contract_position::{ContractPositions, contract_position};
 
 /// The problem as one line,
@@ -65,6 +64,7 @@ pub(crate) fn entry_where(entry_id: &str, api: Option<&str>) -> String {
 }
 
 /// The location of a target entry under `app` when the run reads several apps.
+#[allow(dead_code, reason = "reached only by generate and check, layer 3.3")]
 pub(crate) fn app_entry_where(app: Option<&str>, entry_id: &str, api: Option<&str>) -> String {
     let location = entry_where(entry_id, api);
 
@@ -75,6 +75,7 @@ pub(crate) fn app_entry_where(app: Option<&str>, entry_id: &str, api: Option<&st
 }
 
 /// `problem` located inside `app`, in front of its own location.
+#[allow(dead_code, reason = "reached only by generate and check, layer 3.3")]
 pub(crate) fn in_app(app: &str, problem: CliProblem) -> CliProblem {
     let location = match &problem.location {
         Some(location) => format!("app '{app}', {location}"),
@@ -88,6 +89,7 @@ pub(crate) fn in_app(app: &str, problem: CliProblem) -> CliProblem {
 }
 
 /// Whether `message` writes `pointer` as a whole: not followed by `/` or a word character.
+#[allow(dead_code, reason = "reached only by generate and check, layer 3.3")]
 fn names_pointer(message: &str, pointer: &str) -> bool {
     // Every start position is tried, as a regular expression search does, so occurrences may overlap.
     message.char_indices().any(|(start, _)| {
@@ -107,11 +109,12 @@ fn names_pointer(message: &str, pointer: &str) -> bool {
 
 /// The problem a target's refusal prints: its message followed by the operation and IR member it
 /// names when the message does not, and the contract position when `positions` locates it.
+#[allow(dead_code, reason = "reached only by generate and check, layer 3.3")]
 pub(crate) fn problem_from_refusal(
     refusal: &Refusal,
     location: String,
     positions: Option<&ContractPositions<'_>>,
-) -> Result<CliProblem, CliError> {
+) -> CliProblem {
     let operation = refusal.operation.as_ref().map(OperationId::as_str);
     let member = refusal.member.as_deref();
     let mut pointers: Vec<String> = Vec::new();
@@ -135,18 +138,18 @@ pub(crate) fn problem_from_refusal(
         format!(" ({})", pointers.join(", "))
     };
     let position = match positions {
-        Some(positions) => contract_position(positions, member, operation)?,
+        Some(positions) => contract_position(positions, member, operation),
         None => None,
     };
 
-    Ok(CliProblem {
+    CliProblem {
         code: refusal.code.clone(),
         message: format!("{}{at}", refusal.message),
         fix: refusal.fix.clone(),
         location: Some(location),
         position,
         docs: refusal.docs.clone(),
-    })
+    }
 }
 
 #[cfg(test)]

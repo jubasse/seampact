@@ -11,7 +11,7 @@ use seampact_cli_config::{
 };
 use seampact_editor_schemas::DEFAULT_EDITOR_SCHEMAS_DIRECTORY;
 
-use crate::cli_problem::unlocated_problem;
+use crate::cli_problem::{located_problem, unlocated_problem};
 use crate::compile_command::{CompileOutputs, EditorSchemasMode, compile_command};
 use crate::compile_sources::run_environment;
 use crate::config_location::{APP_CONFIG_FILE_NAME, ConfigLocation, config_location, display_path};
@@ -22,7 +22,6 @@ use crate::init_starter::{
     starter_contract,
 };
 use crate::modelines::{INSTALLED_AUTHORING_SCHEMAS, modeline_of, with_modeline};
-use crate::not_ported::not_ported_yet;
 use crate::{CliError, CliIo, EXIT_SUCCESS, refuse};
 
 /// The ignore entry of the default editor schemas directory, at any depth below the app root.
@@ -142,7 +141,7 @@ fn init_new_project(
     )?;
 
     if let Some(GitIgnoreChange::Link { file }) = &ignore {
-        let problem = ignore_file_link_problem(io, file)?;
+        let problem = ignore_file_link_problem(io, file);
 
         return Ok(refuse(io, &[problem]));
     }
@@ -318,16 +317,28 @@ pub(crate) fn write_ignore(
 }
 
 /// The refusal when `.gitignore` is a symbolic link.
-pub(crate) fn ignore_file_link_problem(
-    _io: &dyn CliIo,
-    _file: &Utf8Path,
-) -> Result<CliProblem, CliError> {
-    Err(not_ported_yet("ignoreFileLinkProblem"))
+pub(crate) fn ignore_file_link_problem(io: &dyn CliIo, file: &Utf8Path) -> CliProblem {
+    unlocated_problem(
+        "init.ignore-file-link",
+        format!(
+            "{} is a symbolic link, and adding the editor schemas to it would change its target; nothing was written.",
+            display_path(io.cwd(), file)
+        ),
+        "Run `seampact init` with `--no-ignore-files` and add `.seampact/` to the link's target yourself.",
+    )
 }
 
 /// The refusal when the app config names no `path` source.
-pub(crate) fn no_path_source_problem(_location: &ConfigLocation) -> Result<CliProblem, CliError> {
-    Err(not_ported_yet("noPathSourceProblem"))
+pub(crate) fn no_path_source_problem(location: &ConfigLocation) -> CliProblem {
+    located_problem(
+        "init.modelines.no-source",
+        format!(
+            "{} names no `path` source, so no contract file here gets a modeline.",
+            location.display_name
+        ),
+        "Add a `path` source that names your contract folder; a bundle source's files are not edited.",
+        location.display_name.clone(),
+    )
 }
 
 /// The refusal when `existing` files already stand where a new project goes.
