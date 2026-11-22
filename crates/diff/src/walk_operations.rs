@@ -3,9 +3,7 @@
 use std::collections::HashMap;
 
 use seampact_diff_table::{DiffKind, DiffPosition, IrDefinition};
-use seampact_ir::{
-    DeclarationKind, Deprecation, Operation, OperationInput, OperationMaturity, Origin, Response,
-};
+use seampact_ir::{DeclarationKind, Operation, OperationMaturity, Origin};
 use seampact_json::JsonValue;
 
 use crate::DiffError;
@@ -13,10 +11,14 @@ use crate::change_sink::{ChangeReach, ElementOrigin, RawChange};
 use crate::not_ported::not_ported_yet;
 use crate::walk_access::access_comparisons;
 use crate::walk_behaviour::behaviour_comparisons;
+use crate::walk_body::compare_body;
 use crate::walk_context::{
     ChangeSite, MemberComparisons, WalkContext, compare_members, emit_at, refuse_unknown_value,
 };
+use crate::walk_deprecation::compare_deprecation;
 use crate::walk_json::{object_members, pointer_join, text_value};
+use crate::walk_params::compare_params;
+use crate::walk_responses::compare_responses;
 
 /// The reaches and the origin of one operation's changes, owned so a comparison can keep them.
 #[derive(Debug, Clone)]
@@ -107,13 +109,22 @@ pub(crate) fn operation_site(
     position: DiffPosition,
     origin: &Origin,
 ) -> OperationSite {
+    operation_site_with_origin(operation, position, Some(origin))
+}
+
+/// The site of one operation's changes, with the origin of the element when it has one.
+pub(crate) fn operation_site_with_origin(
+    operation: &Operation,
+    position: DiffPosition,
+    origin: Option<&Origin>,
+) -> OperationSite {
     OperationSite {
         reaches: vec![ChangeReach {
             position,
             operations: vec![operation.id.as_str().to_owned()],
             facts: Vec::new(),
         }],
-        origin: Some(ElementOrigin::from(origin)),
+        origin: origin.map(ElementOrigin::from),
     }
 }
 
@@ -128,12 +139,14 @@ fn compare_operation(
 
     for operation in [before, after] {
         if operation.kind != DeclarationKind::HttpOperation {
-            return refuse_unknown_value(
+            refuse_unknown_value(
                 context,
                 &site,
                 &pointer_join(pointer, &["kind"]),
                 operation.kind.as_str(),
             );
+
+            return Ok(());
         }
     }
 
@@ -276,65 +289,6 @@ fn emit_route(
         RawChange::new(DiffKind::OperationRoute, route_case, pointer.to_owned())
             .between(before.cloned(), after.cloned()),
     );
-}
-
-/// Compares the params of two operations.
-///
-/// # Errors
-///
-/// Not ported yet.
-fn compare_params(
-    _context: &mut WalkContext<'_>,
-    _pointer: &str,
-    _before: &Operation,
-    _after: &Operation,
-) -> Result<(), DiffError> {
-    Err(not_ported_yet("compareParams"))
-}
-
-/// Compares the input bodies of two operations.
-///
-/// # Errors
-///
-/// Not ported yet.
-fn compare_body(
-    _context: &mut WalkContext<'_>,
-    _pointer: &str,
-    _operation: &Operation,
-    _before: Option<&OperationInput>,
-    _after: Option<&OperationInput>,
-) -> Result<(), DiffError> {
-    Err(not_ported_yet("compareBody"))
-}
-
-/// Compares the responses of two operations.
-///
-/// # Errors
-///
-/// Not ported yet.
-fn compare_responses(
-    _context: &mut WalkContext<'_>,
-    _pointer: &str,
-    _operation: &Operation,
-    _before: &[Response],
-    _after: &[Response],
-) -> Result<(), DiffError> {
-    Err(not_ported_yet("compareResponses"))
-}
-
-/// Compares the deprecations of two operations.
-///
-/// # Errors
-///
-/// Not ported yet.
-fn compare_deprecation(
-    _context: &mut WalkContext<'_>,
-    _site: &ChangeSite<'_>,
-    _pointer: &str,
-    _before: Option<&Deprecation>,
-    _after: Option<&Deprecation>,
-) -> Result<(), DiffError> {
-    Err(not_ported_yet("compareDeprecation"))
 }
 
 /// Compares the maturity of two operations.

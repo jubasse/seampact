@@ -1,19 +1,21 @@
 //! The comparison of who may call an operation: access, caller kinds, requirements, scopes, bindings,
 //! field rights, csrf, owner and the unknown-query policy.
 
-use seampact_diff_table::{DiffKind, IrDefinition};
+use seampact_diff_table::{DiffKind, DiffPosition, IrDefinition};
 use seampact_ir::{
-    Access, Binding, Csrf, FieldRight, Operation, OperationScope, PrincipalRequirement, Requirement,
+    Access, Binding, Csrf, Direction, FieldRight, KnownAccessRef, Operation, OperationScope,
+    PrincipalRequirement, RefusedCredential, Requirement,
 };
-use seampact_json::JsonValue;
+use seampact_json::{JsonValue, stringify_json};
 
 use crate::DiffError;
-use crate::change_sink::RawChange;
+use crate::change_sink::{ChangeReach, RawChange};
 use crate::not_ported::not_ported_yet;
 use crate::walk_context::{
-    ChangeSite, MemberComparisons, WalkContext, compare_members, emit_at, refuse_unknown_value,
+    ChangeSite, KeyedListComparison, MemberComparisons, WalkContext, compare_kept_order,
+    compare_keyed_list, compare_members, emit_at, refuse_unknown_value,
 };
-use crate::walk_json::{object_members, pointer_join, text_value};
+use crate::walk_json::{json_of, object_members, pointer_join, text_value};
 use crate::walk_operations::OperationSite;
 
 /// The case of an `unknownQuery` change by the policy the operation moves to.
@@ -254,7 +256,9 @@ fn compare_unknown_query(
             before_policy
         };
 
-        return refuse_unknown_value(context, site, &pointer_join(pointer, &["policy"]), unknown);
+        refuse_unknown_value(context, site, &pointer_join(pointer, &["policy"]), unknown);
+
+        return Ok(());
     };
 
     if before_policy != after_policy {
@@ -317,34 +321,118 @@ fn compare_caller_kinds(
     Err(not_ported_yet("compareCallerKinds"))
 }
 
-/// Compares the principal requirements of two operations.
-///
-/// # Errors
-///
-/// Not ported yet.
+/// Compares the principal requirements of two operations by field.
 fn compare_principal_requirements(
-    _context: &mut WalkContext<'_>,
-    _site: &ChangeSite<'_>,
-    _pointer: &str,
-    _before: &[PrincipalRequirement],
-    _after: &[PrincipalRequirement],
+    context: &mut WalkContext<'_>,
+    site: &ChangeSite<'_>,
+    pointer: &str,
+    before: &[PrincipalRequirement],
+    after: &[PrincipalRequirement],
 ) -> Result<(), DiffError> {
-    Err(not_ported_yet("comparePrincipalRequirements"))
+    let comparison = KeyedListComparison {
+        key_of: Box::new(|requirement: &PrincipalRequirement| Ok(requirement.field.clone())),
+        added: Box::new(|context, entry_pointer, requirement| {
+            emit_at(
+                context,
+                site,
+                RawChange::new(
+                    DiffKind::PrincipalRequirement,
+                    "added",
+                    entry_pointer.to_owned(),
+                )
+                .between(None, Some(text_value(&requirement.field))),
+            );
+
+            Ok(())
+        }),
+        removed: Box::new(|context, entry_pointer, requirement| {
+            emit_at(
+                context,
+                site,
+                RawChange::new(
+                    DiffKind::PrincipalRequirement,
+                    "removed",
+                    entry_pointer.to_owned(),
+                )
+                .between(Some(text_value(&requirement.field)), None),
+            );
+
+            Ok(())
+        }),
+        kept: Box::new(|context, entry_pointer, before_entry, after_entry| {
+            compare_members(
+                context,
+                site,
+                IrDefinition::PrincipalRequirement,
+                entry_pointer,
+                Some(&object_members(before_entry)?),
+                Some(&object_members(after_entry)?),
+                &MemberComparisons::new(),
+            )
+        }),
+    };
+
+    compare_keyed_list(context, pointer, before, after, &comparison)
 }
 
-/// Compares the scopes of two operations.
-///
-/// # Errors
-///
-/// Not ported yet.
+/// Compares the scopes of two operations by scope id, then their order.
 fn compare_scopes(
-    _context: &mut WalkContext<'_>,
-    _site: &ChangeSite<'_>,
-    _pointer: &str,
-    _before: &[OperationScope],
-    _after: &[OperationScope],
+    context: &mut WalkContext<'_>,
+    site: &ChangeSite<'_>,
+    pointer: &str,
+    before: &[OperationScope],
+    after: &[OperationScope],
 ) -> Result<(), DiffError> {
-    Err(not_ported_yet("compareScopes"))
+    let comparison = KeyedListComparison {
+        key_of: Box::new(|scope: &OperationScope| Ok(scope.scope.as_str().to_owned())),
+        added: Box::new(|context, entry_pointer, scope| {
+            emit_at(
+                context,
+                site,
+                RawChange::new(DiffKind::Scope, "added", entry_pointer.to_owned())
+                    .between(None, Some(text_value(scope.scope.as_str()))),
+            );
+
+            Ok(())
+        }),
+        removed: Box::new(|context, entry_pointer, scope| {
+            emit_at(
+                context,
+                site,
+                RawChange::new(DiffKind::Scope, "removed", entry_pointer.to_owned())
+                    .between(Some(text_value(scope.scope.as_str())), None),
+            );
+
+            Ok(())
+        }),
+        kept: Box::new(|context, entry_pointer, before_entry, after_entry| {
+            compare_members(
+                context,
+                site,
+                IrDefinition::OperationScope,
+                entry_pointer,
+                Some(&object_members(before_entry)?),
+                Some(&object_members(after_entry)?),
+                &MemberComparisons::new(),
+            )
+        }),
+    };
+
+    compare_keyed_list(context, pointer, before, after, &comparison)?;
+
+    let before_names: Vec<&str> = before.iter().map(|scope| scope.scope.as_str()).collect();
+    let after_names: Vec<&str> = after.iter().map(|scope| scope.scope.as_str()).collect();
+
+    compare_kept_order(
+        context,
+        site,
+        pointer,
+        "scopes",
+        &before_names,
+        &after_names,
+    );
+
+    Ok(())
 }
 
 /// Compares the requirements of two operations.
@@ -362,34 +450,284 @@ fn compare_requirements(
     Err(not_ported_yet("compareRequirements"))
 }
 
-/// Compares the bindings of two operations.
-///
-/// # Errors
-///
-/// Not ported yet.
+/// Compares the bindings of two operations by where they write.
 fn compare_bindings(
-    _context: &mut WalkContext<'_>,
-    _site: &ChangeSite<'_>,
-    _pointer: &str,
-    _before: &[Binding],
-    _after: &[Binding],
+    context: &mut WalkContext<'_>,
+    site: &ChangeSite<'_>,
+    pointer: &str,
+    before: &[Binding],
+    after: &[Binding],
 ) -> Result<(), DiffError> {
-    Err(not_ported_yet("compareBindings"))
+    let comparison = KeyedListComparison {
+        key_of: Box::new(|binding: &Binding| Ok(stringify_json(&json_of(&binding.to)?))),
+        added: Box::new(|context, entry_pointer, _binding| {
+            emit_at(
+                context,
+                site,
+                RawChange::new(DiffKind::Binding, "added", entry_pointer.to_owned()),
+            );
+
+            Ok(())
+        }),
+        removed: Box::new(|context, entry_pointer, _binding| {
+            emit_at(
+                context,
+                site,
+                RawChange::new(DiffKind::Binding, "removed", entry_pointer.to_owned()),
+            );
+
+            Ok(())
+        }),
+        kept: Box::new(|context, entry_pointer, before_entry, after_entry| {
+            let mut comparisons = MemberComparisons::new();
+
+            comparisons.insert(
+                "from",
+                Box::new(|context, member_pointer, _before_value, _after_value| {
+                    emit_at(
+                        context,
+                        site,
+                        RawChange::new(DiffKind::Binding, "changed", member_pointer.to_owned()),
+                    );
+
+                    Ok(())
+                }),
+            );
+
+            compare_members(
+                context,
+                site,
+                IrDefinition::Binding,
+                entry_pointer,
+                Some(&object_members(before_entry)?),
+                Some(&object_members(after_entry)?),
+                &comparisons,
+            )
+        }),
+    };
+
+    compare_keyed_list(context, pointer, before, after, &comparison)
 }
 
-/// Compares the field rights of two operations.
-///
-/// # Errors
-///
-/// Not ported yet.
+/// Whether a field right was added, removed or changed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum FieldRightCase {
+    Added,
+    Removed,
+    Changed,
+}
+
+impl FieldRightCase {
+    const fn as_str(self) -> &'static str {
+        match self {
+            Self::Added => "added",
+            Self::Removed => "removed",
+            Self::Changed => "changed",
+        }
+    }
+}
+
+/// The one reach a field right changes at: its direction, over the operations of `input`.
+/// A direction other than input and output refuses the diff and has none.
+fn field_right_reaches(
+    context: &mut WalkContext<'_>,
+    input: &ChangeSite<'_>,
+    list_pointer: &str,
+    field_right: &FieldRight,
+) -> Option<Vec<ChangeReach>> {
+    let position = match field_right.direction {
+        Direction::Input => DiffPosition::Input,
+        Direction::Output => DiffPosition::Output,
+        Direction::Unknown(_) => {
+            refuse_unknown_value(
+                context,
+                input,
+                &pointer_join(list_pointer, &["direction"]),
+                field_right.direction.as_str(),
+            );
+
+            return None;
+        }
+    };
+    let operations: Vec<String> = input
+        .reaches
+        .iter()
+        .flat_map(|reach| reach.operations.iter().cloned())
+        .collect();
+
+    Some(vec![ChangeReach {
+        position,
+        operations,
+        facts: Vec::new(),
+    }])
+}
+
+/// Emits a field right change at its direction; the removed one reports `before`, the others `after`.
+fn emit_field_right(
+    context: &mut WalkContext<'_>,
+    input: &ChangeSite<'_>,
+    list_pointer: &str,
+    field_right_case: FieldRightCase,
+    entry_pointer: &str,
+    field_right: &FieldRight,
+) {
+    let Some(reaches) = field_right_reaches(context, input, list_pointer, field_right) else {
+        return;
+    };
+    let site = ChangeSite {
+        reaches: &reaches,
+        origin: input.origin.clone(),
+    };
+    let right = Some(text_value(field_right.right.as_str()));
+    let change = RawChange::new(
+        DiffKind::FieldRight,
+        field_right_case.as_str(),
+        entry_pointer.to_owned(),
+    );
+
+    emit_at(
+        context,
+        &site,
+        if field_right_case == FieldRightCase::Removed {
+            change.between(right, None)
+        } else {
+            change.between(None, right)
+        },
+    );
+}
+
+/// Compares the field rights of two operations by direction, schema and pointer.
 fn compare_field_rights(
-    _context: &mut WalkContext<'_>,
-    _site: &ChangeSite<'_>,
-    _pointer: &str,
-    _before: &[FieldRight],
-    _after: &[FieldRight],
+    context: &mut WalkContext<'_>,
+    input: &ChangeSite<'_>,
+    pointer: &str,
+    before: &[FieldRight],
+    after: &[FieldRight],
 ) -> Result<(), DiffError> {
-    Err(not_ported_yet("compareFieldRights"))
+    let comparison = KeyedListComparison {
+        key_of: Box::new(|field_right: &FieldRight| {
+            Ok(format!(
+                "{}\u{0}{}\u{0}{}",
+                field_right.direction.as_str(),
+                field_right.schema.as_str(),
+                field_right.pointer
+            ))
+        }),
+        added: Box::new(|context, entry_pointer, field_right| {
+            emit_field_right(
+                context,
+                input,
+                pointer,
+                FieldRightCase::Added,
+                entry_pointer,
+                field_right,
+            );
+
+            Ok(())
+        }),
+        removed: Box::new(|context, entry_pointer, field_right| {
+            emit_field_right(
+                context,
+                input,
+                pointer,
+                FieldRightCase::Removed,
+                entry_pointer,
+                field_right,
+            );
+
+            Ok(())
+        }),
+        kept: Box::new(|context, entry_pointer, before_entry, after_entry| {
+            let Some(reaches) = field_right_reaches(context, input, pointer, after_entry) else {
+                return Ok(());
+            };
+            let site = ChangeSite {
+                reaches: &reaches,
+                origin: input.origin.clone(),
+            };
+            let mut comparisons = MemberComparisons::new();
+
+            comparisons.insert(
+                "right",
+                Box::new(|context, _member_pointer, _before_value, _after_value| {
+                    emit_field_right(
+                        context,
+                        input,
+                        pointer,
+                        FieldRightCase::Changed,
+                        entry_pointer,
+                        after_entry,
+                    );
+
+                    Ok(())
+                }),
+            );
+
+            compare_members(
+                context,
+                &site,
+                IrDefinition::FieldRight,
+                entry_pointer,
+                Some(&object_members(before_entry)?),
+                Some(&object_members(after_entry)?),
+                &comparisons,
+            )
+        }),
+    };
+
+    compare_keyed_list(context, pointer, before, after, &comparison)
+}
+
+/// The rank of an access: the more callers it admits, the lower.
+const PUBLIC_RANK: u8 = 0;
+const OPTIONAL_ANONYMOUS_RANK: u8 = 1;
+const OPTIONAL_REJECT_RANK: u8 = 2;
+const IDENTITY_RANK: u8 = 3;
+
+/// The case of an access that moves from one rank to another.
+#[expect(dead_code, reason = "called by compareAccess, ported in brief 4")]
+fn rank_change_case(before_rank: u8, after_rank: u8) -> &'static str {
+    if before_rank == PUBLIC_RANK && after_rank == OPTIONAL_ANONYMOUS_RANK {
+        return "principalOptionalAdded";
+    }
+
+    if before_rank == OPTIONAL_ANONYMOUS_RANK && after_rank == PUBLIC_RANK {
+        return "principalOptionalRemoved";
+    }
+
+    if after_rank > before_rank {
+        "tightened"
+    } else {
+        "loosened"
+    }
+}
+
+/// The rank of an access; an optional access refused with an unknown value refuses the diff.
+#[expect(dead_code, reason = "called by compareAccess, ported in brief 4")]
+fn access_rank(
+    context: &mut WalkContext<'_>,
+    site: &ChangeSite<'_>,
+    pointer: &str,
+    access: KnownAccessRef<'_>,
+) -> Option<u8> {
+    match access {
+        KnownAccessRef::Public(_) => Some(PUBLIC_RANK),
+        KnownAccessRef::Identity(_) => Some(IDENTITY_RANK),
+        KnownAccessRef::Optional(optional) => match &optional.on_refused {
+            RefusedCredential::Anonymous => Some(OPTIONAL_ANONYMOUS_RANK),
+            RefusedCredential::Reject => Some(OPTIONAL_REJECT_RANK),
+            RefusedCredential::Unknown(unknown) => {
+                refuse_unknown_value(
+                    context,
+                    site,
+                    &pointer_join(pointer, &["onRefused"]),
+                    unknown.as_str(),
+                );
+
+                None
+            }
+        },
+    }
 }
 
 /// Compares the csrf protection of two operations.

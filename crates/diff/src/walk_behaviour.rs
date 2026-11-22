@@ -168,7 +168,9 @@ fn compare_paging(
         Box::new(|context, member_pointer, _before_value, _after_value| {
             let policy = after_paging.over_limit.as_str();
             let Some(case_name) = over_limit_case(policy) else {
-                return refuse_unknown_value(context, site, member_pointer, policy);
+                refuse_unknown_value(context, site, member_pointer, policy);
+
+                return Ok(());
             };
 
             emit_at(
