@@ -80,7 +80,7 @@ pub(crate) fn declaration_reach_key(catalogue: &str, id: &str) -> String {
 ///
 /// # Errors
 ///
-/// [`DiffError::NotPortedYet`] until the declaration visitors are ported.
+/// [`DiffError::Internal`] for a bug.
 pub(crate) fn build_reach_index(ir: &ContractIr) -> Result<ReachIndex, DiffError> {
     let mut index = ReachIndex::new();
 

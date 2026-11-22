@@ -30,8 +30,7 @@ pub(crate) struct WalkOutcome {
 ///
 /// # Errors
 ///
-/// [`DiffError::Internal`] when an IR does not encode; [`DiffError::NotPortedYet`] until every
-/// comparison is ported.
+/// [`DiffError::Internal`] when an IR does not encode.
 pub(crate) fn walk_contracts(
     before: &ContractIr,
     after: &ContractIr,

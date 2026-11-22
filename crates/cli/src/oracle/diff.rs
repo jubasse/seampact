@@ -13,14 +13,6 @@ use seampact_load::{FsReader, LoadOptions};
 use seampact_oracle::{DiffAnswer, DiffCase, DiffSide, Fixture, SubjectAnswer};
 use serde::{Serialize, Serializer};
 
-use crate::oracle::stub_answer::{StubError, failed_answer};
-
-impl StubError for DiffError {
-    fn is_not_ported(&self) -> bool {
-        matches!(self, Self::NotPortedYet { .. })
-    }
-}
-
 /// The diff codes and table, `{ "codes", "table" }`.
 pub(crate) fn diff_table_answer() -> SubjectAnswer<JsonValue> {
     SubjectAnswer::Ported(diff_table_json())
@@ -41,7 +33,9 @@ pub(crate) fn diff_answer(case: &DiffCase) -> SubjectAnswer<DiffAnswer> {
 
     match diff_both_sides(&sides.0, &sides.1, &options) {
         Ok(answer) => SubjectAnswer::Ported(answer),
-        Err(DiffCaseError::Diff(error)) => failed_answer(&error),
+        Err(DiffCaseError::Diff(error)) => SubjectAnswer::InternalError {
+            message: error.to_string(),
+        },
         Err(DiffCaseError::Setup(message)) => SubjectAnswer::InternalError { message },
     }
 }
