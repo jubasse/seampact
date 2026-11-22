@@ -1,33 +1,59 @@
 //! The text of one problem the CLI prints on stderr.
 
 use seampact_cli_config::CliProblem;
+use seampact_diagnostics::diagnostic_inert;
 use seampact_ir::OperationId;
 use seampact_target::Refusal;
 
 use crate::contract_position::{ContractPositions, contract_position};
 
+/// Past this many characters a field of a printed problem is cut: the text can come from a hostile tree.
+pub(crate) const PROBLEM_FIELD_LIMIT: usize = 1000;
+
+/// What a cut field ends with, as the quoted values of a message do.
+const PROBLEM_CUT_MARK: char = '\u{2026}';
+
 /// The problem as one line,
 /// `<contract file:line>: <code>: <where>: <message> Fix: <fix> Docs: <url>`, each absent part
 /// left out with its separator.
+///
+/// Every field is cut past [`PROBLEM_FIELD_LIMIT`] characters and written inert, so authored text
+/// never reaches the terminal as an escape sequence.
 #[must_use]
 pub fn format_problem(problem: &CliProblem) -> String {
     let position = problem
         .position
-        .as_ref()
-        .map_or_else(String::new, |position| format!("{position}: "));
+        .as_deref()
+        .map_or_else(String::new, |position| {
+            format!("{}: ", printable_field(position))
+        });
     let location = problem
         .location
-        .as_ref()
-        .map_or_else(String::new, |location| format!("{location}: "));
-    let docs = problem
-        .docs
-        .as_ref()
-        .map_or_else(String::new, |docs| format!(" Docs: {docs}"));
+        .as_deref()
+        .map_or_else(String::new, |location| {
+            format!("{}: ", printable_field(location))
+        });
+    let docs = problem.docs.as_deref().map_or_else(String::new, |docs| {
+        format!(" Docs: {}", printable_field(docs))
+    });
 
     format!(
         "{position}{}: {location}{} Fix: {}{docs}",
-        problem.code, problem.message, problem.fix
+        printable_field(&problem.code),
+        printable_field(&problem.message),
+        printable_field(&problem.fix)
     )
+}
+
+/// `text` cut past [`PROBLEM_FIELD_LIMIT`] characters, then written inert.
+fn printable_field(text: &str) -> String {
+    let mut kept: String = text.chars().take(PROBLEM_FIELD_LIMIT).collect();
+
+    if text.chars().nth(PROBLEM_FIELD_LIMIT).is_some() {
+        kept.push(PROBLEM_CUT_MARK);
+    }
+
+    diagnostic_inert(&kept)
 }
 
 /// A problem with no position, no docs link and no location.
@@ -64,7 +90,7 @@ pub(crate) fn entry_where(entry_id: &str, api: Option<&str>) -> String {
 }
 
 /// The location of a target entry under `app` when the run reads several apps.
-#[allow(dead_code, reason = "reached only by generate and check, layer 3.3")]
+#[expect(dead_code, reason = "reached only by generate and check, layer 3.3")]
 pub(crate) fn app_entry_where(app: Option<&str>, entry_id: &str, api: Option<&str>) -> String {
     let location = entry_where(entry_id, api);
 
@@ -75,7 +101,10 @@ pub(crate) fn app_entry_where(app: Option<&str>, entry_id: &str, api: Option<&st
 }
 
 /// `problem` located inside `app`, in front of its own location.
-#[allow(dead_code, reason = "reached only by generate and check, layer 3.3")]
+#[cfg_attr(
+    not(test),
+    expect(dead_code, reason = "reached only by generate and check, layer 3.3")
+)]
 pub(crate) fn in_app(app: &str, problem: CliProblem) -> CliProblem {
     let location = match &problem.location {
         Some(location) => format!("app '{app}', {location}"),
@@ -89,7 +118,10 @@ pub(crate) fn in_app(app: &str, problem: CliProblem) -> CliProblem {
 }
 
 /// Whether `message` writes `pointer` as a whole: not followed by `/` or a word character.
-#[allow(dead_code, reason = "reached only by generate and check, layer 3.3")]
+#[cfg_attr(
+    not(test),
+    expect(dead_code, reason = "reached only by generate and check, layer 3.3")
+)]
 fn names_pointer(message: &str, pointer: &str) -> bool {
     // Every start position is tried, as a regular expression search does, so occurrences may overlap.
     message.char_indices().any(|(start, _)| {
@@ -109,7 +141,7 @@ fn names_pointer(message: &str, pointer: &str) -> bool {
 
 /// The problem a target's refusal prints: its message followed by the operation and IR member it
 /// names when the message does not, and the contract position when `positions` locates it.
-#[allow(dead_code, reason = "reached only by generate and check, layer 3.3")]
+#[expect(dead_code, reason = "reached only by generate and check, layer 3.3")]
 pub(crate) fn problem_from_refusal(
     refusal: &Refusal,
     location: String,
@@ -218,5 +250,39 @@ mod tests {
             format_problem(&problem),
             "contract/api.yaml:7: cli.usage: seampact.config.yaml:3: No command given. Fix: Run it. Docs: https://example.test/#row"
         );
+    }
+
+    fn is_active(character: char) -> bool {
+        character.is_control()
+            || matches!(character, '\u{200B}'..='\u{200F}' | '\u{2028}'..='\u{202E}')
+    }
+
+    #[test]
+    fn a_problem_is_printed_without_a_character_a_terminal_acts_on() {
+        let problem = CliProblem {
+            code: "x.\u{1b}y".to_owned(),
+            message: "a\u{1b}[2J\u{202e}b".to_owned(),
+            fix: "f\u{7}".to_owned(),
+            location: Some("source '\u{9b}'".to_owned()),
+            position: Some("api\u{1b}.yaml:1".to_owned()),
+            docs: Some("https://x.test/\u{200b}".to_owned()),
+        };
+        let printed = format_problem(&problem);
+
+        assert!(!printed.chars().any(is_active), "{printed:?}");
+        assert!(printed.contains("a\\u001B[2J\\u202Eb"), "{printed}");
+    }
+
+    #[test]
+    fn a_field_past_the_bound_is_cut_with_an_ellipsis() {
+        let problem = unlocated_problem("x.y", "m".repeat(PROBLEM_FIELD_LIMIT + 50), "f");
+        let printed = format_problem(&problem);
+
+        assert!(
+            printed.chars().count() < PROBLEM_FIELD_LIMIT + 50,
+            "{}",
+            printed.len()
+        );
+        assert!(printed.contains("\u{2026} Fix: f"), "{printed}");
     }
 }

@@ -12,7 +12,7 @@ use seampact_bundle_fetch::{
 };
 use seampact_cli_config::{CliProblem, LoadedAppConfig, ResolvedSource};
 use seampact_compiler::{PipelineOptions, PipelineResult};
-use seampact_diagnostics::{Diagnostic, InternalError, Severity, print_diagnostics};
+use seampact_diagnostics::{Diagnostic, InternalError, Severity, print_diagnostics, quote_text};
 use seampact_finalize::finalize_canonical_ir;
 use seampact_ir::ContractIr;
 use seampact_load::LoadOptions;
@@ -301,11 +301,16 @@ fn compile_source(
     Ok(())
 }
 
-/// The problem of a bundle failure at `location`; the failing file is named when the message does
-/// not already.
+/// The problem of a bundle failure at `location`; the failing file is named, quoted, when the
+/// message does not already.
 pub(crate) fn bundle_problem(failure: &BundleSourceFailure, location: &str) -> CliProblem {
     let file = match &failure.file {
-        Some(file) if !failure.message.contains(file.as_str()) => format!(" (file '{file}')"),
+        Some(file)
+            if !failure.message.contains(file.as_str())
+                && !failure.message.contains(&quote_text(file)) =>
+        {
+            format!(" (file {})", quote_text(file))
+        }
         Some(_) | None => String::new(),
     };
 
@@ -373,4 +378,38 @@ fn printed_diagnostics(
     }
 
     print_diagnostics(diagnostics, locations)
+}
+
+#[cfg(test)]
+mod tests {
+    use seampact_bundle_fetch::BundleSourceFailureCode;
+
+    use super::*;
+
+    fn failure_in(file: &str, message: &str) -> BundleSourceFailure {
+        BundleSourceFailure {
+            file: Some(file.to_owned()),
+            ..BundleSourceFailure::new(BundleSourceFailureCode::GitFailed, message.to_owned(), "f")
+        }
+    }
+
+    #[test]
+    fn a_failing_file_the_message_does_not_name_is_added_quoted_and_inert() {
+        let problem = bundle_problem(
+            &failure_in("sources/a\u{1b}[2Jb", "It failed."),
+            "source 's'",
+        );
+
+        assert_eq!(problem.message, "It failed. (file 'sources/a\\u001B[2Jb')");
+    }
+
+    #[test]
+    fn a_failing_file_the_message_quotes_is_not_added_again() {
+        let problem = bundle_problem(
+            &failure_in("sources/a\u{1b}b", "The file 'sources/a\\u001Bb' failed."),
+            "source 's'",
+        );
+
+        assert_eq!(problem.message, "The file 'sources/a\\u001Bb' failed.");
+    }
 }
