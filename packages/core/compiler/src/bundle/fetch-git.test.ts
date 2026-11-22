@@ -1,4 +1,4 @@
-import { chmodSync, existsSync, writeFileSync } from "node:fs";
+import { chmodSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, expect, test } from "vitest";
 import { temporaryDirectory } from "./bundle.test-support.js";
@@ -17,7 +17,7 @@ test("a fetch that grows the repository past the cap is killed and removed", asy
 
   writeFileSync(
     script,
-    '#!/bin/sh\nfor a in "$@"; do case "$a" in --git-dir=*) dir="${a#--git-dir=}";; esac; done\nmkdir -p "$dir"\ncase "$*" in *fetch*) truncate -s 300M "$dir/pack"; exec sleep 30;; esac\n',
+    '#!/bin/sh\nfor a in "$@"; do case "$a" in --git-dir=*) dir=$(echo "$a" | cut -c11-);; esac; done\nmkdir -p "$dir"\ncase "$*" in *fetch*) truncate -s 300M "$dir/pack"; exec sleep 30;; esac\n',
   );
   chmodSync(script, 0o755);
   process.env.PATH = `${fakeBin}:${originalPath}`;
