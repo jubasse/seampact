@@ -1114,13 +1114,16 @@ dependencies = [
  "camino",
  "indexmap",
  "seampact-authoring",
+ "seampact-cli-config",
  "seampact-diagnostics",
  "seampact-ir",
  "seampact-js",
  "seampact-json",
+ "seampact-load",
  "seampact-pipeline",
  "seampact-span",
  "serde_json",
+ "tempfile",
  "thiserror",
 ]
 
