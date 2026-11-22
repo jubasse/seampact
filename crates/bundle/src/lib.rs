@@ -38,7 +38,9 @@ pub use error::BundleError;
 pub use failure::{BundleFailure, BundleFailureCode};
 pub use file_list::{canonical_bundle_file_list, compare_bundle_paths};
 pub use installed_package::{installed_package_directory, resolve_directory};
-pub use integrity::{bundle_integrity, bundle_sha256_hex};
+pub use integrity::{
+    BUNDLE_INTEGRITY_PREFIX, bundle_base64_decoded, bundle_hex, bundle_integrity, bundle_sha256_hex,
+};
 pub use label::bundle_label_problem;
 pub use limits::{
     BUNDLE_ARCHIVE_BYTES_MAX, BUNDLE_ENTRIES_MAX, BUNDLE_EXTRACTED_BYTES_MAX,

@@ -35,33 +35,5 @@ pub fn scratch_directory(name: &str) -> Utf8PathBuf {
     reason = "each test file uses its own helpers; a bad vector is the failed test"
 )]
 pub fn base64_decoded(text: &str) -> Vec<u8> {
-    let mut bytes = Vec::new();
-    let mut group = 0_u32;
-    let mut count = 0;
-
-    for character in text.chars().filter(|c| *c != '=') {
-        let sextet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
-            .find(character)
-            .unwrap();
-
-        group = group << 6 | u32::try_from(sextet).unwrap();
-        count += 1;
-
-        if count == 4 {
-            bytes.extend_from_slice(&group.to_be_bytes()[1..]);
-            group = 0;
-            count = 0;
-        }
-    }
-
-    match count {
-        2 => bytes.push(u8::try_from((group >> 4) & 0xff).unwrap()),
-        3 => bytes.extend_from_slice(&[
-            u8::try_from((group >> 10) & 0xff).unwrap(),
-            u8::try_from((group >> 2) & 0xff).unwrap(),
-        ]),
-        _ => {}
-    }
-
-    bytes
+    seampact_bundle::bundle_base64_decoded(text).unwrap()
 }

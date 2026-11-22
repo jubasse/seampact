@@ -1,7 +1,6 @@
 //! The extraction of a bundle tarball into a private temporary directory.
 
 #![cfg(unix)]
-
 #![allow(
     clippy::unwrap_used,
     clippy::panic,

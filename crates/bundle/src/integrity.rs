@@ -8,21 +8,53 @@ use crate::BundleFile;
 use crate::file_list::canonical_bundle_file_list;
 
 /// The integrity's prefix, the form npm's SRI uses.
-const BUNDLE_INTEGRITY_PREFIX: &str = "sha256-";
+pub const BUNDLE_INTEGRITY_PREFIX: &str = "sha256-";
 
 const BASE64_ALPHABET: &[u8; 64] =
     b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+const BITS_PER_BASE64_CHARACTER: u32 = 6;
+const BITS_PER_BYTE: u32 = 8;
 
 /// The lowercase hexadecimal SHA-256 of a file's bytes.
 #[must_use]
 pub fn bundle_sha256_hex(bytes: &[u8]) -> String {
-    Sha256::digest(bytes)
-        .iter()
-        .fold(String::new(), |mut hex, byte| {
-            let _ = write!(hex, "{byte:02x}");
+    bundle_hex(&Sha256::digest(bytes))
+}
 
-            hex
-        })
+/// The lowercase hexadecimal text of `bytes`.
+#[must_use]
+pub fn bundle_hex(bytes: &[u8]) -> String {
+    bytes.iter().fold(String::new(), |mut hex, byte| {
+        let _ = write!(hex, "{byte:02x}");
+
+        hex
+    })
+}
+
+/// The bytes of base64 characters, leftover bits dropped, as `Buffer.from(text, "base64")`;
+/// `None` for a character outside the alphabet.
+#[must_use]
+pub fn bundle_base64_decoded(characters: &str) -> Option<Vec<u8>> {
+    let mut bytes = Vec::new();
+    let mut accumulated: u32 = 0;
+    let mut bits: u32 = 0;
+
+    for character in characters.chars().filter(|character| *character != '=') {
+        let sextet = BASE64_ALPHABET
+            .iter()
+            .position(|byte| char::from(*byte) == character)?;
+
+        accumulated = (accumulated << BITS_PER_BASE64_CHARACTER) | u32::try_from(sextet).ok()?;
+        bits += BITS_PER_BASE64_CHARACTER;
+
+        if bits >= BITS_PER_BYTE {
+            bits -= BITS_PER_BYTE;
+            bytes.push(u8::try_from((accumulated >> bits) & 0xff).ok()?);
+            accumulated &= (1 << bits) - 1;
+        }
+    }
+
+    Some(bytes)
 }
 
 /// The padded standard base64 of `bytes`.
@@ -72,6 +104,13 @@ mod tests {
         assert_eq!(standard_base64(b"fo"), "Zm8=");
         assert_eq!(standard_base64(b"foo"), "Zm9v");
         assert_eq!(standard_base64(b"foobar"), "Zm9vYmFy");
+    }
+
+    #[test]
+    fn base64_drops_the_leftover_bits_of_a_last_character() {
+        assert_eq!(bundle_base64_decoded("AB"), Some(vec![0]));
+        assert_eq!(bundle_base64_decoded("//"), Some(vec![0xff]));
+        assert_eq!(bundle_base64_decoded("A-"), None);
     }
 
     #[test]

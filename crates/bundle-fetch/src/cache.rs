@@ -4,10 +4,10 @@
 //! one, and the pinned-bundle check runs again on every read: the cache is a copy, never a trust
 //! input.
 
-use std::fmt::Write as _;
 use std::fs;
 
 use camino::{Utf8Path, Utf8PathBuf};
+use seampact_bundle::{BUNDLE_INTEGRITY_PREFIX, bundle_base64_decoded, bundle_hex};
 use tempfile::Builder;
 
 use crate::BundleFetchError;
@@ -20,13 +20,8 @@ const CACHE_NAME: &str = "seampact";
 const BUNDLES_DIRECTORY: &str = "bundles";
 const TEMPORARY_PREFIX: &str = ".incoming-";
 const TEMPORARY_SUFFIX_CHARACTERS: usize = 16;
-/// The integrity's prefix, as the bundle integrity writes it.
-const BUNDLE_INTEGRITY_PREFIX: &str = "sha256-";
 /// A SHA-256 digest in padded standard base64: 43 characters and one `=`.
 const DIGEST_BASE64_CHARACTERS: usize = 43;
-const BASE64_ALPHABET: &str = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-const BITS_PER_BASE64_CHARACTER: u32 = 6;
-const BITS_PER_BYTE: u32 = 8;
 
 /// The operating system whose user cache directory convention applies.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -118,41 +113,13 @@ pub fn bundle_cache_entry(cache_directory: &Utf8Path, integrity: &str) -> Option
         return None;
     }
 
-    let digest = decoded_base64(characters)?;
-    let mut hex = String::with_capacity(digest.len() * 2);
-
-    for byte in &digest {
-        let _ = write!(hex, "{byte:02x}");
-    }
+    let digest = bundle_base64_decoded(characters)?;
 
     Some(
         cache_directory
             .join(BUNDLES_DIRECTORY)
-            .join(format!("sha256-{hex}")),
+            .join(format!("{BUNDLE_INTEGRITY_PREFIX}{}", bundle_hex(&digest))),
     )
-}
-
-/// The bytes of base64 characters, leftover bits dropped, as `Buffer.from(text, "base64")`;
-/// `None` for a character outside the alphabet.
-fn decoded_base64(characters: &str) -> Option<Vec<u8>> {
-    let mut bytes = Vec::new();
-    let mut accumulated: u32 = 0;
-    let mut bits: u32 = 0;
-
-    for character in characters.chars() {
-        let sextet = u32::try_from(BASE64_ALPHABET.find(character)?).ok()?;
-
-        accumulated = (accumulated << BITS_PER_BASE64_CHARACTER) | sextet;
-        bits += BITS_PER_BASE64_CHARACTER;
-
-        if bits >= BITS_PER_BYTE {
-            bits -= BITS_PER_BYTE;
-            bytes.push(u8::try_from((accumulated >> bits) & 0xff).ok()?);
-            accumulated &= (1 << bits) - 1;
-        }
-    }
-
-    Some(bytes)
 }
 
 /// Copies the verified bundle `directory` to `entry` through a temporary directory and a rename;
@@ -306,13 +273,6 @@ mod tests {
                 "integrity {integrity:?}"
             );
         }
-    }
-
-    #[test]
-    fn base64_drops_the_leftover_bits_of_a_last_character() {
-        assert_eq!(decoded_base64("AB"), Some(vec![0]));
-        assert_eq!(decoded_base64("//"), Some(vec![0xff]));
-        assert_eq!(decoded_base64("A-"), None);
     }
 
     #[test]
