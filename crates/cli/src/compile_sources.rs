@@ -19,7 +19,6 @@ use seampact_load::LoadOptions;
 use seampact_pipeline::PipelineDeclared;
 use seampact_span::{Location, SourceFiles};
 
-use crate::bundle_source::bundle_source_of;
 use crate::cli_problem::located_problem;
 use crate::local_bundle::{LocalBundleOutcome, LocalBundles, verify_local_bundle};
 use crate::source_reader::source_reader;
@@ -108,7 +107,7 @@ pub(crate) fn compile_sources(
 
         match source {
             ResolvedSource::Bundle(written) => {
-                take_bundle(name, &bundle_source_of(written)?, &run, &mut compiled)?;
+                take_bundle(name, written, &run, &mut compiled)?;
             }
             ResolvedSource::Path { directory } => {
                 compile_source(name, directory, &run, &mut compiled, io)?;

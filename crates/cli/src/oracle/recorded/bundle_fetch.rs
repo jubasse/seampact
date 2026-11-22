@@ -7,6 +7,7 @@ use std::time::Duration;
 use camino::{Utf8Path, Utf8PathBuf};
 use indexmap::IndexMap;
 use seampact_bundle::BundleSource;
+use seampact_cli_config::bundle_source_of;
 use seampact_bundle_fetch::{
     BundleFetchOptions, BundleFetchResult, BundleSourceFailure, LocalSourcePolicy, ReleaseGet,
     ReleaseGetError, ReleaseResponse, Url, WorkspaceImportFailure, WorkspaceImportsOptions,
@@ -21,7 +22,6 @@ use seampact_oracle::{ROOT_TOKEN, RecordedAnswer, RecordedToolCall, SubjectAnswe
 use seampact_pipeline::PipelineDeclared;
 use seampact_span::{Location, SourceFiles};
 
-use crate::bundle_source::bundle_source_of;
 
 const FETCH_BUNDLE: &str = "fetchBundle";
 const COMPILE_WORKSPACE_WITH_IMPORTS: &str = "compileWorkspaceWithImports";

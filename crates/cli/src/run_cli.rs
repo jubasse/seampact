@@ -12,6 +12,7 @@ use crate::command::Command;
 use crate::compile_command::{CompileOutputs, EditorSchemasMode, compile_command};
 use crate::config_location::config_location;
 use crate::diff_command::diff_command;
+use crate::explain_command::explain_command;
 use crate::lint_command::lint_command;
 use crate::not_ported::not_ported_yet;
 use crate::{
@@ -75,7 +76,7 @@ pub fn run_command(argv: &[OsString], io: &mut dyn CliIo) -> Result<i32, CliErro
         Command::Check => Err(not_ported_yet("runCheck")),
         Command::Lint => run_lint(rest, io),
         Command::Diff => run_diff(rest, io),
-        Command::Explain => Err(not_ported_yet("runExplain")),
+        Command::Explain => run_explain(rest, io),
         Command::Bundle => run_bundle(rest, io),
     }
 }
@@ -162,6 +163,26 @@ fn run_diff(args: &[String], io: &mut dyn CliIo) -> Result<i32, CliError> {
     };
 
     diff_command(&config_location_of(&parsed, io), against, io)
+}
+
+fn run_explain(args: &[String], io: &mut dyn CliIo) -> Result<i32, CliError> {
+    let parsed = match parse_command_args(
+        args,
+        &[text_option("config")],
+        Positionals::Allowed,
+    ) {
+        Ok(parsed) => parsed,
+        Err(error) => return Ok(usage_error(io, error.message())),
+    };
+
+    let [operation] = parsed.positionals() else {
+        return Ok(usage_error(
+            io,
+            "`explain` takes one operation, as `<api>.<operationId>`.",
+        ));
+    };
+
+    explain_command(&config_location_of(&parsed, io), operation, io)
 }
 
 fn run_bundle(args: &[String], io: &mut dyn CliIo) -> Result<i32, CliError> {

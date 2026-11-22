@@ -2,10 +2,10 @@ src/cli_problem.rs#format_problem	packages/core/cli/src/cli-problem.ts#formatPro
 src/cli_io.rs#print_problems	packages/core/cli/src/cli-io.ts#printProblems
 src/cli_io.rs#print_warnings	packages/core/cli/src/cli-io.ts#printWarnings
 src/cli_problem.rs#entry_where	packages/core/cli/src/cli-problem.ts#entryWhere
--	packages/core/cli/src/cli-problem.ts#namesPointer	pending: brief 2
--	packages/core/cli/src/cli-problem.ts#inApp	pending: brief 2
--	packages/core/cli/src/cli-problem.ts#appEntryWhere	pending: brief 2
--	packages/core/cli/src/cli-problem.ts#problemFromRefusal	pending: brief 2
+src/cli_problem.rs#names_pointer	packages/core/cli/src/cli-problem.ts#namesPointer
+src/cli_problem.rs#in_app	packages/core/cli/src/cli-problem.ts#inApp
+src/cli_problem.rs#app_entry_where	packages/core/cli/src/cli-problem.ts#appEntryWhere
+src/cli_problem.rs#problem_from_refusal	packages/core/cli/src/cli-problem.ts#problemFromRefusal
 src/run_cli.rs#run_command	packages/core/cli/src/run-cli.ts#runCli
 -	packages/core/cli/src/run-cli.ts#runInit	pending: brief 2
 src/run_cli.rs#run_compile	packages/core/cli/src/run-cli.ts#runCompile
@@ -15,12 +15,12 @@ src/run_cli.rs#run_compile	packages/core/cli/src/run-cli.ts#runCompile
 -	packages/core/cli/src/run-cli.ts#nativeEntryPolicy	pending: brief 2
 src/run_cli.rs#run_lint	packages/core/cli/src/run-cli.ts#runLint
 src/run_cli.rs#run_diff	packages/core/cli/src/run-cli.ts#runDiff
--	packages/core/cli/src/run-cli.ts#runExplain	pending: brief 2
+src/run_cli.rs#run_explain	packages/core/cli/src/run-cli.ts#runExplain
 src/run_cli.rs#run_bundle	packages/core/cli/src/run-cli.ts#runBundle
 src/bundle_command.rs#output	packages/core/cli/src/run-cli.ts#bundleOutput
 src/args.rs#parse_command_args	packages/core/cli/src/run-cli.ts#parseCommandArgs
 src/args.rs#text	packages/core/cli/src/run-cli.ts#stringOption
--	packages/core/cli/src/run-cli.ts#listOption	pending: brief 2
+src/args.rs#texts	packages/core/cli/src/run-cli.ts#listOption
 src/run_cli.rs#usage_error	packages/core/cli/src/run-cli.ts#usageError
 src/run_cli.rs#not_available	packages/core/cli/src/run-cli.ts#notAvailable
 src/run_cli.rs#usage_text	packages/core/cli/src/run-cli.ts#usageText
@@ -53,8 +53,8 @@ src/api_refs.rs#unknown_source_problems	packages/core/cli/src/commands/api-refs.
 src/api_refs.rs#entry_api_refs	packages/core/cli/src/commands/api-refs.ts#entryApiRefs
 src/api_refs.rs#sources_holding_refs	packages/core/cli/src/commands/api-refs.ts#sourcesHoldingRefs
 src/api_refs.rs#may_hold_any	packages/core/cli/src/commands/api-refs.ts#mayHoldAny
--	packages/core/cli/src/commands/api-refs.ts#duplicateApiProblem	pending: brief 2
--	packages/core/cli/src/commands/api-refs.ts#resolveEntryApis	pending: brief 2
+src/api_refs.rs#duplicate_api_problem	packages/core/cli/src/commands/api-refs.ts#duplicateApiProblem
+src/api_refs.rs#resolve_entry_apis	packages/core/cli/src/commands/api-refs.ts#resolveEntryApis
 src/api_refs.rs#add_qualify_fix	packages/core/cli/src/commands/api-refs.ts#addQualifyFix
 src/compile_command.rs#compile_command	packages/core/cli/src/commands/compile-command.ts#compileCommand
 src/compile_command.rs#write_ir_files	packages/core/cli/src/commands/compile-command.ts#writeIrFiles
@@ -65,7 +65,7 @@ src/cli_io.rs#refuse	packages/core/cli/src/commands/compile-command.ts#refuse
 -	packages/core/cli/src/symbolic-link.ts#isPathTaken	merged: ../cli-config/src/symbolic_link.rs#is_path_taken
 src/bundle_command.rs#bundle_command	packages/core/cli/src/commands/bundle-command.ts#bundleCommand
 src/bundle_command.rs#chosen_source	packages/core/cli/src/commands/bundle-command.ts#chosenSource
-src/bundle_command.rs#named_source	packages/core/cli/src/commands/bundle-command.ts#namedSource	pending: brief 3
+src/bundle_command.rs#named_source	packages/core/cli/src/commands/bundle-command.ts#namedSource
 src/bundle_command.rs#resolved_output	packages/core/cli/src/commands/bundle-command.ts#resolvedOutput
 src/bundle_command.rs#output_path	packages/core/cli/src/commands/bundle-command.ts#outputPath
 src/cli_io.rs#refuse	packages/core/cli/src/commands/bundle-command.ts#refuse
@@ -87,14 +87,14 @@ src/cli_io.rs#refuse	packages/core/cli/src/commands/init-command.ts#refuse
 src/diff_baseline.rs#read_baseline	packages/core/cli/src/commands/diff-baseline.ts#readBaseline
 src/diff_baseline.rs#baseline_files	packages/core/cli/src/commands/diff-baseline.ts#baselineFiles
 src/diff_baseline.rs#read_ir_file	packages/core/cli/src/commands/diff-baseline.ts#readIrFile
-src/diff_baseline.rs#invalid_message	packages/core/cli/src/commands/diff-baseline.ts#invalidMessage	pending: brief 3
+src/diff_baseline.rs#invalid_message	packages/core/cli/src/commands/diff-baseline.ts#invalidMessage
 src/diff_baseline.rs#refused	packages/core/cli/src/commands/diff-baseline.ts#refused
 src/diff_baseline.rs#stat_if_present	packages/core/cli/src/commands/diff-baseline.ts#statIfPresent
 src/diff_command.rs#diff_command	packages/core/cli/src/commands/diff-command.ts#diffCommand
 src/cli_io.rs#refuse	packages/core/cli/src/commands/diff-command.ts#refuse
--	packages/core/cli/src/commands/explain-command.ts#explainCommand	pending: brief 2
+src/explain_command.rs#explain_command	packages/core/cli/src/commands/explain-command.ts#explainCommand
 src/explain_command.rs#explain_target	packages/core/cli/src/commands/explain-command.ts#explainTarget
--	packages/core/cli/src/commands/explain-command.ts#chosenApi	pending: brief 2
+src/explain_command.rs#chosen_api	packages/core/cli/src/commands/explain-command.ts#chosenApi
 src/cli_io.rs#refuse	packages/core/cli/src/commands/explain-command.ts#refuse
 -	packages/core/cli/src/commands/git-ignore.ts#gitIgnoreWithEntries	pending: brief 2
 -	packages/core/cli/src/commands/git-ignore.ts#withoutTrailingSlash	pending: brief 2
@@ -105,37 +105,37 @@ src/cli_io.rs#refuse	packages/core/cli/src/commands/explain-command.ts#refuse
 -	packages/core/cli/src/commands/modelines.ts#workspaceFileKinds	pending: brief 2
 -	packages/core/cli/src/commands/modelines.ts#layerFileKind	pending: brief 2
 -	packages/core/cli/src/commands/modelines.ts#singleKind	pending: brief 2
--	packages/core/cli/src/commands/explain-view.ts#explainOperationText	pending: brief 2
--	packages/core/cli/src/commands/explain-view.ts#lineText	pending: brief 2
--	packages/core/cli/src/commands/explain-view.ts#block	pending: brief 2
--	packages/core/cli/src/commands/explain-view.ts#memberLine	pending: brief 2
--	packages/core/cli/src/commands/explain-view.ts#accessLines	pending: brief 2
--	packages/core/cli/src/commands/explain-view.ts#csrfValue	pending: brief 3
--	packages/core/cli/src/commands/explain-view.ts#idempotencyValue	pending: brief 3
--	packages/core/cli/src/commands/explain-view.ts#unknownQueryValue	pending: brief 2
--	packages/core/cli/src/commands/explain-view.ts#concurrencyValue	pending: brief 3
--	packages/core/cli/src/commands/explain-view.ts#pagingValue	pending: brief 3
--	packages/core/cli/src/commands/explain-view.ts#deprecatedValue	pending: brief 3
--	packages/core/cli/src/commands/explain-view.ts#maturityValue	pending: brief 2
--	packages/core/cli/src/commands/explain-view.ts#subjectDefaulted	pending: brief 3
--	packages/core/cli/src/commands/explain-view.ts#requirementValue	pending: brief 3
--	packages/core/cli/src/commands/explain-view.ts#inputLines	pending: brief 2
--	packages/core/cli/src/commands/explain-view.ts#paramLines	pending: brief 2
--	packages/core/cli/src/commands/explain-view.ts#responseValue	pending: brief 2
--	packages/core/cli/src/commands/explain-view.ts#errorLines	pending: brief 2
--	packages/core/cli/src/commands/explain-view.ts#nestedNotShown	pending: brief 2
--	packages/core/cli/src/commands/explain-view.ts#notShownLine	pending: brief 2
--	packages/core/cli/src/commands/explain-view.ts#isEmptyValue	pending: brief 2
--	packages/core/cli/src/commands/explain-view.ts#typeText	pending: brief 2
--	packages/core/cli/src/commands/explain-view.ts#sourceText	pending: brief 3
--	packages/core/cli/src/commands/explain-view.ts#withoutProvenance	pending: brief 2
--	packages/core/cli/src/commands/explain-view.ts#recordOf	pending: brief 2
--	packages/core/cli/src/commands/explain-view.ts#provenance	pending: brief 2
--	packages/core/cli/src/commands/explain-view.ts#originText	pending: brief 2
--	packages/core/cli/src/commands/explain-view.ts#flow	pending: brief 2
--	packages/core/cli/src/commands/contract-position.ts#contractPosition	pending: brief 3
+src/explain_view.rs#explain_operation_text	packages/core/cli/src/commands/explain-view.ts#explainOperationText
+src/explain_view.rs#written	packages/core/cli/src/commands/explain-view.ts#lineText
+src/explain_view.rs#block	packages/core/cli/src/commands/explain-view.ts#block
+src/explain_view.rs#member_line	packages/core/cli/src/commands/explain-view.ts#memberLine
+src/explain_view.rs#access_lines	packages/core/cli/src/commands/explain-view.ts#accessLines
+src/explain_values.rs#csrf_value	packages/core/cli/src/commands/explain-view.ts#csrfValue	pending: brief 3
+src/explain_values.rs#idempotency_value	packages/core/cli/src/commands/explain-view.ts#idempotencyValue	pending: brief 3
+src/explain_values.rs#unknown_query_value	packages/core/cli/src/commands/explain-view.ts#unknownQueryValue
+src/explain_values.rs#concurrency_value	packages/core/cli/src/commands/explain-view.ts#concurrencyValue	pending: brief 3
+src/explain_values.rs#paging_value	packages/core/cli/src/commands/explain-view.ts#pagingValue	pending: brief 3
+src/explain_values.rs#deprecated_value	packages/core/cli/src/commands/explain-view.ts#deprecatedValue	pending: brief 3
+src/explain_values.rs#maturity_value	packages/core/cli/src/commands/explain-view.ts#maturityValue
+src/explain_values.rs#subject_defaulted	packages/core/cli/src/commands/explain-view.ts#subjectDefaulted	pending: brief 3
+src/explain_values.rs#requirement_value	packages/core/cli/src/commands/explain-view.ts#requirementValue	pending: brief 3
+src/explain_view.rs#input_lines	packages/core/cli/src/commands/explain-view.ts#inputLines
+src/explain_view.rs#param_lines	packages/core/cli/src/commands/explain-view.ts#paramLines
+src/explain_values.rs#response_value	packages/core/cli/src/commands/explain-view.ts#responseValue
+src/explain_view.rs#error_lines	packages/core/cli/src/commands/explain-view.ts#errorLines
+src/explain_not_shown.rs#nested_not_shown	packages/core/cli/src/commands/explain-view.ts#nestedNotShown
+src/explain_not_shown.rs#not_shown_line	packages/core/cli/src/commands/explain-view.ts#notShownLine
+src/explain_not_shown.rs#is_empty_value	packages/core/cli/src/commands/explain-view.ts#isEmptyValue
+src/explain_flow.rs#type_text	packages/core/cli/src/commands/explain-view.ts#typeText
+src/explain_values.rs#source_text	packages/core/cli/src/commands/explain-view.ts#sourceText	pending: brief 3
+src/explain_values.rs#without_provenance	packages/core/cli/src/commands/explain-view.ts#withoutProvenance
+-	packages/core/cli/src/commands/explain-view.ts#recordOf	skip: a JsonObject is already the record of its members in key order
+src/explain_origin.rs#provenance	packages/core/cli/src/commands/explain-view.ts#provenance
+src/explain_origin.rs#origin_text	packages/core/cli/src/commands/explain-view.ts#originText
+src/explain_flow.rs#flow	packages/core/cli/src/commands/explain-view.ts#flow
+src/contract_position.rs#contract_position	packages/core/cli/src/commands/contract-position.ts#contractPosition	pending: brief 3
 -	packages/core/cli/src/commands/contract-position.ts#nodesAlong	pending: brief 3
 -	packages/core/cli/src/commands/contract-position.ts#childOf	pending: brief 3
 -	packages/core/cli/src/commands/contract-position.ts#locatedOrigin	pending: brief 3
--	packages/core/cli/src/commands/contract-position.ts#originPosition	pending: brief 2
-src/local_bundle.rs#verify_local_bundle	packages/core/cli/src/commands/local-bundle.ts#verifyLocalBundle	pending: brief 2
+src/contract_position.rs#origin_position	packages/core/cli/src/commands/contract-position.ts#originPosition
+src/local_bundle.rs#verify_local_bundle	packages/core/cli/src/commands/local-bundle.ts#verifyLocalBundle

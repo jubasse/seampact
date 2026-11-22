@@ -3,6 +3,7 @@
 
 use camino::{Utf8Path, Utf8PathBuf};
 use indexmap::IndexMap;
+use seampact_bundle::{BundleSource, BundleSourceForm};
 use seampact_cli_config::{
     CliConfigError, CliProblem, LoadedAppConfig, LoadedMergedDocument, LoadedRootConfig,
     LoadedWorkspace, ReadAppConfigOutcome, ReadRootConfigOutcome, ReadRunConfigOutcome,
@@ -306,7 +307,7 @@ fn sources_json(sources: &IndexMap<String, ResolvedSource>) -> JsonValue {
                         ("directory", text(directory.as_str())),
                     ]),
                     ResolvedSource::Bundle(bundle) => {
-                        object([("kind", text("bundle")), ("bundle", bundle.clone())])
+                        object([("kind", text("bundle")), ("bundle", bundle_json(bundle))])
                     }
                 };
 
@@ -314,6 +315,35 @@ fn sources_json(sources: &IndexMap<String, ResolvedSource>) -> JsonValue {
             })
             .collect(),
     )
+}
+
+/// The bundle source as the config writes it.
+fn bundle_json(bundle: &BundleSource) -> JsonValue {
+    let mut members = match &bundle.form {
+        BundleSourceForm::Package(package) => vec![
+            ("package", text(&package.package)),
+            ("version", text(&package.version)),
+        ],
+        BundleSourceForm::Release(release) => {
+            vec![("release", object([("url", text(&release.url))]))]
+        }
+        BundleSourceForm::Git(git) => {
+            let mut git_members = vec![("url", text(&git.url)), ("tag", text(&git.tag))];
+
+            if let Some(directory) = &git.directory {
+                git_members.push(("directory", text(directory)));
+            }
+
+            vec![("git", object(git_members))]
+        }
+        BundleSourceForm::Maven(coordinate) => vec![("maven", text(coordinate))],
+    };
+
+    if let Some(integrity) = &bundle.integrity {
+        members.push(("integrity", text(integrity)));
+    }
+
+    object(members)
 }
 
 fn problem_json(problem: &CliProblem) -> JsonValue {

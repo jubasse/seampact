@@ -2,6 +2,7 @@
 //! and run configs, each read or refused with [`CliProblem`]s.
 
 mod api_refs;
+mod bundle_source;
 mod artefact_switches;
 mod cli_problem;
 mod config_file;
@@ -31,6 +32,8 @@ mod symbolic_link;
 
 use seampact_diagnostics::RuleId;
 
+pub use api_refs::{ApiRef, api_refs_of, parse_api_ref};
+pub use bundle_source::bundle_source_of;
 pub use cli_problem::CliProblem;
 pub use document_plan::open_api_api_names;
 pub use error::CliConfigError;

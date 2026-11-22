@@ -2,11 +2,11 @@
 
 use camino::{Utf8Path, Utf8PathBuf};
 use indexmap::IndexMap;
-use seampact_bundle::BundleVerifyResult;
+use seampact_bundle::{BundleVerifyResult, verify_bundle};
 use seampact_cli_config::CliProblem;
 
 use crate::CliError;
-use crate::not_ported::not_ported_yet;
+use crate::cli_problem::located_problem;
 
 /// The directory of each bundle a plugin fetched, by source name.
 pub(crate) type LocalBundles = IndexMap<String, Utf8PathBuf>;
@@ -20,11 +20,31 @@ pub(crate) enum LocalBundleOutcome {
     Refused(CliProblem),
 }
 
-/// Checks the bundle `directory` holds against the source's pinned `integrity`.
+/// Checks the bundle `directory` holds against the source's pinned `integrity`; a source without
+/// one is refused, as nothing could be checked against it.
+///
+/// # Errors
+///
+/// [`CliError::Bundle`] when the directory cannot be read.
 pub(crate) fn verify_local_bundle(
-    _name: &str,
-    _directory: &Utf8Path,
-    _integrity: Option<&str>,
+    name: &str,
+    directory: &Utf8Path,
+    integrity: Option<&str>,
 ) -> Result<LocalBundleOutcome, CliError> {
-    Err(not_ported_yet("verifyLocalBundle"))
+    let Some(integrity) = integrity else {
+        return Ok(LocalBundleOutcome::Refused(located_problem(
+            "cli.bundle-directory.unpinned",
+            format!(
+                "The source '{name}' is handed over as the local bundle {directory}, and it pins no integrity to check it against."
+            ),
+            "Pin the source's `integrity` in the app config.",
+            format!("source '{name}'"),
+        )));
+    };
+
+    Ok(LocalBundleOutcome::Verified(verify_bundle(
+        directory,
+        Some(integrity),
+        None,
+    )?))
 }

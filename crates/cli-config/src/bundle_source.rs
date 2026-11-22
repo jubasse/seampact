@@ -35,7 +35,7 @@ struct WrittenGit {
 /// # Errors
 ///
 /// [`InternalError`] when the entry names no source form the config schema allows.
-pub(crate) fn bundle_source_of(entry: &JsonValue) -> Result<BundleSource, InternalError> {
+pub fn bundle_source_of(entry: &JsonValue) -> Result<BundleSource, InternalError> {
     let written: WrittenSource = serde_json::to_value(entry)
         .and_then(serde_json::from_value)
         .map_err(|error| {
