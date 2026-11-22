@@ -46,8 +46,8 @@ src/compile_sources.rs#print_source_diagnostics	packages/core/cli/src/commands/c
 src/compile_sources.rs#bundle_problem	packages/core/cli/src/commands/compile-sources.ts#bundleProblem
 src/compile_sources.rs#printed_diagnostics	packages/core/cli/src/commands/compile-sources.ts#printedDiagnostics
 -	packages/core/cli/src/commands/compile-sources.ts#labelledLocations	skip: the hooks diagnosticFileLabel and sourceReader serve the embedded binary of the TypeScript package, which the Rust binary does not have
-src/api_refs.rs#parse_api_ref	packages/core/cli/src/commands/api-refs.ts#parseApiRef
-src/api_refs.rs#api_refs_of	packages/core/cli/src/commands/api-refs.ts#apiRefsOf
+-	packages/core/cli/src/commands/api-refs.ts#parseApiRef	merged: ../cli-config/src/api_refs.rs#parse_api_ref
+-	packages/core/cli/src/commands/api-refs.ts#apiRefsOf	merged: ../cli-config/src/api_refs.rs#api_refs_of
 src/api_refs.rs#used_sources	packages/core/cli/src/commands/api-refs.ts#usedSources
 src/api_refs.rs#unknown_source_problems	packages/core/cli/src/commands/api-refs.ts#unknownSourceProblems
 src/api_refs.rs#entry_api_refs	packages/core/cli/src/commands/api-refs.ts#entryApiRefs
