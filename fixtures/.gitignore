@@ -1,0 +1,2 @@
+# The cases install the bundle package `@seampact-fixtures/notes` in their trees, which the root rule ignores.
+!node_modules/

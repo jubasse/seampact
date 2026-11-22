@@ -17,7 +17,11 @@ fn io_error(path: &Utf8Path, message: String) -> BundleError {
 }
 
 /// `path.resolve`: absolute against the working directory, `.` and `..` collapsed in the text.
-fn resolved(base_directory: &Utf8Path) -> Result<Utf8PathBuf, BundleError> {
+///
+/// # Errors
+///
+/// [`BundleError::Io`] when the working directory is needed and is unreadable or not UTF-8.
+pub fn resolve_directory(base_directory: &Utf8Path) -> Result<Utf8PathBuf, BundleError> {
     let absolute = if base_directory.is_absolute() {
         base_directory.to_path_buf()
     } else {
@@ -56,11 +60,11 @@ fn resolved(base_directory: &Utf8Path) -> Result<Utf8PathBuf, BundleError> {
 /// # Errors
 ///
 /// [`BundleError::Io`] when the found directory has no real path or it is not UTF-8.
-pub(crate) fn installed_package_directory(
+pub fn installed_package_directory(
     name: &str,
     base_directory: &Utf8Path,
 ) -> Result<Option<Utf8PathBuf>, BundleError> {
-    let mut directory = resolved(base_directory)?;
+    let mut directory = resolve_directory(base_directory)?;
 
     loop {
         let mut candidate = directory.join(NODE_MODULES);
@@ -93,7 +97,7 @@ mod tests {
         let base = Utf8Path::new("/work/app/./sub/../lib");
 
         assert_eq!(
-            resolved(base).unwrap(),
+            resolve_directory(base).unwrap(),
             Utf8PathBuf::from("/work/app/lib"),
             "base {base}"
         );

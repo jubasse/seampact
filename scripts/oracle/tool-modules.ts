@@ -75,6 +75,8 @@ export interface OracleTools {
   bundleManifestBytes(manifest: object): Uint8Array;
   loadFsReader(root: string): LoadedReader;
   runCli(argv: readonly string[], io: OracleCliIo): Promise<number>;
+  /** The IR writer: members in UTF-16 order, the bytes the compile oracle writes. */
+  finalizeSerializeJson(value: unknown): string;
 }
 
 const isObject = (value: unknown): value is Record<string, unknown> =>
@@ -111,6 +113,8 @@ async function loadTools(): Promise<OracleTools> {
   // Not exported by the package: the oracle compares the expanded rows the Rust table is generated from.
   const memberRows = await importSource("diff/src/table/member-rows.ts");
   const cli = await importSource("cli/src/index.ts");
+  // Not exported by the package: the recorded calls write each compiled IR as the compile oracle does.
+  const finalize = await importSource("compiler/src/finalize/index.ts");
   const from = (name: string) => `${PACKAGES}/${name}`;
 
   return {
@@ -131,6 +135,11 @@ async function loadTools(): Promise<OracleTools> {
     bundleManifestBytes: functionOf(compiler, "bundleManifestBytes", from("compiler")),
     loadFsReader: functionOf(compiler, "loadFsReader", from("compiler")),
     runCli: functionOf(cli, "runCli", from("cli")),
+    finalizeSerializeJson: functionOf(
+      finalize,
+      "finalizeSerializeJson",
+      from("compiler/src/finalize"),
+    ),
   };
 }
 

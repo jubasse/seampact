@@ -17,8 +17,10 @@ import type { OracleTools } from "./tool-modules.ts";
 // keeps its transcript (`cli/transcript.json`) and the calls it made to the config readers, the editor schemas and
 // the bundle fetch (`<unit>/<NN>-<function>.json`).
 
-// `init` writes the config its own run then reads: replaying a read on the tree before the command cannot match.
+// `init` writes the config and the contract its own run then reads: replaying a read on the tree before the command
+// cannot match.
 const CONFIG_WRITING_COMMAND = "init";
+const CONFIG_AND_CONTRACT_UNITS: readonly RecordedUnit[] = ["cli-config", "bundle-fetch"];
 
 export interface CliSpec {
   argv: string[];
@@ -90,7 +92,35 @@ function normalizedFiles(
   );
 }
 
-function recordedFiles(calls: readonly RecordedCall[], root: string): ExpectedFiles {
+const isObject = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
+
+// A `compileWorkspaceWithImports` result holds each api's IR and source map as the compiler built them, members in
+// construction order; they are written as the compile oracle writes them: members in UTF-16 order.
+function withCanonicalIrs(tools: OracleTools, result: unknown): unknown {
+  if (!isObject(result) || !isObject(result.compiled) || !Array.isArray(result.compiled.apis))
+    return result;
+
+  const canonical = (value: unknown): unknown =>
+    value === undefined ? undefined : JSON.parse(tools.finalizeSerializeJson(value));
+  const apis = result.compiled.apis.map((api: unknown) =>
+    isObject(api)
+      ? {
+          ...api,
+          ...(api.ir === undefined ? {} : { ir: canonical(api.ir) }),
+          ...(api.sourceMap === undefined ? {} : { sourceMap: canonical(api.sourceMap) }),
+        }
+      : api,
+  );
+
+  return { ...result, compiled: { ...result.compiled, apis } };
+}
+
+function recordedFiles(
+  tools: OracleTools,
+  calls: readonly RecordedCall[],
+  root: string,
+): ExpectedFiles {
   const files: ExpectedFiles = new Map();
   const counts = new Map<RecordedUnit, number>();
 
@@ -103,7 +133,7 @@ function recordedFiles(calls: readonly RecordedCall[], root: string): ExpectedFi
     const recorded = {
       function: call.function,
       args: call.args,
-      result: call.result,
+      result: withCanonicalIrs(tools, call.result),
       ...(Object.keys(written).length === 0 ? {} : { written }),
     };
 
@@ -166,11 +196,12 @@ async function runCase(tools: OracleTools, root: string, spec: CliSpec): Promise
   };
 
   const replayable = calls.filter(
-    (call) => !(call.unit === "cli-config" && spec.argv[0] === CONFIG_WRITING_COMMAND),
+    (call) =>
+      !(CONFIG_AND_CONTRACT_UNITS.includes(call.unit) && spec.argv[0] === CONFIG_WRITING_COMMAND),
   );
 
   return new Map([
     ["cli/transcript.json", jsonText(transcript)],
-    ...recordedFiles(replayable, root),
+    ...recordedFiles(tools, replayable, root),
   ]);
 }

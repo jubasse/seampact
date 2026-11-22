@@ -14,7 +14,14 @@ seampact-bundle.workspace = true
 seampact-compiler.workspace = true
 seampact-diagnostics.workspace = true
 seampact-ir.workspace = true
+seampact-js.workspace = true
+seampact-json.workspace = true
+seampact-load.workspace = true
+rustls.workspace = true
+tempfile.workspace = true
 thiserror.workspace = true
+ureq.workspace = true
+url.workspace = true
 
 [lints]
 workspace = true

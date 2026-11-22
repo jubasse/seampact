@@ -20,6 +20,7 @@ anyhow.workspace = true
 camino.workspace = true
 indexmap.workspace = true
 seampact-bundle.workspace = true
+seampact-authoring.workspace = true
 seampact-bundle-fetch.workspace = true
 seampact-cli-config.workspace = true
 seampact-compiler.workspace = true
