@@ -68,7 +68,12 @@ fn from_json_text<T: DeserializeOwned>(text: &str) -> Result<T, IrError> {
     serde_json::from_str(text).map_err(IrError::Decode)
 }
 
-fn to_json_value<T: Serialize>(document: &T) -> Result<JsonValue, IrError> {
+/// The JSON value of any IR value, as the TypeScript walk reads it.
+///
+/// # Errors
+///
+/// [`IrError::Encode`] or [`IrError::Value`] when a member does not encode.
+pub fn to_json_value<T: Serialize>(document: &T) -> Result<JsonValue, IrError> {
     let value = serde_json::to_value(document).map_err(IrError::Encode)?;
 
     Ok(JsonValue::try_from(value)?)

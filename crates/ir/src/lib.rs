@@ -50,6 +50,7 @@ pub use declarations::{
     ScopeSubject, Service, SignatureScheme, SignedIdentity, SourceSchemeKey, TemplateSignature,
     ValueSchemeKey, VariantsPrincipal, VocabularyEnumSource,
 };
+pub use document::to_json_value;
 pub use error::IrError;
 pub use formats::{
     ArrayTemplate, EachTemplate, ErrorShape, HeaderTemplate, LiteralTemplate, MetaMember,
