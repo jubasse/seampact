@@ -67,7 +67,9 @@ pub(crate) fn walk_contracts(
     comparisons.insert(
         "packs",
         Box::new(|context, _pointer, _before, _after| {
-            compare_packs(context, &before.packs, &after.packs)
+            compare_packs(context, &before.packs, &after.packs);
+
+            Ok(())
         }),
     );
     comparisons.insert(

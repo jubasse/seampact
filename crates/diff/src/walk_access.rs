@@ -3,14 +3,15 @@
 
 use seampact_diff_table::{DiffKind, DiffPosition, IrDefinition};
 use seampact_ir::{
-    Access, Binding, Csrf, Direction, FieldRight, KnownAccessRef, Operation, OperationScope,
-    PrincipalRequirement, RefusedCredential, Requirement,
+    Access, Binding, CallerKind, Csrf, Direction, FieldRight, KnownAccessRef, KnownCsrfRef,
+    KnownRequirementRef, Operation, OperationScope, PrincipalRequirement, RefusedCredential,
+    Requirement, SchemeId,
 };
 use seampact_json::{JsonValue, stringify_json};
+use serde::Serialize;
 
 use crate::DiffError;
 use crate::change_sink::{ChangeReach, RawChange};
-use crate::not_ported::not_ported_yet;
 use crate::walk_context::{
     ChangeSite, KeyedListComparison, MemberComparisons, WalkContext, compare_kept_order,
     compare_keyed_list, compare_members, emit_at, refuse_unknown_value,
@@ -71,7 +72,9 @@ fn insert_caller_comparisons<'comparison>(
     comparisons.insert(
         "callerKinds",
         Box::new(|context, pointer, _before_value, _after_value| {
-            compare_caller_kinds(context, &input.site(), pointer, before, after)
+            compare_caller_kinds(context, &input.site(), pointer, before, after);
+
+            Ok(())
         }),
     );
     comparisons.insert(
@@ -291,34 +294,229 @@ fn compare_unknown_query(
     )
 }
 
-/// Compares the access of two operations.
-///
-/// # Errors
-///
-/// Not ported yet.
+/// Compares the access of two operations: a move between ranks, then the members of the kind.
 fn compare_access(
-    _context: &mut WalkContext<'_>,
-    _site: &ChangeSite<'_>,
-    _pointer: &str,
-    _before: &Access,
-    _after: &Access,
+    context: &mut WalkContext<'_>,
+    site: &ChangeSite<'_>,
+    pointer: &str,
+    before: &Access,
+    after: &Access,
 ) -> Result<(), DiffError> {
-    Err(not_ported_yet("compareAccess"))
+    let (Ok(known_before), Ok(known_after)) = (
+        KnownAccessRef::try_from(before),
+        KnownAccessRef::try_from(after),
+    ) else {
+        let unknown = if KnownAccessRef::try_from(before).is_err() {
+            before
+        } else {
+            after
+        };
+
+        refuse_unknown_value(
+            context,
+            site,
+            &pointer_join(pointer, &["kind"]),
+            unknown.tag(),
+        );
+
+        return Ok(());
+    };
+    let (Some(before_rank), Some(after_rank)) = (
+        access_rank(context, site, pointer, known_before),
+        access_rank(context, site, pointer, known_after),
+    ) else {
+        return Ok(());
+    };
+
+    if before_rank != after_rank {
+        emit_at(
+            context,
+            site,
+            RawChange::new(
+                DiffKind::Access,
+                rank_change_case(before_rank, after_rank),
+                pointer.to_owned(),
+            )
+            .between(
+                Some(text_value(before.tag())),
+                Some(text_value(after.tag())),
+            ),
+        );
+    }
+
+    let credentials = match (known_before, known_after) {
+        (KnownAccessRef::Public(_), _) | (_, KnownAccessRef::Public(_)) => None,
+        (before_credentials, after_credentials) => Some((
+            schemes_of(before_credentials),
+            schemes_of(after_credentials),
+        )),
+    };
+    let comparisons = access_member_comparisons(site, credentials);
+
+    compare_members(
+        context,
+        site,
+        access_definition(known_after),
+        pointer,
+        Some(&object_members(before)?),
+        Some(&object_members(after)?),
+        &comparisons,
+    )
+}
+
+/// The comparisons of the members of an access; `credentials` holds the schemes of both sides
+/// when neither is public.
+fn access_member_comparisons<'comparison>(
+    site: &'comparison ChangeSite<'_>,
+    credentials: Option<(Vec<&'comparison str>, Vec<&'comparison str>)>,
+) -> MemberComparisons<'comparison> {
+    let has_credentials = credentials.is_some();
+    let mut comparisons = MemberComparisons::new();
+
+    comparisons.insert(
+        "kind",
+        Box::new(|_context, _pointer, _before_value, _after_value| Ok(())),
+    );
+    comparisons.insert(
+        "onRefused",
+        Box::new(|_context, _pointer, _before_value, _after_value| Ok(())),
+    );
+    comparisons.insert(
+        "reason",
+        Box::new(|context, member_pointer, before_value, after_value| {
+            emit_at(
+                context,
+                site,
+                RawChange::new(DiffKind::Annotation, "reason", member_pointer.to_owned())
+                    .between(before_value.cloned(), after_value.cloned()),
+            );
+
+            Ok(())
+        }),
+    );
+    comparisons.insert(
+        "identity",
+        Box::new(move |context, member_pointer, before_value, after_value| {
+            // A public access holds neither: the rank change says it all.
+            if has_credentials {
+                emit_at(
+                    context,
+                    site,
+                    RawChange::new(DiffKind::Access, "identity", member_pointer.to_owned())
+                        .between(before_value.cloned(), after_value.cloned()),
+                );
+            }
+
+            Ok(())
+        }),
+    );
+    comparisons.insert(
+        "schemes",
+        Box::new(
+            move |context, member_pointer, _before_value, _after_value| {
+                if let Some((before_schemes, after_schemes)) = &credentials {
+                    compare_names(
+                        context,
+                        site,
+                        member_pointer,
+                        NameChange {
+                            kind: DiffKind::Access,
+                            added_case: "schemeAdded",
+                            removed_case: "schemeRemoved",
+                        },
+                        before_schemes,
+                        after_schemes,
+                    );
+                }
+
+                Ok(())
+            },
+        ),
+    );
+
+    comparisons
+}
+
+fn access_definition(access: KnownAccessRef<'_>) -> IrDefinition {
+    match access {
+        KnownAccessRef::Identity(_) => IrDefinition::IdentityAccess,
+        KnownAccessRef::Optional(_) => IrDefinition::OptionalAccess,
+        KnownAccessRef::Public(_) => IrDefinition::PublicAccess,
+    }
+}
+
+/// The scheme ids an access with credentials accepts; a public access has none.
+fn schemes_of(access: KnownAccessRef<'_>) -> Vec<&str> {
+    let schemes = match access {
+        KnownAccessRef::Identity(identity) => &identity.schemes,
+        KnownAccessRef::Optional(optional) => &optional.schemes,
+        KnownAccessRef::Public(_) => return Vec::new(),
+    };
+
+    schemes.iter().map(SchemeId::as_str).collect()
 }
 
 /// Compares the caller kinds of two operations.
-///
-/// # Errors
-///
-/// Not ported yet.
 fn compare_caller_kinds(
-    _context: &mut WalkContext<'_>,
-    _site: &ChangeSite<'_>,
-    _pointer: &str,
-    _before: &Operation,
-    _after: &Operation,
-) -> Result<(), DiffError> {
-    Err(not_ported_yet("compareCallerKinds"))
+    context: &mut WalkContext<'_>,
+    site: &ChangeSite<'_>,
+    pointer: &str,
+    before: &Operation,
+    after: &Operation,
+) {
+    let before_kinds: Vec<&str> = before.caller_kinds.iter().map(CallerKind::as_str).collect();
+    let after_kinds: Vec<&str> = after.caller_kinds.iter().map(CallerKind::as_str).collect();
+
+    compare_names(
+        context,
+        site,
+        pointer,
+        NameChange {
+            kind: DiffKind::CallerKind,
+            added_case: "added",
+            removed_case: "removed",
+        },
+        &before_kinds,
+        &after_kinds,
+    );
+}
+
+/// The kind and the two cases a name list reports its additions and removals as.
+#[derive(Debug, Clone, Copy)]
+struct NameChange {
+    kind: DiffKind,
+    added_case: &'static str,
+    removed_case: &'static str,
+}
+
+/// Compares two name lists: names added, names removed, then the order of the names both keep.
+fn compare_names(
+    context: &mut WalkContext<'_>,
+    site: &ChangeSite<'_>,
+    pointer: &str,
+    change: NameChange,
+    before: &[&str],
+    after: &[&str],
+) {
+    for name in after.iter().filter(|name| !before.contains(name)) {
+        emit_at(
+            context,
+            site,
+            RawChange::new(change.kind, change.added_case, pointer.to_owned())
+                .between(None, Some(text_value(name))),
+        );
+    }
+
+    for name in before.iter().filter(|name| !after.contains(name)) {
+        emit_at(
+            context,
+            site,
+            RawChange::new(change.kind, change.removed_case, pointer.to_owned())
+                .between(Some(text_value(name)), None),
+        );
+    }
+
+    compare_kept_order(context, site, pointer, "values", before, after);
 }
 
 /// Compares the principal requirements of two operations by field.
@@ -435,19 +633,133 @@ fn compare_scopes(
     Ok(())
 }
 
-/// Compares the requirements of two operations.
-///
-/// # Errors
-///
-/// Not ported yet.
+/// A requirement with its place key: its name and how many earlier ones carry that name.
+#[derive(Debug, Serialize)]
+struct RankedRequirement<'requirement> {
+    requirement: &'requirement Requirement,
+    key: String,
+}
+
+/// The name a requirement is matched by: its kind, then the right or the rule it names.
+fn requirement_name(requirement: &Requirement) -> String {
+    match KnownRequirementRef::try_from(requirement) {
+        Ok(KnownRequirementRef::Right(right)) => format!("right\u{0}{}", right.right.as_str()),
+        Ok(KnownRequirementRef::Rule(rule)) => format!("rule\u{0}{}", rule.rule.as_str()),
+        Err(_) => requirement.tag().to_owned(),
+    }
+}
+
+/// The requirements with their keys: the name, then the rank among the requirements of that name.
+fn ranked_requirements(list: &[Requirement]) -> Vec<RankedRequirement<'_>> {
+    let names: Vec<String> = list.iter().map(requirement_name).collect();
+
+    list.iter()
+        .zip(&names)
+        .enumerate()
+        .map(|(index, (requirement, name))| {
+            let rank = names
+                .iter()
+                .take(index)
+                .filter(|candidate| *candidate == name)
+                .count();
+
+            RankedRequirement {
+                requirement,
+                key: format!("{name}\u{0}{rank}"),
+            }
+        })
+        .collect()
+}
+
+/// Compares the requirements of two operations by name and rank, then their order.
 fn compare_requirements(
-    _context: &mut WalkContext<'_>,
-    _site: &ChangeSite<'_>,
-    _pointer: &str,
-    _before: &[Requirement],
-    _after: &[Requirement],
+    context: &mut WalkContext<'_>,
+    site: &ChangeSite<'_>,
+    pointer: &str,
+    before: &[Requirement],
+    after: &[Requirement],
 ) -> Result<(), DiffError> {
-    Err(not_ported_yet("compareRequirements"))
+    if let Some(unknown) = before
+        .iter()
+        .chain(after)
+        .find(|requirement| KnownRequirementRef::try_from(*requirement).is_err())
+    {
+        refuse_unknown_value(
+            context,
+            site,
+            &pointer_join(pointer, &["kind"]),
+            unknown.tag(),
+        );
+
+        return Ok(());
+    }
+
+    let before_ranked = ranked_requirements(before);
+    let after_ranked = ranked_requirements(after);
+    let label = |ranked: &RankedRequirement<'_>| {
+        text_value(&requirement_name(ranked.requirement).replacen('\u{0}', " ", 1))
+    };
+    let comparison = KeyedListComparison {
+        key_of: Box::new(|ranked: &RankedRequirement<'_>| Ok(ranked.key.clone())),
+        added: Box::new(|context, entry_pointer, ranked| {
+            emit_at(
+                context,
+                site,
+                RawChange::new(DiffKind::Requirement, "added", entry_pointer.to_owned())
+                    .between(None, Some(label(ranked))),
+            );
+
+            Ok(())
+        }),
+        removed: Box::new(|context, entry_pointer, ranked| {
+            emit_at(
+                context,
+                site,
+                RawChange::new(DiffKind::Requirement, "removed", entry_pointer.to_owned())
+                    .between(Some(label(ranked)), None),
+            );
+
+            Ok(())
+        }),
+        kept: Box::new(|context, entry_pointer, before_entry, after_entry| {
+            let definition = match KnownRequirementRef::try_from(after_entry.requirement) {
+                Ok(KnownRequirementRef::Rule(_)) => IrDefinition::RuleRequirement,
+                Ok(KnownRequirementRef::Right(_)) | Err(_) => IrDefinition::RightRequirement,
+            };
+
+            compare_members(
+                context,
+                site,
+                definition,
+                entry_pointer,
+                Some(&object_members(before_entry.requirement)?),
+                Some(&object_members(after_entry.requirement)?),
+                &MemberComparisons::new(),
+            )
+        }),
+    };
+
+    compare_keyed_list(context, pointer, &before_ranked, &after_ranked, &comparison)?;
+
+    let before_keys: Vec<&str> = before_ranked
+        .iter()
+        .map(|ranked| ranked.key.as_str())
+        .collect();
+    let after_keys: Vec<&str> = after_ranked
+        .iter()
+        .map(|ranked| ranked.key.as_str())
+        .collect();
+
+    compare_kept_order(
+        context,
+        site,
+        pointer,
+        "requires",
+        &before_keys,
+        &after_keys,
+    );
+
+    Ok(())
 }
 
 /// Compares the bindings of two operations by where they write.
@@ -685,10 +997,6 @@ const OPTIONAL_REJECT_RANK: u8 = 2;
 const IDENTITY_RANK: u8 = 3;
 
 /// The case of an access that moves from one rank to another.
-#[cfg_attr(
-    not(test),
-    expect(dead_code, reason = "called by compareAccess, ported in brief 4")
-)]
 fn rank_change_case(before_rank: u8, after_rank: u8) -> &'static str {
     if before_rank == PUBLIC_RANK && after_rank == OPTIONAL_ANONYMOUS_RANK {
         return "principalOptionalAdded";
@@ -706,10 +1014,6 @@ fn rank_change_case(before_rank: u8, after_rank: u8) -> &'static str {
 }
 
 /// The rank of an access; an optional access refused with an unknown value refuses the diff.
-#[cfg_attr(
-    not(test),
-    expect(dead_code, reason = "called by compareAccess, ported in brief 4")
-)]
 fn access_rank(
     context: &mut WalkContext<'_>,
     site: &ChangeSite<'_>,
@@ -736,19 +1040,83 @@ fn access_rank(
     }
 }
 
-/// Compares the csrf protection of two operations.
-///
-/// # Errors
-///
-/// Not ported yet.
+/// Compares the csrf protection of two operations: switched on or off, reworded, else by member.
 fn compare_csrf(
-    _context: &mut WalkContext<'_>,
-    _site: &ChangeSite<'_>,
-    _pointer: &str,
-    _before: Option<&Csrf>,
-    _after: Option<&Csrf>,
+    context: &mut WalkContext<'_>,
+    site: &ChangeSite<'_>,
+    pointer: &str,
+    before: Option<&Csrf>,
+    after: Option<&Csrf>,
 ) -> Result<(), DiffError> {
-    Err(not_ported_yet("compareCsrf"))
+    if let Some(unknown) = [before, after]
+        .into_iter()
+        .flatten()
+        .find(|csrf| KnownCsrfRef::try_from(*csrf).is_err())
+    {
+        refuse_unknown_value(
+            context,
+            site,
+            &pointer_join(pointer, &["kind"]),
+            unknown.tag(),
+        );
+
+        return Ok(());
+    }
+
+    let kind_of = |csrf: Option<&Csrf>| csrf.map(|found| text_value(found.tag()));
+    let is_derived = |csrf: Option<&Csrf>| csrf.is_some_and(|found| found.tag() == "derived");
+    let (before_on, after_on) = (is_derived(before), is_derived(after));
+
+    if before_on != after_on {
+        emit_at(
+            context,
+            site,
+            RawChange::new(
+                DiffKind::Csrf,
+                if after_on { "added" } else { "removed" },
+                pointer.to_owned(),
+            )
+            .between(kind_of(before), kind_of(after)),
+        );
+
+        return Ok(());
+    }
+
+    let (Some(before_csrf), Some(after_csrf)) = (before, after) else {
+        emit_at(
+            context,
+            site,
+            RawChange::new(DiffKind::Annotation, "csrf", pointer.to_owned())
+                .between(kind_of(before), kind_of(after)),
+        );
+
+        return Ok(());
+    };
+
+    if before_csrf.tag() != after_csrf.tag() {
+        emit_at(
+            context,
+            site,
+            RawChange::new(DiffKind::Annotation, "csrf", pointer.to_owned())
+                .between(kind_of(before), kind_of(after)),
+        );
+
+        return Ok(());
+    }
+
+    compare_members(
+        context,
+        site,
+        if after_on {
+            IrDefinition::DerivedCsrf
+        } else {
+            IrDefinition::ExemptCsrf
+        },
+        pointer,
+        Some(&object_members(before_csrf)?),
+        Some(&object_members(after_csrf)?),
+        &MemberComparisons::new(),
+    )
 }
 
 #[cfg(test)]
@@ -819,6 +1187,28 @@ mod tests {
                 .first()
                 .and_then(|refusal| refusal.member.clone()),
             Some("/operations/0/fieldRights/direction".to_owned())
+        );
+    }
+
+    #[test]
+    fn requirements_are_named_by_kind_and_target_and_ranked_by_repeats() {
+        let right = |name: &str| -> Requirement {
+            serde_json::from_value(serde_json::json!({"kind": "right", "right": name}))
+                .unwrap_or_else(|error| panic!("{error}"))
+        };
+        let list = [right("a"), right("b"), right("a")];
+        let keys: Vec<String> = ranked_requirements(&list)
+            .into_iter()
+            .map(|ranked| ranked.key)
+            .collect();
+
+        assert_eq!(
+            keys,
+            vec![
+                "right\u{0}a\u{0}0".to_owned(),
+                "right\u{0}b\u{0}0".to_owned(),
+                "right\u{0}a\u{0}1".to_owned()
+            ]
         );
     }
 }

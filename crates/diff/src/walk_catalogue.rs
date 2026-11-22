@@ -6,6 +6,7 @@ use std::hash::Hash;
 use seampact_diff_table::{DiffKind, IrDefinition};
 use seampact_ir::{
     IrMap, KnownSchemaRef, KnownUnionTagRef, MapSchema, ObjectSchema, Property, UnionSchema,
+    UnionVariant,
 };
 use seampact_js::cmp_utf16;
 use seampact_json::JsonValue;
@@ -19,6 +20,7 @@ use crate::walk_context::{
 };
 use crate::walk_json::{flag_value, object_members, pointer_join, text_value};
 use crate::walk_reach::{common_reaches, enum_reach_key, schema_reach_key};
+use crate::walk_same_wire::is_same_wire_schema;
 use crate::walk_type_use::{compare_enum_values, compare_nullable, compare_type_use};
 
 /// The comparison of a member that holds a deprecation flag.
@@ -557,19 +559,135 @@ fn compare_union_schema(
     )
 }
 
-/// Compares the variants of two unions.
-///
-/// # Errors
-///
-/// Not ported yet.
+/// Compares the variants of two unions by tag: added, removed, kept and changed, then the order.
 fn compare_variants(
-    _context: &mut WalkContext<'_>,
-    _site: &ChangeSite<'_>,
-    _pointer: &str,
-    _before: &UnionSchema,
-    _after: &UnionSchema,
+    context: &mut WalkContext<'_>,
+    site: &ChangeSite<'_>,
+    pointer: &str,
+    before: &UnionSchema,
+    after: &UnionSchema,
 ) -> Result<(), DiffError> {
-    Err(not_ported_yet("compareVariants"))
+    for (index, variant) in after.variants.iter().enumerate() {
+        if before
+            .variants
+            .iter()
+            .any(|candidate| candidate.tag == variant.tag)
+        {
+            continue;
+        }
+
+        emit_at(
+            context,
+            site,
+            RawChange::new(
+                DiffKind::UnionVariant,
+                "added",
+                pointer_join(pointer, &[&index.to_string()]),
+            )
+            .between(None, Some(text_value(&variant.tag))),
+        );
+    }
+
+    for (index, variant) in before.variants.iter().enumerate() {
+        let Some((kept, after_variant)) = after
+            .variants
+            .iter()
+            .enumerate()
+            .find(|(_, candidate)| candidate.tag == variant.tag)
+        else {
+            emit_at(
+                context,
+                site,
+                RawChange::new(
+                    DiffKind::UnionVariant,
+                    "removed",
+                    pointer_join(pointer, &[&index.to_string()]),
+                )
+                .between(Some(text_value(&variant.tag)), None),
+            );
+
+            continue;
+        };
+
+        compare_kept_variant(
+            context,
+            site,
+            &pointer_join(pointer, &[&kept.to_string()]),
+            variant,
+            after_variant,
+        )?;
+    }
+
+    let before_tags: Vec<&str> = before
+        .variants
+        .iter()
+        .map(|variant| variant.tag.as_str())
+        .collect();
+    let after_tags: Vec<&str> = after
+        .variants
+        .iter()
+        .map(|variant| variant.tag.as_str())
+        .collect();
+
+    compare_kept_order(
+        context,
+        site,
+        pointer,
+        "variants",
+        &before_tags,
+        &after_tags,
+    );
+
+    Ok(())
+}
+
+/// Compares a variant both unions keep: its schema is a rename when the wire stays the same.
+fn compare_kept_variant(
+    context: &mut WalkContext<'_>,
+    site: &ChangeSite<'_>,
+    pointer: &str,
+    before: &UnionVariant,
+    after: &UnionVariant,
+) -> Result<(), DiffError> {
+    let mut comparisons = MemberComparisons::new();
+
+    comparisons.insert(
+        "schema",
+        Box::new(|context, member_pointer, _before_value, _after_value| {
+            let same_wire = is_same_wire_schema(
+                context.before,
+                before.schema.as_str(),
+                context.after,
+                after.schema.as_str(),
+            )?;
+            let (kind, case_name) = if same_wire {
+                (DiffKind::Name, "schema")
+            } else {
+                (DiffKind::TypeChanged, "variantSchema")
+            };
+
+            emit_at(
+                context,
+                site,
+                RawChange::new(kind, case_name, member_pointer.to_owned()).between(
+                    Some(text_value(before.schema.as_str())),
+                    Some(text_value(after.schema.as_str())),
+                ),
+            );
+
+            Ok(())
+        }),
+    );
+
+    compare_members(
+        context,
+        site,
+        IrDefinition::UnionVariant,
+        pointer,
+        Some(&object_members(before)?),
+        Some(&object_members(after)?),
+        &comparisons,
+    )
 }
 
 /// Compares the members of two map schemas.

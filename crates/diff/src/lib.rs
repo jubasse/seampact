@@ -22,6 +22,7 @@ mod walk_body;
 mod walk_catalogue;
 mod walk_context;
 mod walk_contracts;
+mod walk_decimal;
 mod walk_declarations;
 mod walk_deprecation;
 mod walk_json;
@@ -31,6 +32,7 @@ mod walk_params;
 mod walk_reach;
 mod walk_refusals;
 mod walk_responses;
+mod walk_same_wire;
 mod walk_type_use;
 
 pub use diff_contracts::{diff_contract_sets, diff_contracts};

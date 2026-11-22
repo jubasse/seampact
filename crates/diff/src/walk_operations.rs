@@ -8,7 +8,6 @@ use seampact_json::JsonValue;
 
 use crate::DiffError;
 use crate::change_sink::{ChangeReach, ElementOrigin, RawChange};
-use crate::not_ported::not_ported_yet;
 use crate::walk_access::access_comparisons;
 use crate::walk_behaviour::behaviour_comparisons;
 use crate::walk_body::compare_body;
@@ -17,6 +16,7 @@ use crate::walk_context::{
 };
 use crate::walk_deprecation::compare_deprecation;
 use crate::walk_json::{object_members, pointer_join, text_value};
+use crate::walk_maturity::compare_maturity_level;
 use crate::walk_params::compare_params;
 use crate::walk_responses::compare_responses;
 
@@ -291,17 +291,32 @@ fn emit_route(
     );
 }
 
-/// Compares the maturity of two operations.
-///
-/// # Errors
-///
-/// Not ported yet.
+/// Compares the maturity of two operations: the level moves, any other member by its row.
 fn compare_operation_maturity(
-    _context: &mut WalkContext<'_>,
-    _site: &ChangeSite<'_>,
-    _pointer: &str,
-    _before: &OperationMaturity,
-    _after: &OperationMaturity,
+    context: &mut WalkContext<'_>,
+    site: &ChangeSite<'_>,
+    pointer: &str,
+    before: &OperationMaturity,
+    after: &OperationMaturity,
 ) -> Result<(), DiffError> {
-    Err(not_ported_yet("compareOperationMaturity"))
+    let mut comparisons = MemberComparisons::new();
+
+    comparisons.insert(
+        "level",
+        Box::new(|context, member_pointer, _before_value, _after_value| {
+            compare_maturity_level(context, site, member_pointer, &before.level, &after.level);
+
+            Ok(())
+        }),
+    );
+
+    compare_members(
+        context,
+        site,
+        IrDefinition::OperationMaturity,
+        pointer,
+        Some(&object_members(before)?),
+        Some(&object_members(after)?),
+        &comparisons,
+    )
 }
