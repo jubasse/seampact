@@ -1388,6 +1388,7 @@ name = "seampact-diff"
 version = "2.0.0"
 dependencies = [
  "indexmap",
+ "num-bigint",
  "seampact-diagnostics",
  "seampact-diff-table",
  "seampact-ir",
