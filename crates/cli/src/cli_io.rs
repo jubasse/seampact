@@ -44,6 +44,13 @@ pub fn print_problems(io: &mut dyn CliIo, problems: &[CliProblem]) {
     }
 }
 
+/// Prints the problems of a refusal and answers the refusal exit code.
+pub(crate) fn refuse(io: &mut dyn CliIo, problems: &[CliProblem]) -> i32 {
+    print_problems(io, problems);
+
+    EXIT_REFUSED
+}
+
 /// Prints each warning on its own stderr line: what the generated files leave to the developer's
 /// code, the command going on.
 pub fn print_warnings(io: &mut dyn CliIo, warnings: &[CliProblem]) {
