@@ -682,7 +682,7 @@ pub(crate) fn mark_sensitive(
     );
 }
 
-fn wire_value(
+pub(crate) fn wire_value(
     _context: &EmitContext<'_>,
     _use: &TypeUse,
     _value: &JsonValue,
