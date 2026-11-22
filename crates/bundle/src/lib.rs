@@ -56,7 +56,8 @@ pub use source::{
     BundleSource, BundleSourceForm, GitBundleSource, PackageBundleSource, ReleaseBundleSource,
 };
 pub use tarball_read::{
-    BundleArchiveExtraction, BundleArchiveRead, extract_bundle_tarball, read_bundle_tarball,
+    BundleArchiveExtraction, BundleArchiveRead, ExtractedBundle, extract_bundle_tarball,
+    read_bundle_tarball,
 };
 pub use tarball_write::bundle_tarball;
 pub use untrusted_json::{UntrustedJson, duplicate_key_pointer, parse_untrusted_json, utf8_text};

@@ -16,44 +16,12 @@ use seampact_bundle::{
     bundle_sha256_hex, read_bundle_tarball, verify_bundle,
 };
 use serde_json::Value;
-use support::{repository_root, scratch_directory};
+use support::{base64_decoded, repository_root, scratch_directory};
 
 fn vectors() -> Value {
     let path = repository_root().join("packages/core/spec/vectors/bundle/vectors.json");
 
     serde_json::from_str(&fs::read_to_string(path).unwrap()).unwrap()
-}
-
-fn base64_decoded(text: &str) -> Vec<u8> {
-    let mut bytes = Vec::new();
-    let mut group = 0_u32;
-    let mut count = 0;
-
-    for character in text.chars().filter(|c| *c != '=') {
-        let sextet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
-            .find(character)
-            .unwrap();
-
-        group = group << 6 | u32::try_from(sextet).unwrap();
-        count += 1;
-
-        if count == 4 {
-            bytes.extend_from_slice(&group.to_be_bytes()[1..]);
-            group = 0;
-            count = 0;
-        }
-    }
-
-    match count {
-        2 => bytes.push(u8::try_from((group >> 4) & 0xff).unwrap()),
-        3 => bytes.extend_from_slice(&[
-            u8::try_from((group >> 10) & 0xff).unwrap(),
-            u8::try_from((group >> 2) & 0xff).unwrap(),
-        ]),
-        _ => {}
-    }
-
-    bytes
 }
 
 #[test]

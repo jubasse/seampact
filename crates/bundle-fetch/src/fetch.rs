@@ -18,10 +18,9 @@ use crate::cache::{bundle_cache_entry, process_cache_directory, store_bundle_cac
 use crate::fetch_git::fetch_git_bundle;
 use crate::fetch_package::{InstalledPackage, installed_bundle_package};
 use crate::fetch_release::{ReleaseTarball, download_release_tarball, release_source_problem};
-use crate::fetched::Fetched;
+use crate::fetched::{Fetched, FetchedRemoval};
 use crate::git_source::git_source_problem;
 use crate::release_get::ReleaseGet;
-use crate::removed_on_drop::RemovedOnDrop;
 use crate::{BundleFetchError, BundleSourceFailure, BundleSourceFailureCode, LocalSourcePolicy};
 
 /// The codes of the pinned-bundle check's IR step (`bundle.ir-version`, `bundle.ir-revision`...).
@@ -215,9 +214,9 @@ fn fetch_release(
 
     match extract_bundle_tarball(&tarball)? {
         BundleArchiveExtraction::Refused(failures) => Ok(Fetched::Failed(first_failure(failures)?)),
-        BundleArchiveExtraction::Extracted(directory) => Ok(Fetched::Directory {
-            removal: RemovedOnDrop::new(directory.clone()),
-            directory,
+        BundleArchiveExtraction::Extracted(extracted) => Ok(Fetched::Directory {
+            directory: extracted.path().to_owned(),
+            removal: FetchedRemoval::Extracted(extracted),
         }),
     }
 }
