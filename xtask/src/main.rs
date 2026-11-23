@@ -6,6 +6,7 @@
     reason = "xtask reports gate steps on the terminal"
 )]
 
+mod deps;
 mod gate;
 mod gate_stamp;
 mod oracle;
