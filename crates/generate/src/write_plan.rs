@@ -1,14 +1,19 @@
 //! Every write of a run, each checked by the writer before the first one is committed.
 
 use camino::{Utf8Path, Utf8PathBuf};
-use seampact_cli_config::{CheckLevel, CliIo, CliProblem, Problems};
-use seampact_target::{GeneratedFile, Refusal, Refused};
+use indexmap::IndexMap;
+use seampact_cli_config::{
+    CheckLevel, CliIo, CliProblem, Problems, located_problem, print_warnings,
+};
+use seampact_paths::node_path;
+use seampact_target::{GenerateWarning, GeneratedFile, Refusal, Refused, refusal_code};
 use seampact_writer::{
-    HandEditPolicy, ManifestRead, PlannedWrite, WriteStop, plan_generated_write, read_manifest,
+    HandEditPolicy, ManifestRead, PlannedWrite, WriteStop, commit_generated_write,
+    plan_generated_write, read_manifest,
 };
 
 use crate::app_entry_where::app_entry_where;
-use crate::not_ported::not_ported_yet;
+use crate::drift_level::strictest_level;
 use crate::refusal_problem::problem_from_refusal;
 use crate::stop::Stop;
 use crate::{EmittedAppDocument, GenerateError, GeneratedOutput};
@@ -92,22 +97,104 @@ pub struct CommittableWrites {
 ///
 /// # Errors
 ///
-/// [`GenerateError::NotPortedYet`] until the function is ported.
+/// [`GenerateError::Io`] or [`GenerateError::Internal`] when the writer cannot check.
 pub fn plan_writes(
-    _outputs: &[GeneratedOutput],
-    _documents: &[EmittedAppDocument],
-    _swept: &[SweptDirectory],
-    _policy: HandEditPolicy,
+    outputs: &[GeneratedOutput],
+    documents: &[EmittedAppDocument],
+    swept: &[SweptDirectory],
+    policy: HandEditPolicy,
 ) -> Result<PlannedWrites, GenerateError> {
-    Err(not_ported_yet("planWrites"))
+    let mut planned = PlannedWrites::default();
+
+    for output in outputs {
+        let check = check_write(&output.root, &output.entry_id, &output.files, policy)?;
+
+        planned.entries.push(EntryWrite {
+            output: output.clone(),
+            check,
+        });
+    }
+
+    for (directory, group) in document_directories(documents, swept)? {
+        let files: Vec<GeneratedFile> = group
+            .documents
+            .iter()
+            .map(|document| GeneratedFile {
+                path: document.file.file_name().unwrap_or_default().to_owned(),
+                contents: document.text.clone(),
+            })
+            .collect();
+        let check = check_write(&directory, DOCUMENT_OWNER, &files, policy)?;
+
+        planned.documents.push(DocumentDirectoryWrite {
+            directory,
+            documents: group.documents,
+            check,
+            level: group.level,
+        });
+    }
+
+    Ok(planned)
+}
+
+/// The documents written to one directory, and the level of a drift there.
+struct DocumentGroup {
+    documents: Vec<EmittedAppDocument>,
+    level: CheckLevel,
+}
+
+/// The documents grouped by directory in first-seen order, then each swept directory that holds
+/// documents seampact wrote and no planned document.
+fn document_directories(
+    documents: &[EmittedAppDocument],
+    swept: &[SweptDirectory],
+) -> Result<IndexMap<Utf8PathBuf, DocumentGroup>, GenerateError> {
+    let mut by_directory: IndexMap<Utf8PathBuf, Vec<EmittedAppDocument>> = IndexMap::new();
+
+    for document in documents {
+        by_directory
+            .entry(node_path::dirname(&document.file))
+            .or_default()
+            .push(document.clone());
+    }
+
+    let mut groups: IndexMap<Utf8PathBuf, DocumentGroup> = by_directory
+        .into_iter()
+        .map(|(directory, group)| {
+            let levels: Vec<CheckLevel> = group.iter().map(|document| document.level).collect();
+
+            let level = strictest_level(&levels);
+
+            (
+                directory,
+                DocumentGroup {
+                    documents: group,
+                    level,
+                },
+            )
+        })
+        .collect();
+
+    for SweptDirectory { directory, level } in swept {
+        if !groups.contains_key(directory) && holds_written_documents(directory)? {
+            groups.insert(
+                directory.clone(),
+                DocumentGroup {
+                    documents: Vec::new(),
+                    level: *level,
+                },
+            );
+        }
+    }
+
+    Ok(groups)
 }
 
 /// The writes as planned writes, or every refusal of the run.
 ///
 /// # Errors
 ///
-/// [`Stop::Refused`] with every refusal of the run; [`Stop::Failed`] with
-/// [`GenerateError::NotPortedYet`] until `documentProblem` is ported.
+/// [`Stop::Refused`] with every refusal of the run.
 pub fn committable_writes(writes: PlannedWrites) -> Result<CommittableWrites, Stop> {
     let mut problems: Vec<CliProblem> = writes
         .entries
@@ -115,9 +202,7 @@ pub fn committable_writes(writes: PlannedWrites) -> Result<CommittableWrites, St
         .flat_map(entry_write_problems)
         .collect();
 
-    for write in &writes.documents {
-        problems.extend(document_write_problems(write)?);
-    }
+    problems.extend(writes.documents.iter().flat_map(document_write_problems));
 
     Problems::refuse_any(problems)?;
 
@@ -165,11 +250,9 @@ fn entry_write_problems(write: &EntryWrite) -> Vec<CliProblem> {
 }
 
 /// The problems of a document directory's write the writer refused.
-fn document_write_problems(
-    write: &DocumentDirectoryWrite,
-) -> Result<Vec<CliProblem>, GenerateError> {
+fn document_write_problems(write: &DocumentDirectoryWrite) -> Vec<CliProblem> {
     let Err(Refused(refusals)) = &write.check else {
-        return Ok(Vec::new());
+        return Vec::new();
     };
 
     refusals
@@ -178,11 +261,24 @@ fn document_write_problems(
         .collect()
 }
 
-fn document_problem(
-    _directory: &Utf8Path,
-    _refusal: &Refusal,
-) -> Result<CliProblem, GenerateError> {
-    Err(not_ported_yet("documentProblem"))
+fn document_problem(directory: &Utf8Path, refusal: &Refusal) -> CliProblem {
+    let location = format!("openapi documents in {directory}");
+
+    match refusal.code.as_str() {
+        refusal_code::WRITER_FILE_NOT_GENERATED => located_problem(
+            "openapi.document.not-generated",
+            refusal.message.clone(),
+            "Move or rename that file, write `openapi: none` in the app config to write no seampact document, or give the document another path in `openapi`.",
+            location,
+        ),
+        refusal_code::WRITER_FILE_EDITED => located_problem(
+            "openapi.document.edited",
+            refusal.message.clone(),
+            "Delete the edited document so that `generate` writes it again, run `seampact generate --force` to write it over the edit, or give the document another path in `openapi`.",
+            location,
+        ),
+        _ => problem_from_refusal(refusal, location, None),
+    }
 }
 
 /// The writer's plan for `files` in `directory`, or its refusals.
@@ -190,7 +286,6 @@ fn document_problem(
 /// # Errors
 ///
 /// [`GenerateError::Io`] or [`GenerateError::Internal`] when the writer cannot check.
-#[expect(dead_code, reason = "called by plan_writes, brief 2")]
 fn check_write(
     directory: &Utf8Path,
     owner: &str,
@@ -205,7 +300,6 @@ fn check_write(
 }
 
 /// Whether `directory` holds a manifest of documents seampact wrote.
-#[expect(dead_code, reason = "called by plan_writes, brief 2")]
 fn holds_written_documents(directory: &Utf8Path) -> Result<bool, GenerateError> {
     let manifest = read_manifest(directory)?;
 
@@ -215,12 +309,78 @@ fn holds_written_documents(directory: &Utf8Path) -> Result<bool, GenerateError> 
     ))
 }
 
+/// A warning printed as a refusal is: its code, message, fix, operation and IR member.
+fn warning_problem(warning: &GenerateWarning, location: &str) -> CliProblem {
+    let refusal = Refusal::new(&warning.code, &warning.message, &warning.fix)
+        .with_operation(warning.operation.clone());
+    let refusal = match &warning.member {
+        Some(member) => refusal.with_member(member),
+        None => refusal,
+    };
+
+    problem_from_refusal(&refusal, location.to_owned(), None)
+}
+
 /// Commits every write: each entry's files, then each document directory, printing what each
 /// wrote and its warnings.
 ///
 /// # Errors
 ///
-/// [`GenerateError::NotPortedYet`] until the function is ported.
-pub fn commit_writes(_writes: CommittableWrites, _io: &mut dyn CliIo) -> Result<(), GenerateError> {
-    Err(not_ported_yet("commitWrites"))
+/// [`GenerateError::Io`] or [`GenerateError::Internal`] when a file cannot be written.
+pub fn commit_writes(writes: CommittableWrites, io: &mut dyn CliIo) -> Result<(), GenerateError> {
+    for CommittableEntryWrite { output, write } in writes.entries {
+        let written = commit_generated_write(write)?;
+        let location = app_entry_where(output.app.as_deref(), &output.entry_id, Some(&output.api));
+
+        io.stdout(&format!(
+            "{location}: {} written, {} unchanged, {} removed ({}).\n",
+            written.written.len(),
+            written.unchanged.len(),
+            written.removed.len(),
+            output.root
+        ));
+
+        let warnings: Vec<CliProblem> = output
+            .warnings
+            .iter()
+            .map(|warning| warning_problem(warning, &location))
+            .collect();
+
+        print_warnings(io, &warnings);
+    }
+
+    for CommittableDocumentWrite {
+        directory,
+        documents,
+        write,
+    } in writes.documents
+    {
+        let written = commit_generated_write(write)?;
+
+        for document in &documents {
+            let state = if document
+                .file
+                .file_name()
+                .is_some_and(|name| written.written.iter().any(|each| each == name))
+            {
+                "written"
+            } else {
+                "unchanged"
+            };
+
+            io.stdout(&format!(
+                "openapi document '{}': {state} ({}).\n",
+                document.name, document.file
+            ));
+        }
+
+        for removed in &written.removed {
+            io.stdout(&format!(
+                "openapi document {}: removed.\n",
+                node_path::join(&directory, Utf8Path::new(removed))
+            ));
+        }
+    }
+
+    Ok(())
 }

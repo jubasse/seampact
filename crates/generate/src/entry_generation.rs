@@ -3,29 +3,37 @@
 use std::collections::HashMap;
 
 use seampact_cli_config::{
-    CliProblem, PlannedAppDocument, Problems, TargetEntrySettings, entry_where, located_problem,
+    CliProblem, HookBootCheckLevel, PlannedAppDocument, Problems, TargetEntrySettings, entry_where,
+    hook_check_level_of, located_problem,
 };
 use seampact_diagnostics::InternalError;
 use seampact_json::JsonValue;
 use seampact_target::{
-    DescriptorSet, GENERATE_TROUBLESHOOTING_URL, ImportSpecifierStyle, LINK_TROUBLESHOOTING_URL,
-    LinkSet, Refusal, TargetFailure,
+    DescriptorSet, GENERATE_TROUBLESHOOTING_URL, GenerateRequest, GenerateWarning, HookBootCheck,
+    ImportSpecifierStyle, LINK_TROUBLESHOOTING_URL, LinkSet, Refusal, TargetFailure,
 };
+use seampact_writer::{HeaderSource, check_generated_paths, finish_files};
 
-use crate::contract_position::ContractPositions;
 use crate::drift_level::DEFAULT_DRIFT_CHECK_LEVEL;
 use crate::entry_links::{links_of, paired_api};
 use crate::exclusive_base_paths::exclusive_base_path_problems;
+use crate::framework_route_check::framework_route_check_of;
 use crate::generated_output::GeneratedApi;
 use crate::import_specifier_styles::import_specifier_styles;
 use crate::link_set::{add_link, is_link_kind, relative_location};
-use crate::not_ported::not_ported_yet;
+use crate::native_docs_document::native_docs_document_of;
 use crate::planned_entry::{PlannedApi, PlannedEntry};
-use crate::refusal_problem::problem_from_refusal;
+use crate::refusal_problem::problems_at_api;
 use crate::stop::{Stop, gather};
 use crate::{AppPlan, GeneratedOutput};
 
 const LINK_CODE_PREFIX: &str = "link.";
+
+/// The artefact whose document the target follows, as `entry-generation.ts` names it.
+const NATIVE_DOCS_ARTEFACT: &str = "nativeDocs";
+
+/// The suffix of the code of a warning a form's own code stands for.
+const HANDLER_WARNING_SUFFIX: &str = ".handler";
 
 /// What describing a provider's api answers.
 type DescribeOutcome = Result<DescriptorSet, TargetFailure>;
@@ -37,10 +45,8 @@ pub(crate) struct EntryGeneration<'plan> {
     /// The describe answers already known.
     pub(crate) describe: Describe,
     /// The documents the app writes.
-    #[expect(dead_code, reason = "read by generate_api, brief 2")]
     pub(crate) app_documents: Vec<&'plan PlannedAppDocument>,
     /// The warning codes the config ignores.
-    #[expect(dead_code, reason = "read by generate_api, brief 2")]
     pub(crate) ignored_warnings: &'plan [String],
 }
 
@@ -85,9 +91,8 @@ impl Describe {
 ///
 /// # Errors
 ///
-/// [`Stop::Refused`] with the problems of every api the targets refuse; [`Stop::Failed`] with
-/// [`GenerateError::NotPortedYet`](crate::GenerateError::NotPortedYet) until `generateApi` is
-/// ported, or for a bug.
+/// [`Stop::Refused`] with the problems of every api the targets refuse; [`Stop::Failed`] for a
+/// bug or a file the run cannot read.
 pub fn generate_entries(
     plan: &AppPlan<'_>,
     app: Option<&str>,
@@ -129,19 +134,116 @@ pub fn generate_entries(
 }
 
 fn generate_api(
-    _consumer: &PlannedEntry,
-    _planned_api: &PlannedApi,
-    _style: Option<ImportSpecifierStyle>,
-    _generation: &mut EntryGeneration<'_>,
+    consumer: &PlannedEntry,
+    planned_api: &PlannedApi,
+    style: Option<ImportSpecifierStyle>,
+    generation: &mut EntryGeneration<'_>,
 ) -> Result<GeneratedApi, Stop> {
-    Err(not_ported_yet("generateApi").into())
+    let settings = &consumer.settings;
+    let links = build_links(consumer, planned_api, generation)?;
+    let native_docs = if consumer.artefacts.contains(NATIVE_DOCS_ARTEFACT) {
+        Some(native_docs_document_of(
+            settings,
+            planned_api,
+            &generation.app_documents,
+        )?)
+    } else {
+        None
+    };
+    let framework_routes = framework_route_check_of(settings);
+    let mut request = GenerateRequest::new(&planned_api.ir)
+        .with_needs(&consumer.needs)
+        .with_links(&links)
+        .with_artefacts(&consumer.artefacts)
+        .with_framework_routes(&framework_routes)
+        .with_hook_check(hook_boot_check_of(settings))
+        .with_installed_runtimes(&consumer.installed_runtimes);
+
+    if let Some(options) = &settings.options {
+        request = request.with_options(options);
+    }
+
+    if let Some(mount) = &settings.mount {
+        request = request.with_mount(mount);
+    }
+
+    if let Some(style) = style {
+        request = request.with_import_specifiers(style);
+    }
+
+    if let Some(document) = &native_docs {
+        request = request.with_native_docs_document(document);
+    }
+
+    let generated = match consumer.target.generate(&request) {
+        Ok(generated) => generated,
+        Err(TargetFailure::Internal(error)) => return Err(error.into()),
+        Err(TargetFailure::Refused(refused)) => {
+            return Err(refusal_stop(&refused.0, settings, planned_api)?);
+        }
+    };
+    let metadata = consumer.target.metadata();
+    let header = HeaderSource {
+        version: metadata.version,
+        short_id: metadata.id.as_str(),
+        api_id: planned_api.ir.api.id.as_str(),
+    };
+    let files = match check_generated_paths(generated.files)
+        .and_then(|checked| finish_files(checked, &header))
+    {
+        Ok(files) => files,
+        Err(refused) => return Err(refusal_stop(&refused.0, settings, planned_api)?),
+    };
+
+    Ok(GeneratedApi {
+        entry_id: settings.id.clone(),
+        api: planned_api.api.clone(),
+        root: planned_api.root.clone(),
+        files,
+        warnings: generated
+            .warnings
+            .into_iter()
+            .filter(|warning| !is_ignored_warning(warning, generation.ignored_warnings))
+            .collect(),
+    })
+}
+
+/// The refusal of a run whose target or writer refused `refusals` for `planned_api`.
+fn refusal_stop(
+    refusals: &[Refusal],
+    settings: &TargetEntrySettings,
+    planned_api: &PlannedApi,
+) -> Result<Stop, InternalError> {
+    let documented: Vec<Refusal> = refusals.iter().map(with_docs).collect();
+    let problems = problems_at_api(
+        &documented,
+        |refusal| refusal_where(settings, &planned_api.api, &refusal.code),
+        planned_api,
+    )?;
+
+    Ok(Problems::new(problems).into())
+}
+
+fn hook_boot_check_of(entry: &TargetEntrySettings) -> HookBootCheck {
+    match hook_check_level_of(entry.artefacts.as_ref()) {
+        HookBootCheckLevel::Error => HookBootCheck::Error,
+        HookBootCheckLevel::Warn => HookBootCheck::Warn,
+        HookBootCheckLevel::Off => HookBootCheck::Off,
+    }
+}
+
+/// Whether the config ignores `warning`: its code is a form it names, or that form's handler code.
+fn is_ignored_warning(warning: &GenerateWarning, ignored_forms: &[String]) -> bool {
+    ignored_forms.iter().any(|form| {
+        warning.code == *form
+            || warning
+                .code
+                .strip_suffix(HANDLER_WARNING_SUFFIX)
+                .is_some_and(|code| code == form)
+    })
 }
 
 /// `refusal` with the troubleshooting section of its code when it names none.
-#[expect(
-    dead_code,
-    reason = "called by build_links until generate_api is ported, brief 2"
-)]
 fn with_docs(refusal: &Refusal) -> Refusal {
     if refusal.docs.is_some() {
         return refusal.clone();
@@ -160,7 +262,6 @@ fn with_docs(refusal: &Refusal) -> Refusal {
 }
 
 /// Where a refusal of `code` is: the providers a link refusal names, else the entry and api.
-#[expect(dead_code, reason = "called by generate_api, brief 2")]
 fn refusal_where(entry: &TargetEntrySettings, api: &str, code: &str) -> String {
     let provider_ids: Vec<String> = links_of(entry)
         .into_iter()
@@ -179,7 +280,6 @@ fn refusal_where(entry: &TargetEntrySettings, api: &str, code: &str) -> String {
 }
 
 /// The links `consumer_api` receives from the providers its entry names.
-#[expect(dead_code, reason = "called by generate_api, brief 2")]
 fn build_links(
     consumer: &PlannedEntry,
     consumer_api: &PlannedApi,
@@ -195,7 +295,7 @@ fn build_links(
             .iter()
             .find(|each| each.settings.id == provider_id);
         let provider_api = provider.and_then(|each| paired_api(each, consumer_api));
-        let known_kind = is_link_kind(kind)?;
+        let known_kind = is_link_kind(kind);
 
         // The link checks of the plan refused these cases before any target ran.
         let (Some(provider), Some(provider_api), Some(kind)) = (provider, provider_api, known_kind)
@@ -214,23 +314,18 @@ fn build_links(
         match generation.describe.of(provider, provider_api) {
             Err(TargetFailure::Internal(error)) => return Err(error.clone().into()),
             Err(TargetFailure::Refused(refused)) => {
-                let provider_ir = provider_api
-                    .ir
-                    .to_json_value()
-                    .map_err(|error| InternalError::new(error.to_string()))?;
-                let positions = ContractPositions {
-                    ir: &provider_ir,
-                    locations: provider_api.located.as_ref(),
-                };
+                let documented: Vec<Refusal> = refused.0.iter().map(with_docs).collect();
 
-                problems.extend(refused.0.iter().map(|refusal| {
-                    problem_from_refusal(&with_docs(refusal), location.clone(), Some(&positions))
-                }));
+                problems.extend(problems_at_api(
+                    &documented,
+                    |_| location.clone(),
+                    provider_api,
+                )?);
             }
             Ok(descriptors) => {
-                let link_location = relative_location(&consumer_api.root, &provider_api.root)?;
+                let link_location = relative_location(&consumer_api.root, &provider_api.root);
 
-                if !add_link(&mut links, kind, descriptors.clone(), link_location)? {
+                if !add_link(&mut links, kind, descriptors, link_location) {
                     problems.push(located_problem(
                         "link.kind.not-described",
                         format!(
