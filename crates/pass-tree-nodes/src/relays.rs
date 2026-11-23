@@ -11,7 +11,7 @@ use seampact_ir::{
     ContractIr, DerivationId, DerivedFrom, FormatId, HttpMethod, ImportedIr, IrClosedCheck,
     IrClosedDeclaration, IrMap, Operation, OperationId, OperationRef, Origin, Paging, PagingId,
     PagingStyle, Param, Params, Response, ResponseHeader, SortKey, SurfaceId, ValueSource,
-    WireFormat, check_ir_closed_declaration,
+    WireFormat, check_ir_closed_declaration, derivation_ids,
 };
 use seampact_json::JsonValue;
 use seampact_pass_tree_shared::{
@@ -29,16 +29,14 @@ use crate::diagnostics::{
 use crate::fields::TreeNodesSite;
 use crate::pass::TreeNodesScope;
 
-/// The derivation that stamps what a relay route copies.
-const RELAY_DERIVATION: DerivationId = DerivationId::from_static("relay.route");
 /// The derivations whose responses a relay route copies.
 const COPIED_RESPONSE_DERIVATIONS: &[DerivationId] = &[
-    DerivationId::from_static("response.format"),
-    DerivationId::from_static("batch.read"),
-    RELAY_DERIVATION,
+    derivation_ids::RESPONSE_FORMAT,
+    derivation_ids::BATCH_READ,
+    derivation_ids::RELAY_ROUTE,
 ];
 /// The derivations whose elements a relay route copies.
-const COPIED_ELEMENT_DERIVATIONS: &[DerivationId] = &[RELAY_DERIVATION];
+const COPIED_ELEMENT_DERIVATIONS: &[DerivationId] = &[derivation_ids::RELAY_ROUTE];
 
 /// An operation of a draft another api produced, or of an imported IR, borrowed from the run.
 #[derive(Debug, Clone, Copy)]
@@ -507,7 +505,7 @@ fn stamped<Element: RelayCopied>(element: &Element, stamp: &RelayStamp) -> Eleme
     copied.stamp(
         origin,
         DerivedFrom {
-            derivation: RELAY_DERIVATION,
+            derivation: derivation_ids::RELAY_ROUTE,
             from: vec![stamp.from.clone()],
         },
     );

@@ -7,8 +7,8 @@ use seampact_diagnostics::{
     Diagnostic, DiagnosticOrigin, InternalError, RuleId, Severity, quote_text,
 };
 use seampact_ir::{
-    DeclarationKind, ImportedIr, IrClosedCheck, OperationError, OperationId, OperationRef,
-    check_ir_closed_declaration,
+    DeclarationKind, DerivationId, ImportedIr, IrClosedCheck, OperationError, OperationId,
+    OperationRef, check_ir_closed_declaration, derivation_ids,
 };
 use seampact_pipeline::{DraftIr, DraftOperation, PassError, pointer_below};
 
@@ -19,24 +19,24 @@ pub(crate) const RELAY_SUPERSET_RULE_ID: RuleId = RuleId::from_static(LINK_RELAY
 
 /// The gateway's own derivations (`docs/grammar/07-routes.md` "Relays"): the access and api-wide
 /// codes the gateway answers itself, which a relay route need not answer.
-pub const LINK_GATEWAY_DERIVATIONS: &[&str] = &[
-    "identity.authenticate",
-    "signed.identity",
-    "csrf.cookieWrite",
-    "idempotency.write",
-    "principal.requires",
-    "binding.mismatch",
-    "requirement.errors",
-    "scope.errors",
-    "fieldRight.restricted",
-    "sortKey.restricted",
-    "rule.bucket",
-    "identity.deadline",
-    "identity.versionToken",
-    "api.gateway",
-    "api.service",
-    "response.undeclared",
-    "conventions.every",
+pub const LINK_GATEWAY_DERIVATIONS: [DerivationId; 17] = [
+    derivation_ids::IDENTITY_AUTHENTICATE,
+    derivation_ids::SIGNED_IDENTITY,
+    derivation_ids::CSRF_COOKIE_WRITE,
+    derivation_ids::IDEMPOTENCY_WRITE,
+    derivation_ids::PRINCIPAL_REQUIRES,
+    derivation_ids::BINDING_MISMATCH,
+    derivation_ids::REQUIREMENT_ERRORS,
+    derivation_ids::SCOPE_ERRORS,
+    derivation_ids::FIELD_RIGHT_RESTRICTED,
+    derivation_ids::SORT_KEY_RESTRICTED,
+    derivation_ids::RULE_BUCKET,
+    derivation_ids::IDENTITY_DEADLINE,
+    derivation_ids::IDENTITY_VERSION_TOKEN,
+    derivation_ids::API_GATEWAY,
+    derivation_ids::API_SERVICE,
+    derivation_ids::RESPONSE_UNDECLARED,
+    derivation_ids::CONVENTIONS_EVERY,
 ];
 
 const SUPERSET_FIX: &str = "Bind the role to the same code in both apis, for the api with `conventions.errors.derived` or with `errorRoles` on the relay route.";
@@ -97,12 +97,10 @@ fn public_errors_of<'run>(
 }
 
 fn is_gateway_own(error: &OperationError) -> bool {
-    let derivation = error
+    error
         .derived_from
         .as_ref()
-        .map_or("", |derived| derived.derivation.as_str());
-
-    LINK_GATEWAY_DERIVATIONS.contains(&derivation)
+        .is_some_and(|derived| LINK_GATEWAY_DERIVATIONS.contains(&derived.derivation))
 }
 
 fn roles_text(error: &OperationError) -> String {
@@ -345,9 +343,10 @@ mod tests {
     #[test]
     fn every_gateway_derivation_is_a_row_of_the_derivation_table() {
         let rows: Vec<&str> = DERIVATION_TABLE.iter().map(|row| row.id).collect();
-        let missing: Vec<&&str> = LINK_GATEWAY_DERIVATIONS
+        let gateway = LINK_GATEWAY_DERIVATIONS;
+        let missing: Vec<&DerivationId> = gateway
             .iter()
-            .filter(|id| !rows.contains(id))
+            .filter(|id| !rows.contains(&id.as_str()))
             .collect();
 
         assert!(missing.is_empty(), "{missing:?}");

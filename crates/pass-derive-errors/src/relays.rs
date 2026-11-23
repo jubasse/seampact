@@ -19,7 +19,7 @@ use seampact_diagnostics::{InternalError, quote_text};
 use seampact_ir::{
     DerivationId, ErrorCode, ErrorDecl, ErrorRoleBinding, IrClosedCheck, IrMap, NatureDecl,
     NatureId, Operation, OperationError, OperationId, OperationRef, Origin, Schema, SchemaId,
-    check_ir_closed_declaration,
+    check_ir_closed_declaration, derivation_ids,
 };
 use seampact_json::{JsonValue, canonical_json};
 use seampact_pass_tree_shared::{TREE_NODES_OPERATION_KIND, tree_nodes_relay_origin};
@@ -31,14 +31,14 @@ use crate::report::{
 };
 use crate::triggers::DeriveErrorsRoute;
 
-/// The derivation of a code a relay route copies.
-pub(crate) const DERIVE_ERRORS_RELAY_DERIVATION: DerivationId =
-    DerivationId::from_static("relay.route");
-
 const PACK_DERIVATION_PREFIX: &str = "pack.";
 
 /// The derivations of a domain code besides the relay's own.
-const OTHER_DOMAIN_DERIVATIONS: [&str; 3] = ["member.notFound", "owner.caller", "node.errors"];
+const OTHER_DOMAIN_DERIVATIONS: [DerivationId; 3] = [
+    derivation_ids::MEMBER_NOT_FOUND,
+    derivation_ids::OWNER_CALLER,
+    derivation_ids::NODE_ERRORS,
+];
 
 /// A domain code a relay route copies from the public operation.
 #[derive(Debug, Clone, PartialEq)]
@@ -139,8 +139,8 @@ fn is_domain_code(error: &OperationError) -> bool {
     };
     let derivation = &derived_from.derivation;
 
-    OTHER_DOMAIN_DERIVATIONS.contains(&derivation.as_str())
-        || *derivation == DERIVE_ERRORS_RELAY_DERIVATION
+    OTHER_DOMAIN_DERIVATIONS.contains(derivation)
+        || *derivation == derivation_ids::RELAY_ROUTE
         || derivation.as_str().starts_with(PACK_DERIVATION_PREFIX)
 }
 

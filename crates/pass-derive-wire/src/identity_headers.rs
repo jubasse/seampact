@@ -11,7 +11,7 @@
 use seampact_diagnostics::InternalError;
 use seampact_ir::{
     DerivationId, DerivedFrom, HeaderDecl, HeaderSemantic, HeaderSide, HeaderUseFor,
-    IdentityHeaderUse, KnownAccessRef, KnownIdentityRef, ResponseHeaderSemantic,
+    IdentityHeaderUse, KnownAccessRef, KnownIdentityRef, ResponseHeaderSemantic, derivation_ids,
 };
 
 use crate::params::{
@@ -19,10 +19,6 @@ use crate::params::{
     derive_wire_string_use,
 };
 use crate::routes::{DeriveWireRoute, DeriveWireScope, derive_wire_access_of};
-
-const HEADER: DerivationId = DerivationId::from_static("identity.header");
-
-const VERSION_TOKEN: DerivationId = DerivationId::from_static("identity.versionToken");
 
 /// A use of a header by an identity, with the declaration it names.
 #[derive(Debug, Clone, Copy)]
@@ -107,7 +103,12 @@ fn write_header(
             declaration.id, declaration.semantic
         )));
     };
-    let derived = derived_of(name, item, authenticated && header_use.required, HEADER);
+    let derived = derived_of(
+        name,
+        item,
+        authenticated && header_use.required,
+        derivation_ids::IDENTITY_HEADER,
+    );
 
     if *side == HeaderSide::Response {
         let semantic = response_semantic_of(&declaration.semantic)?;
@@ -148,7 +149,12 @@ fn write_version_token(
 
     derive_wire_add_success_header(
         route,
-        &derived_of(response, item, authenticated, VERSION_TOKEN),
+        &derived_of(
+            response,
+            item,
+            authenticated,
+            derivation_ids::IDENTITY_VERSION_TOKEN,
+        ),
         Some(&semantic),
         scope,
     )?;
@@ -161,7 +167,7 @@ fn write_version_token(
                 request,
                 item,
                 authenticated && header_use.required,
-                VERSION_TOKEN,
+                derivation_ids::IDENTITY_VERSION_TOKEN,
             ),
             scope,
         )?;

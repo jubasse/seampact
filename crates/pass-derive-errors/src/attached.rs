@@ -8,7 +8,7 @@
 
 use indexmap::IndexMap;
 use seampact_diagnostics::InternalError;
-use seampact_ir::{DerivationId, ErrorCode, KnownAccessRef, Origin};
+use seampact_ir::{DerivationId, ErrorCode, KnownAccessRef, Origin, derivation_ids};
 use seampact_json::{JsonObject, JsonValue};
 use seampact_pipeline::{
     ConventionReading, TreeNode, TreeNodeId, TreeNodeKind, TreeNodes, pointer_below,
@@ -31,11 +31,11 @@ pub(crate) enum DeriveErrorsAttachedDerivation {
 impl DeriveErrorsAttachedDerivation {
     /// The derivation as the table writes it.
     pub(crate) const fn id(self) -> DerivationId {
-        DerivationId::from_static(match self {
-            Self::NodeErrors => "node.errors",
-            Self::ConventionsEvery => "conventions.every",
-            Self::IdentityAuthenticate => "identity.authenticate",
-        })
+        match self {
+            Self::NodeErrors => derivation_ids::NODE_ERRORS,
+            Self::ConventionsEvery => derivation_ids::CONVENTIONS_EVERY,
+            Self::IdentityAuthenticate => derivation_ids::IDENTITY_AUTHENTICATE,
+        }
     }
 }
 

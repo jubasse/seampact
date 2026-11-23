@@ -8,10 +8,10 @@
 
 use seampact_diagnostics::InternalError;
 use seampact_ir::{
-    ArrayTypeUse, DecimalLiteral, DerivationId, DerivedFrom, OverLimitPolicy, Paging,
-    PagingParamPlacement, PagingParamStyle, PagingRequestRole, PagingRole, PagingStyle,
-    PagingToken, Pattern, QueryStyle, QueryWire, QueryWireKind, Refinements, ResponseShape,
-    ScalarType, ScalarTypeUse, TypeUse,
+    ArrayTypeUse, DecimalLiteral, DerivedFrom, OverLimitPolicy, Paging, PagingParamPlacement,
+    PagingParamStyle, PagingRequestRole, PagingRole, PagingStyle, PagingToken, Pattern, QueryStyle,
+    QueryWire, QueryWireKind, Refinements, ResponseShape, ScalarType, ScalarTypeUse, TypeUse,
+    derivation_ids,
 };
 use seampact_pass_tree_schemas::{
     TreeSchemasPatternResult, tree_schemas_escape_pattern_literal, tree_schemas_normalize_pattern,
@@ -32,8 +32,6 @@ const SORT_DIRECTIONS: [&str; 2] = ["asc", "desc"];
 const DESCENDING_PREFIX: &str = "-";
 
 const PAIR_SEPARATOR: &str = ",";
-
-const PAGING: DerivationId = DerivationId::from_static("paging.params");
 
 const KEY_PLACEHOLDER: &str = "{key}";
 
@@ -84,7 +82,7 @@ pub(crate) fn derive_wire_paging(
         paging,
         style,
         derived_from: DerivedFrom {
-            derivation: PAGING,
+            derivation: derivation_ids::PAGING_PARAMS,
             from: vec![paging.origin.clone(), style.origin.clone()],
         },
     };

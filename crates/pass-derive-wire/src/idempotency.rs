@@ -10,8 +10,8 @@ use std::collections::HashSet;
 
 use seampact_diagnostics::{InternalError, quote_text};
 use seampact_ir::{
-    DerivationId, DerivedFrom, DerivedIdempotency, ExemptIdempotency, IdempotencyEnforcement,
-    Identity, KnownAccessRef, KnownIdempotency, Origin, Reason, ScalarType, TypeUse,
+    DerivedFrom, DerivedIdempotency, ExemptIdempotency, IdempotencyEnforcement, Identity,
+    KnownAccessRef, KnownIdempotency, Origin, Reason, ScalarType, TypeUse, derivation_ids,
 };
 use seampact_json::{JsonValue, stringify_json};
 use seampact_pipeline::{ConventionReading, NearestSetting, parse_duration};
@@ -24,8 +24,6 @@ use crate::report::{DeriveWireProblem, DeriveWireRule};
 use crate::routes::{
     DeriveWireRoute, DeriveWireScope, derive_wire_access_of, derive_wire_origin_at,
 };
-
-const IDEMPOTENCY: DerivationId = DerivationId::from_static("idempotency.write");
 
 /// The idempotency convention, read once per api.
 #[derive(Debug, Clone, PartialEq)]
@@ -181,7 +179,7 @@ fn write_key(
     scope: &mut DeriveWireScope<'_, '_, '_>,
 ) -> Result<(), InternalError> {
     let derived_from = DerivedFrom {
-        derivation: IDEMPOTENCY,
+        derivation: derivation_ids::IDEMPOTENCY_WRITE,
         from: vec![convention.origin.clone()],
     };
 

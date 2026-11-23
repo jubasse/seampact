@@ -1,9 +1,7 @@
 //! The parameters of an operation.
 
-use seampact_ir::{DerivationId, HeaderSemantic, HeaderSide, Operation, Param};
+use seampact_ir::{DerivationId, HeaderSemantic, HeaderSide, Operation, Param, derivation_ids};
 use seampact_json::{JsonObject, JsonValue};
-use seampact_pass_access_identity::CSRF_DERIVATION;
-use seampact_pass_derive_wire::AUTHENTICATE;
 use seampact_target::IrLocation;
 
 use crate::emit_context::{EmitContext, SchemaVariant, write_extension};
@@ -15,11 +13,11 @@ use crate::{ExtensionName, OpenApiError};
 /// The suffix of the name of a bracketed list parameter.
 const BRACKETS_SUFFIX: &str = "[]";
 
-/// The derivation of the CSRF header parameter.
-const CSRF_COOKIE_WRITE_DERIVATION: DerivationId = DerivationId::from_static(CSRF_DERIVATION);
-
 /// The derivations that write a credential parameter, which the security schemes carry instead.
-const SCHEME_DERIVATIONS: [DerivationId; 2] = [AUTHENTICATE, CSRF_COOKIE_WRITE_DERIVATION];
+const SCHEME_DERIVATIONS: [DerivationId; 2] = [
+    derivation_ids::IDENTITY_AUTHENTICATE,
+    derivation_ids::CSRF_COOKIE_WRITE,
+];
 
 /// Whether a parameter is a credential a security scheme writes.
 fn written_by_security(param: &Param) -> bool {

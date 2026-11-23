@@ -4,10 +4,10 @@
 use indexmap::{IndexMap, IndexSet};
 use seampact_diagnostics::InternalError;
 use seampact_ir::{
-    DerivationId, DerivedFrom, FieldWire, HttpMethod, Identity, IdentityId, InputMediaType,
-    InputProof, IrMap, KnownIdentityRef, KnownKeysPolicyRef, KnownRequirementRef, KnownSchemaRef,
-    KnownSchemeRef, KnownTypeUseRef, Origin, Param, ProofPlacement, RefTypeUse, Requirement,
-    RuleProof, SchemaId, Scheme, SchemeId, SignedIdentity, TypeUse, UnknownKeys, UnknownKeysPolicy,
+    DerivedFrom, FieldWire, HttpMethod, Identity, IdentityId, InputMediaType, InputProof, IrMap,
+    KnownIdentityRef, KnownKeysPolicyRef, KnownRequirementRef, KnownSchemaRef, KnownSchemeRef,
+    KnownTypeUseRef, Origin, Param, ProofPlacement, RefTypeUse, Requirement, RuleProof, SchemaId,
+    Scheme, SchemeId, SignedIdentity, TypeUse, UnknownKeys, UnknownKeysPolicy, derivation_ids,
 };
 use seampact_pass_tree_nodes::tree_nodes_field_wire;
 use seampact_pipeline::{DraftOperationInput, PassError, pointer_below};
@@ -58,10 +58,6 @@ pub(crate) struct ProofUse {
     pub(crate) proof_pointer: String,
     pub(crate) from: Vec<Origin>,
 }
-
-const PROOF_DERIVATION: DerivationId = DerivationId::from_static("rule.proof");
-
-const UNKNOWN_KEYS_DERIVATION: DerivationId = DerivationId::from_static("identity.unknownKeys");
 
 const PROOF_ONLY_MEDIA: InputMediaType = InputMediaType::ApplicationJson;
 
@@ -508,7 +504,7 @@ pub(crate) fn report_schema_clash(
 
 pub(crate) fn derived_from_of(use_of: &ProofUse) -> DerivedFrom {
     DerivedFrom {
-        derivation: PROOF_DERIVATION,
+        derivation: derivation_ids::RULE_PROOF,
         from: use_of.from.clone(),
     }
 }
@@ -681,7 +677,7 @@ pub(crate) fn identity_unknown_keys(
         reason: Some(reason),
         origin: None,
         derived_from: Some(DerivedFrom {
-            derivation: UNKNOWN_KEYS_DERIVATION,
+            derivation: derivation_ids::IDENTITY_UNKNOWN_KEYS,
             from: vec![identity.origin.clone()],
         }),
     }))

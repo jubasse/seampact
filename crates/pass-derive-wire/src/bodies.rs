@@ -5,17 +5,15 @@
 //! `Location`, a `uri-reference`.
 
 use seampact_diagnostics::InternalError;
-use seampact_ir::{DerivationId, DerivedFrom, Origin, Response, ScalarType, TypeUse};
+use seampact_ir::{
+    DerivationId, DerivedFrom, Origin, Response, ScalarType, TypeUse, derivation_ids,
+};
 
 use crate::params::{
     DeriveWireDerived, derive_wire_add_response_header, derive_wire_no_refinements,
     derive_wire_scalar_use, derive_wire_string_use,
 };
 use crate::routes::{DeriveWireRoute, DeriveWireScope};
-
-const DOWNLOAD: DerivationId = DerivationId::from_static("response.download");
-
-const REDIRECT: DerivationId = DerivationId::from_static("redirect.location");
 
 const REDIRECT_STATUSES: [i64; 5] = [301, 302, 303, 307, 308];
 
@@ -61,7 +59,7 @@ pub(crate) fn derive_wire_body_headers(
                 name: "Content-Type",
                 required: true,
                 from: from.clone(),
-                derivation: DOWNLOAD,
+                derivation: derivation_ids::RESPONSE_DOWNLOAD,
                 r#type: None,
             },
             scope,
@@ -73,7 +71,7 @@ pub(crate) fn derive_wire_body_headers(
                 name: "Content-Disposition",
                 required: false,
                 from,
-                derivation: DOWNLOAD,
+                derivation: derivation_ids::RESPONSE_DOWNLOAD,
                 r#type: None,
             },
             scope,
@@ -92,7 +90,7 @@ pub(crate) fn derive_wire_body_headers(
                 name: "Location",
                 required: true,
                 from: origin_of(route, response, scope)?,
-                derivation: REDIRECT,
+                derivation: derivation_ids::REDIRECT_LOCATION,
                 r#type: Some(uri_reference_use()),
             },
             scope,

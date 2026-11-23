@@ -8,8 +8,8 @@
 use indexmap::IndexSet;
 use seampact_diagnostics::InternalError;
 use seampact_ir::{
-    CookieScheme, Csrf, DerivationId, DerivedCsrf, DerivedFrom, ExemptCsrf, KnownAccess,
-    KnownIdentityRef, KnownScheme, Reason,
+    CookieScheme, Csrf, DerivedCsrf, DerivedFrom, ExemptCsrf, KnownAccess, KnownIdentityRef,
+    KnownScheme, Reason, derivation_ids,
 };
 use seampact_pipeline::{NearestSetting, pointer_below};
 
@@ -19,9 +19,6 @@ use crate::access::{
 };
 use crate::read::{access_identity_is_object, access_identity_string};
 use crate::report::{AccessIdentityProblem, AccessIdentityRule};
-
-/// The derivation of a derived `csrf`.
-pub const CSRF_DERIVATION: &str = "csrf.cookieWrite";
 
 /// The `csrf` member of an operation; `None` when it has none, or when refused with the error
 /// reported.
@@ -140,7 +137,7 @@ fn derived_csrf(
     Ok(Some(Csrf::Derived(DerivedCsrf {
         header: name.to_owned(),
         derived_from: DerivedFrom {
-            derivation: DerivationId::new(CSRF_DERIVATION.to_owned()),
+            derivation: derivation_ids::CSRF_COOKIE_WRITE,
             from,
         },
     })))

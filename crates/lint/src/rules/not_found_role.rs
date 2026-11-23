@@ -1,7 +1,7 @@
 //! A declared 404 code beside the derived notFound code on a route (grammar section 11).
 
 use indexmap::IndexMap;
-use seampact_ir::{ContractIr, ErrorCode, ErrorRole, Operation};
+use seampact_ir::{ContractIr, DerivationId, ErrorCode, ErrorRole, Operation, derivation_ids};
 
 use crate::lint_finding::{LintFinding, LintRuleContext};
 use crate::origins::{lint_owns_origin, lint_routes_named};
@@ -10,9 +10,11 @@ const NOT_FOUND_STATUS: i64 = 404;
 
 /// A scope, right or rule answers a parent or a subject: its 404 sits beside the member 404 on
 /// purpose.
-const SUBJECT_DERIVATIONS: [&str; 3] = ["scope.errors", "requirement.errors", "rule.bucket"];
-
-const EVERY_DERIVATION: &str = "conventions.every";
+const SUBJECT_DERIVATIONS: [DerivationId; 3] = [
+    derivation_ids::SCOPE_ERRORS,
+    derivation_ids::REQUIREMENT_ERRORS,
+    derivation_ids::RULE_BUCKET,
+];
 
 /// The routes that list one competing code.
 struct CompetingRoutes<'ir> {
@@ -47,7 +49,7 @@ fn attached_for_the_member(operation: &Operation, code: &ErrorCode) -> bool {
             && error
                 .derived_from
                 .as_ref()
-                .is_none_or(|derived| !SUBJECT_DERIVATIONS.contains(&derived.derivation.as_str()))
+                .is_none_or(|derived| !SUBJECT_DERIVATIONS.contains(&derived.derivation))
     })
 }
 
@@ -60,7 +62,7 @@ fn attached_by_every_only(operation: &Operation, code: &ErrorCode) -> bool {
             error
                 .derived_from
                 .as_ref()
-                .is_some_and(|derived| derived.derivation.as_str() == EVERY_DERIVATION)
+                .is_some_and(|derived| derived.derivation == derivation_ids::CONVENTIONS_EVERY)
         })
 }
 

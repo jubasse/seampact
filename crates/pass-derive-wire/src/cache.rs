@@ -8,9 +8,9 @@
 use indexmap::map::Entry;
 use seampact_diagnostics::InternalError;
 use seampact_ir::{
-    Cache, CacheDirectives, CacheVisibility, CallerCacheControl, CallerKind, DerivationId,
-    DerivedFrom, HttpMethod, KnownAccessRef, KnownSchemeRef, Layer, Origin, Response,
-    ResponseHeader, ResponseShape,
+    Cache, CacheDirectives, CacheVisibility, CallerCacheControl, CallerKind, DerivedFrom,
+    HttpMethod, KnownAccessRef, KnownSchemeRef, Layer, Origin, Response, ResponseHeader,
+    ResponseShape, derivation_ids,
 };
 use seampact_json::JsonValue;
 use seampact_pipeline::{
@@ -30,15 +30,6 @@ use crate::routes::{
     derive_wire_origin_at,
 };
 use crate::sensitive::{DeriveWireSensitiveValue, derive_wire_sensitive};
-
-const CACHE_HEADERS: DerivationId = DerivationId::from_static("cache.headers");
-
-const CACHE_ETAG: DerivationId = DerivationId::from_static("cache.etag");
-
-const CACHE_SENSITIVE: DerivationId = DerivationId::from_static("cache.sensitive");
-
-/// The derivation of the `ETag` header `If-Match` versions.
-const CONCURRENCY_VERSION: DerivationId = DerivationId::from_static("concurrency.version");
 
 const NEVER: &str = "never";
 
@@ -205,9 +196,9 @@ fn cache_of(
         })
         .collect();
     let derivation = if sensitive.is_none() {
-        CACHE_HEADERS
+        derivation_ids::CACHE_HEADERS
     } else {
-        CACHE_SENSITIVE
+        derivation_ids::CACHE_SENSITIVE
     };
 
     Ok(Some(Cache {
@@ -246,7 +237,7 @@ fn sensitive_no_store(
         no_store: true,
         origin: sensitive.origin.clone(),
         derived_from: Some(DerivedFrom {
-            derivation: CACHE_SENSITIVE,
+            derivation: derivation_ids::CACHE_SENSITIVE,
             from: vec![sensitive.origin.clone()],
         }),
     })
@@ -423,7 +414,7 @@ fn is_version_tag(header: &ResponseHeader) -> bool {
         && header
             .derived_from
             .as_ref()
-            .is_some_and(|record| record.derivation == CONCURRENCY_VERSION)
+            .is_some_and(|record| record.derivation == derivation_ids::CONCURRENCY_VERSION)
 }
 
 fn write_entity_tag(
@@ -436,7 +427,7 @@ fn write_entity_tag(
         r#type: derive_wire_string_use(),
         required,
         derived_from: DerivedFrom {
-            derivation: CACHE_ETAG,
+            derivation: derivation_ids::CACHE_ETAG,
             from: vec![origin.clone()],
         },
         wire: None,

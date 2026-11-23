@@ -9,7 +9,7 @@
 //! declares CSRF.
 
 use seampact_diagnostics::InternalError;
-use seampact_ir::{Csrf, DerivationId, DerivedFrom, KnownAccessRef, KnownSchemeRef, Origin};
+use seampact_ir::{Csrf, DerivedFrom, KnownAccessRef, KnownSchemeRef, Origin, derivation_ids};
 
 use crate::params::{
     DeriveWireDerived, DeriveWireParamPlace, derive_wire_add_param, derive_wire_string_use,
@@ -17,9 +17,6 @@ use crate::params::{
 use crate::routes::{DeriveWireRoute, DeriveWireScope, derive_wire_access_of};
 
 const AUTHORIZATION: &str = "Authorization";
-
-/// The derivation of the credential parameters of the accepted schemes.
-pub const AUTHENTICATE: DerivationId = DerivationId::from_static("identity.authenticate");
 
 /// The accesses that carry credentials.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -76,7 +73,7 @@ pub(crate) fn derive_wire_credentials(
                 r#type: derive_wire_string_use(),
                 required,
                 derived_from: DerivedFrom {
-                    derivation: AUTHENTICATE,
+                    derivation: derivation_ids::IDENTITY_AUTHENTICATE,
                     from: vec![access_origin.clone(), scheme_origin(*scheme).clone()],
                 },
                 wire: None,

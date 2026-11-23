@@ -8,8 +8,8 @@
 
 use seampact_diagnostics::InternalError;
 use seampact_ir::{
-    DerivationId, DerivedFrom, Direction, KnownSchemaRef, QueryWire, ResponseShape, TypeUse,
-    ValueSourceIn,
+    DerivedFrom, Direction, KnownSchemaRef, QueryWire, ResponseShape, TypeUse, ValueSourceIn,
+    derivation_ids,
 };
 use seampact_json::JsonValue;
 use seampact_pass_tree_shared::tree_nodes_op_owner;
@@ -21,8 +21,6 @@ use crate::params::{
 };
 use crate::relayed::{DeriveWireRelayed, derive_wire_relayed_derived_from, derive_wire_relayed_of};
 use crate::routes::{DeriveWireRoute, DeriveWireScope, derive_wire_origin_at};
-
-const CONCURRENCY: DerivationId = DerivationId::from_static("concurrency.version");
 
 const IF_MATCH: &str = "if-match";
 
@@ -81,7 +79,7 @@ pub(crate) fn derive_wire_concurrency(
     }
 
     let derived_from = DerivedFrom {
-        derivation: CONCURRENCY,
+        derivation: derivation_ids::CONCURRENCY_VERSION,
         from,
     };
 
@@ -192,7 +190,7 @@ fn derive_relayed_concurrency(
 }
 
 fn is_version_derivation(derived_from: Option<&DerivedFrom>) -> bool {
-    derived_from.is_some_and(|record| record.derivation == CONCURRENCY)
+    derived_from.is_some_and(|record| record.derivation == derivation_ids::CONCURRENCY_VERSION)
 }
 
 // Each success response of the relay route carries the `ETag` the same response of the public
@@ -265,7 +263,7 @@ fn write_item_entity_tag(
         r#type: derive_wire_string_use(),
         required: true,
         derived_from: DerivedFrom {
-            derivation: CONCURRENCY,
+            derivation: derivation_ids::CONCURRENCY_VERSION,
             from: vec![derive_wire_origin_at(
                 scope,
                 &format!("{}/concurrency", resource.pointer),
