@@ -1,0 +1,5 @@
+sources:
+  a: { path: ./a }
+targets:
+  - { id: client, use: probe-client, api: tasks }
+  - { id: server, use: probe-server, api: tasks, link: { validators: client } }

@@ -1,0 +1,45 @@
+{
+  "function": "readAppConfig",
+  "args": [
+    "<root>/seampact.config.yaml",
+    "seampact.config.yaml",
+    null
+  ],
+  "result": {
+    "status": "read",
+    "config": {
+      "file": "<root>/seampact.config.yaml",
+      "outDir": "<root>/__generated__",
+      "sources": {
+        "a": {
+          "kind": "path",
+          "directory": "<root>/a"
+        }
+      },
+      "entries": [
+        {
+          "entry": {
+            "id": "server",
+            "use": "probe-server",
+            "api": "tasks",
+            "options": {
+              "files": [
+                {
+                  "path": "a.ts",
+                  "contents": "export const a = 1;\n"
+                },
+                {
+                  "path": "data.json",
+                  "contents": "{\"b\":1}"
+                }
+              ]
+            }
+          },
+          "root": "<root>/__generated__/server"
+        }
+      ],
+      "openapi": "none"
+    }
+  },
+  "step": 2
+}

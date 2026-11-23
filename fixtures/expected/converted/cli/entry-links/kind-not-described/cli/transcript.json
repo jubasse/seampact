@@ -1,0 +1,7 @@
+{
+  "exit": 1,
+  "stdout": "",
+  "stderr": "link.kind.not-described: entry 'server' linked to 'shared', api 'tasks': 'shared' declares that it provides 'validators', and its describe returned no 'validators' descriptor. Fix: Report it to the maintainers of probe-provider.\n",
+  "written": {},
+  "removed": []
+}

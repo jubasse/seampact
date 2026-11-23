@@ -1,0 +1,52 @@
+{
+  "function": "planAppDocuments",
+  "args": [
+    {
+      "file": "<root>/seampact.config.yaml",
+      "outDir": "<root>/__generated__",
+      "sources": {
+        "a": {
+          "kind": "path",
+          "directory": "<root>/a"
+        }
+      },
+      "entries": [
+        {
+          "entry": {
+            "id": "server",
+            "use": "probe-server",
+            "api": "tasks",
+            "options": {
+              "files": [
+                {
+                  "path": "b.ts",
+                  "contents": "export const b = 1;\n"
+                }
+              ]
+            }
+          },
+          "root": "<root>/__generated__/server"
+        }
+      ],
+      "openapi": "none"
+    },
+    {
+      "server": "server"
+    },
+    [
+      {
+        "source": "a",
+        "api": "tasks",
+        "documents": [
+          "full",
+          "public"
+        ]
+      }
+    ]
+  ],
+  "result": {
+    "status": "planned",
+    "documents": []
+  },
+  "step": 2
+}

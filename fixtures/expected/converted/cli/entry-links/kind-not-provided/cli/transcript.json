@@ -1,0 +1,7 @@
+{
+  "exit": 1,
+  "stdout": "",
+  "stderr": "link.kind.not-provided: entry 'server' linked to 'client': 'client' (probe-client) does not provide 'validators'; it provides nothing. Fix: Link an entry whose target provides 'validators'.\n",
+  "written": {},
+  "removed": []
+}

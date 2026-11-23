@@ -1,0 +1,6 @@
+sources:
+  a: { path: ./a }
+openapi:
+  tasks:
+    full: { path: docs/tasks.full.yaml, extensions: none }
+checks: { openapi: disabled }

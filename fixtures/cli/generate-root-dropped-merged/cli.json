@@ -1,0 +1,9 @@
+{
+  "steps": [
+    { "argv": ["generate"] },
+    { "write": { "seampact.config.yaml": "apps: [apps/api]\n" } },
+    { "argv": ["check"] },
+    { "argv": ["generate"] },
+    { "argv": ["check"] }
+  ]
+}

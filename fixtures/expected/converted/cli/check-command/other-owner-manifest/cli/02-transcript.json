@@ -1,0 +1,7 @@
+{
+  "exit": 1,
+  "stdout": "",
+  "stderr": "writer.manifest.other-owner: entry 'server', api 'tasks': The output directory <root>/__generated__/server belongs to the target 'another-target', not 'server'. Fix: Give 'server' its own `out` directory, or delete <root>/__generated__/server/.seampact-manifest.json and the files of 'another-target'.\n",
+  "written": {},
+  "removed": []
+}

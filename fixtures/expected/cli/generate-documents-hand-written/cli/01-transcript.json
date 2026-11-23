@@ -1,0 +1,7 @@
+{
+  "exit": 1,
+  "stdout": "",
+  "stderr": "openapi.document.not-generated: openapi documents in <root>/docs: '<root>/docs/tasks.full.yaml' exists and the writer did not generate it, so it is not overwritten. Fix: Move or rename that file, write `openapi: none` in the app config to write no seampact document, or give the document another path in `openapi`.\n",
+  "written": {},
+  "removed": []
+}

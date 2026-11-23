@@ -1,0 +1,7 @@
+{
+  "exit": 1,
+  "stdout": "",
+  "stderr": "nativeDocs.document.ambiguous: entry 'server', api 'tasks': The api declares the documents 'full', 'public'; 'full', 'public' each hold every route the entry generates, so the framework's document cannot follow one of them. Fix: Set `document` on the entry to the document the framework's document describes ('full', 'public'), or drop `nativeDocs`.\n",
+  "written": {},
+  "removed": []
+}

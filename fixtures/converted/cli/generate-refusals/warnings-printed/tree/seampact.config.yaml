@@ -1,0 +1,5 @@
+openapi: none
+sources:
+  a: { path: ./a }
+targets:
+  - { id: server, use: probe-server, api: tasks, options: { warnings: [{ code: owner.handler, message: "The caller ownership is not enforced by the generated boundary.", fix: "Scope the handler's reads and writes to the authenticated principal.", operation: health }, { code: sortKeys.handler, message: "Not enforced by the generated boundary.", fix: "Handle it in the handler." }], files: [{ path: a.ts, contents: "export const a = 1;\n" }] } }

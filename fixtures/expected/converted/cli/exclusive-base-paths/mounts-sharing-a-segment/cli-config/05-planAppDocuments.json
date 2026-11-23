@@ -1,0 +1,66 @@
+{
+  "function": "planAppDocuments",
+  "args": [
+    {
+      "file": "<root>/seampact.config.yaml",
+      "outDir": "<root>/__generated__",
+      "sources": {
+        "a": {
+          "kind": "path",
+          "directory": "<root>/a"
+        },
+        "b": {
+          "kind": "path",
+          "directory": "<root>/b"
+        }
+      },
+      "entries": [
+        {
+          "entry": {
+            "id": "one",
+            "use": "probe-server",
+            "api": "a/tasks",
+            "mount": "/api"
+          },
+          "root": "<root>/__generated__/one"
+        },
+        {
+          "entry": {
+            "id": "two",
+            "use": "probe-server",
+            "api": "b/tasks",
+            "mount": "/api/more"
+          },
+          "root": "<root>/__generated__/two"
+        }
+      ],
+      "openapi": "none"
+    },
+    {
+      "one": "server",
+      "two": "server"
+    },
+    [
+      {
+        "source": "a",
+        "api": "tasks",
+        "documents": [
+          "full",
+          "public"
+        ]
+      },
+      {
+        "source": "b",
+        "api": "tasks",
+        "documents": [
+          "full",
+          "public"
+        ]
+      }
+    ]
+  ],
+  "result": {
+    "status": "planned",
+    "documents": []
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "exit": 1,
+  "stdout": "",
+  "stderr": "config.key.unsupported: entry 'types': The target 'probe-provider' generates no boot check that reads 'artefacts.bootCheck.hooks'. Fix: Remove 'artefacts.bootCheck.hooks' from the entry; it belongs to a server target's entry.\n",
+  "written": {},
+  "removed": []
+}

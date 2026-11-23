@@ -1,0 +1,101 @@
+{
+  "function": "planAppDocuments",
+  "args": [
+    {
+      "file": "<root>/seampact.config.yaml",
+      "outDir": "<root>/__generated__",
+      "sources": {
+        "a": {
+          "kind": "path",
+          "directory": "<root>/a"
+        }
+      },
+      "entries": [
+        {
+          "entry": {
+            "id": "server",
+            "use": "probe-server",
+            "api": "tasks",
+            "operations": {
+              "include": [
+                "health"
+              ]
+            }
+          },
+          "root": "<root>/__generated__/server"
+        },
+        {
+          "entry": {
+            "id": "other",
+            "use": "probe-server",
+            "api": "tasks",
+            "operations": {
+              "include": [
+                "listTasks"
+              ]
+            },
+            "mount": "/other"
+          },
+          "root": "<root>/__generated__/other"
+        }
+      ]
+    },
+    {
+      "server": "server",
+      "other": "server"
+    },
+    [
+      {
+        "source": "a",
+        "api": "tasks",
+        "documents": [
+          "full",
+          "public"
+        ]
+      }
+    ]
+  ],
+  "result": {
+    "status": "planned",
+    "documents": [
+      {
+        "source": "a",
+        "api": "tasks",
+        "document": "full",
+        "file": "<root>/openapi/tasks.full.yaml",
+        "options": {},
+        "servedOperations": [
+          {
+            "include": [
+              "health"
+            ]
+          },
+          {
+            "include": [
+              "listTasks"
+            ]
+          }
+        ]
+      },
+      {
+        "source": "a",
+        "api": "tasks",
+        "document": "public",
+        "file": "<root>/openapi/tasks.public.yaml",
+        "options": {},
+        "servedOperations": [
+          {
+            "include": [
+              "health"
+            ]
+          },
+          {
+            "include": [
+              "listTasks"
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

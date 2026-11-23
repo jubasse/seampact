@@ -1,0 +1,55 @@
+{
+  "function": "planMergedDocuments",
+  "args": [
+    {
+      "root": {
+        "file": "<root>/seampact.config.yaml",
+        "displayName": "seampact.config.yaml",
+        "apps": [
+          {
+            "name": "apps/api",
+            "directory": "<root>/apps/api",
+            "file": "<root>/apps/api/seampact.config.yaml"
+          }
+        ],
+        "sources": {},
+        "openapi": [],
+        "checks": {}
+      },
+      "apps": [
+        {
+          "app": {
+            "name": "apps/api",
+            "directory": "<root>/apps/api",
+            "file": "<root>/apps/api/seampact.config.yaml"
+          },
+          "config": {
+            "file": "<root>/apps/api/seampact.config.yaml",
+            "outDir": "<root>/apps/api/__generated__",
+            "sources": {
+              "a": {
+                "kind": "path",
+                "directory": "<root>/a"
+              }
+            },
+            "entries": [],
+            "openapi": {
+              "tasks": {
+                "full": "docs/tasks.full.yaml"
+              }
+            },
+            "rootFile": "<root>/seampact.config.yaml"
+          }
+        }
+      ]
+    },
+    {
+      "apps/api": {}
+    }
+  ],
+  "result": {
+    "status": "planned",
+    "documents": []
+  },
+  "step": 3
+}

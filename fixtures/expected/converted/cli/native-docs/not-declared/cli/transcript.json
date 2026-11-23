@@ -1,0 +1,7 @@
+{
+  "exit": 1,
+  "stdout": "",
+  "stderr": "config.artefacts.unknown: entry 'client': The target 'probe-client' declares no artefact 'nativeDocs'; it declares 'queries', 'mutations'. Fix: Remove 'nativeDocs' from the entry's `artefacts`: this target completes no framework-native document, and the seampact OpenAPI document `generate` writes (`openapi/<api>.yaml` unless the app's `openapi` key places it) describes the api.\n",
+  "written": {},
+  "removed": []
+}

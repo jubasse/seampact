@@ -1,0 +1,4 @@
+sources:
+  a: { path: ./a }
+targets:
+  - { id: server, use: probe-server, api: tasks, options: { refusals: [{ code: access.optional.unsupported, message: "Optional authentication is not generated yet.", fix: "Ask the user first: make the access required or public.", member: /operations/0/access, docs: "https://jubasse.github.io/seampact/troubleshooting/generate/#node-servers" }, { code: options.unknown, message: "The option 'x' is unknown.", fix: "Remove 'x'." }] } }

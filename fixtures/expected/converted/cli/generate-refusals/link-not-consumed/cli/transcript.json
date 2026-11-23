@@ -1,0 +1,7 @@
+{
+  "exit": 1,
+  "stdout": "",
+  "stderr": "link.kind.not-consumed: entry 'types' linked to 'zod': 'types' (probe-provider) does not consume 'validators', linked to 'zod'; it consumes nothing. Fix: Remove the 'validators' link of 'types', or use a target that consumes 'validators'.\n",
+  "written": {},
+  "removed": []
+}

@@ -1,0 +1,9 @@
+{
+  "steps": [
+    { "argv": ["generate"] },
+    { "remove": ["docs/tasks.full.yaml"] },
+    { "argv": ["check"] },
+    { "argv": ["generate"] },
+    { "argv": ["check"] }
+  ]
+}

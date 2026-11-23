@@ -1,0 +1,2023 @@
+{
+  "function": "compileWorkspaceWithImports",
+  "args": [
+    {
+      "reader": {
+        "root": "<root>/a"
+      },
+      "entry": "api.yaml",
+      "fetch": {
+        "baseDirectory": "<root>/a",
+        "localSources": "allow"
+      }
+    }
+  ],
+  "result": {
+    "ok": true,
+    "compiled": {
+      "files": [
+        "api.yaml",
+        "docs/api.md"
+      ],
+      "diagnostics": [],
+      "locations": {},
+      "apis": [
+        {
+          "api": "tasks",
+          "diagnostics": [],
+          "locations": {
+            "api#": {
+              "file": "api.yaml",
+              "line": 1,
+              "column": 1,
+              "endLine": 58,
+              "endColumn": 1
+            },
+            "api#/api/name": {
+              "file": "api.yaml",
+              "line": 2,
+              "column": 3,
+              "endLine": 2,
+              "endColumn": 14
+            },
+            "api#/api/version": {
+              "file": "api.yaml",
+              "line": 3,
+              "column": 3,
+              "endLine": 3,
+              "endColumn": 13
+            },
+            "api#/api/kind": {
+              "file": "api.yaml",
+              "line": 4,
+              "column": 3,
+              "endLine": 4,
+              "endColumn": 16
+            },
+            "api#/api/maturity": {
+              "file": "api.yaml",
+              "line": 5,
+              "column": 3,
+              "endLine": 5,
+              "endColumn": 24
+            },
+            "api#/api/summary": {
+              "file": "api.yaml",
+              "line": 6,
+              "column": 3,
+              "endLine": 6,
+              "endColumn": 30
+            },
+            "api#/api/description": {
+              "file": "api.yaml",
+              "line": 7,
+              "column": 3,
+              "endLine": 7,
+              "endColumn": 40
+            },
+            "api#/api/documents/public/surfaces/0": {
+              "file": "api.yaml",
+              "line": 9,
+              "column": 26,
+              "endLine": 9,
+              "endColumn": 29
+            },
+            "api#/api/documents/public/surfaces": {
+              "file": "api.yaml",
+              "line": 9,
+              "column": 15,
+              "endLine": 9,
+              "endColumn": 30
+            },
+            "api#/api/documents/public/internal": {
+              "file": "api.yaml",
+              "line": 9,
+              "column": 32,
+              "endLine": 9,
+              "endColumn": 49
+            },
+            "api#/api/documents/public": {
+              "file": "api.yaml",
+              "line": 9,
+              "column": 5,
+              "endLine": 9,
+              "endColumn": 51
+            },
+            "api#/api/documents/full": {
+              "file": "api.yaml",
+              "line": 10,
+              "column": 5,
+              "endLine": 10,
+              "endColumn": 13
+            },
+            "api#/api/documents": {
+              "file": "api.yaml",
+              "line": 8,
+              "column": 3,
+              "endLine": 11,
+              "endColumn": 1
+            },
+            "api#/api": {
+              "file": "api.yaml",
+              "line": 1,
+              "column": 1,
+              "endLine": 11,
+              "endColumn": 1
+            },
+            "api#/pagings/cursor/request/cursor/query": {
+              "file": "api.yaml",
+              "line": 15,
+              "column": 17,
+              "endLine": 15,
+              "endColumn": 30
+            },
+            "api#/pagings/cursor/request/cursor": {
+              "file": "api.yaml",
+              "line": 15,
+              "column": 7,
+              "endLine": 15,
+              "endColumn": 32
+            },
+            "api#/pagings/cursor/request/limit/query": {
+              "file": "api.yaml",
+              "line": 16,
+              "column": 16,
+              "endLine": 16,
+              "endColumn": 28
+            },
+            "api#/pagings/cursor/request/limit": {
+              "file": "api.yaml",
+              "line": 16,
+              "column": 7,
+              "endLine": 16,
+              "endColumn": 30
+            },
+            "api#/pagings/cursor/request": {
+              "file": "api.yaml",
+              "line": 14,
+              "column": 5,
+              "endLine": 17,
+              "endColumn": 1
+            },
+            "api#/pagings/cursor/response/body": {
+              "file": "api.yaml",
+              "line": 18,
+              "column": 7,
+              "endLine": 18,
+              "endColumn": 19
+            },
+            "api#/pagings/cursor/response/links/next": {
+              "file": "api.yaml",
+              "line": 19,
+              "column": 16,
+              "endLine": 19,
+              "endColumn": 27
+            },
+            "api#/pagings/cursor/response/links": {
+              "file": "api.yaml",
+              "line": 19,
+              "column": 7,
+              "endLine": 19,
+              "endColumn": 29
+            },
+            "api#/pagings/cursor/response": {
+              "file": "api.yaml",
+              "line": 17,
+              "column": 5,
+              "endLine": 20,
+              "endColumn": 1
+            },
+            "api#/pagings/cursor": {
+              "file": "api.yaml",
+              "line": 13,
+              "column": 3,
+              "endLine": 20,
+              "endColumn": 1
+            },
+            "api#/pagings": {
+              "file": "api.yaml",
+              "line": 12,
+              "column": 1,
+              "endLine": 20,
+              "endColumn": 1
+            },
+            "api#/schemas/TaskId/type": {
+              "file": "api.yaml",
+              "line": 22,
+              "column": 13,
+              "endLine": 22,
+              "endColumn": 25
+            },
+            "api#/schemas/TaskId/format": {
+              "file": "api.yaml",
+              "line": 22,
+              "column": 27,
+              "endLine": 22,
+              "endColumn": 39
+            },
+            "api#/schemas/TaskId": {
+              "file": "api.yaml",
+              "line": 22,
+              "column": 3,
+              "endLine": 22,
+              "endColumn": 41
+            },
+            "api#/schemas/Health/type": {
+              "file": "api.yaml",
+              "line": 24,
+              "column": 5,
+              "endLine": 24,
+              "endColumn": 17
+            },
+            "api#/schemas/Health/required/0": {
+              "file": "api.yaml",
+              "line": 25,
+              "column": 16,
+              "endLine": 25,
+              "endColumn": 22
+            },
+            "api#/schemas/Health/required": {
+              "file": "api.yaml",
+              "line": 25,
+              "column": 5,
+              "endLine": 25,
+              "endColumn": 23
+            },
+            "api#/schemas/Health/properties/status/type": {
+              "file": "api.yaml",
+              "line": 26,
+              "column": 29,
+              "endLine": 26,
+              "endColumn": 41
+            },
+            "api#/schemas/Health/properties/status": {
+              "file": "api.yaml",
+              "line": 26,
+              "column": 19,
+              "endLine": 26,
+              "endColumn": 43
+            },
+            "api#/schemas/Health/properties": {
+              "file": "api.yaml",
+              "line": 26,
+              "column": 5,
+              "endLine": 26,
+              "endColumn": 45
+            },
+            "api#/schemas/Health": {
+              "file": "api.yaml",
+              "line": 23,
+              "column": 3,
+              "endLine": 27,
+              "endColumn": 1
+            },
+            "api#/schemas/Task/type": {
+              "file": "api.yaml",
+              "line": 28,
+              "column": 5,
+              "endLine": 28,
+              "endColumn": 17
+            },
+            "api#/schemas/Task/required/0": {
+              "file": "api.yaml",
+              "line": 29,
+              "column": 16,
+              "endLine": 29,
+              "endColumn": 22
+            },
+            "api#/schemas/Task/required/1": {
+              "file": "api.yaml",
+              "line": 29,
+              "column": 24,
+              "endLine": 29,
+              "endColumn": 29
+            },
+            "api#/schemas/Task/required": {
+              "file": "api.yaml",
+              "line": 29,
+              "column": 5,
+              "endLine": 29,
+              "endColumn": 30
+            },
+            "api#/schemas/Task/properties/taskId": {
+              "file": "api.yaml",
+              "line": 31,
+              "column": 7,
+              "endLine": 31,
+              "endColumn": 21
+            },
+            "api#/schemas/Task/properties/title/type": {
+              "file": "api.yaml",
+              "line": 32,
+              "column": 16,
+              "endLine": 32,
+              "endColumn": 28
+            },
+            "api#/schemas/Task/properties/title/minLength": {
+              "file": "api.yaml",
+              "line": 32,
+              "column": 30,
+              "endLine": 32,
+              "endColumn": 42
+            },
+            "api#/schemas/Task/properties/title/maxLength": {
+              "file": "api.yaml",
+              "line": 32,
+              "column": 44,
+              "endLine": 32,
+              "endColumn": 58
+            },
+            "api#/schemas/Task/properties/title": {
+              "file": "api.yaml",
+              "line": 32,
+              "column": 7,
+              "endLine": 32,
+              "endColumn": 60
+            },
+            "api#/schemas/Task/properties": {
+              "file": "api.yaml",
+              "line": 30,
+              "column": 5,
+              "endLine": 33,
+              "endColumn": 1
+            },
+            "api#/schemas/Task": {
+              "file": "api.yaml",
+              "line": 27,
+              "column": 3,
+              "endLine": 33,
+              "endColumn": 1
+            },
+            "api#/schemas": {
+              "file": "api.yaml",
+              "line": 21,
+              "column": 1,
+              "endLine": 33,
+              "endColumn": 1
+            },
+            "api#/surfaces/app/prefix": {
+              "file": "api.yaml",
+              "line": 36,
+              "column": 5,
+              "endLine": 36,
+              "endColumn": 24
+            },
+            "api#/surfaces/app/access/public": {
+              "file": "api.yaml",
+              "line": 37,
+              "column": 15,
+              "endLine": 37,
+              "endColumn": 70
+            },
+            "api#/surfaces/app/access": {
+              "file": "api.yaml",
+              "line": 37,
+              "column": 5,
+              "endLine": 37,
+              "endColumn": 72
+            },
+            "api#/surfaces/app/routes/health/method": {
+              "file": "api.yaml",
+              "line": 40,
+              "column": 9,
+              "endLine": 40,
+              "endColumn": 20
+            },
+            "api#/surfaces/app/routes/health/output": {
+              "file": "api.yaml",
+              "line": 41,
+              "column": 9,
+              "endLine": 41,
+              "endColumn": 23
+            },
+            "api#/surfaces/app/routes/health": {
+              "file": "api.yaml",
+              "line": 39,
+              "column": 7,
+              "endLine": 42,
+              "endColumn": 1
+            },
+            "api#/surfaces/app/routes/tasks/kind": {
+              "file": "api.yaml",
+              "line": 43,
+              "column": 9,
+              "endLine": 43,
+              "endColumn": 25
+            },
+            "api#/surfaces/app/routes/tasks/id/taskId": {
+              "file": "api.yaml",
+              "line": 44,
+              "column": 15,
+              "endLine": 44,
+              "endColumn": 29
+            },
+            "api#/surfaces/app/routes/tasks/id": {
+              "file": "api.yaml",
+              "line": 44,
+              "column": 9,
+              "endLine": 44,
+              "endColumn": 31
+            },
+            "api#/surfaces/app/routes/tasks/item": {
+              "file": "api.yaml",
+              "line": 45,
+              "column": 9,
+              "endLine": 45,
+              "endColumn": 19
+            },
+            "api#/surfaces/app/routes/tasks/ops/list/paging/cursor/maxLimit": {
+              "file": "api.yaml",
+              "line": 47,
+              "column": 39,
+              "endLine": 47,
+              "endColumn": 51
+            },
+            "api#/surfaces/app/routes/tasks/ops/list/paging/cursor": {
+              "file": "api.yaml",
+              "line": 47,
+              "column": 29,
+              "endLine": 47,
+              "endColumn": 53
+            },
+            "api#/surfaces/app/routes/tasks/ops/list/paging": {
+              "file": "api.yaml",
+              "line": 47,
+              "column": 19,
+              "endLine": 47,
+              "endColumn": 55
+            },
+            "api#/surfaces/app/routes/tasks/ops/list": {
+              "file": "api.yaml",
+              "line": 47,
+              "column": 11,
+              "endLine": 47,
+              "endColumn": 57
+            },
+            "api#/surfaces/app/routes/tasks/ops/get": {
+              "file": "api.yaml",
+              "line": 48,
+              "column": 11,
+              "endLine": 48,
+              "endColumn": 18
+            },
+            "api#/surfaces/app/routes/tasks/ops": {
+              "file": "api.yaml",
+              "line": 46,
+              "column": 9,
+              "endLine": 49,
+              "endColumn": 1
+            },
+            "api#/surfaces/app/routes/tasks": {
+              "file": "api.yaml",
+              "line": 42,
+              "column": 7,
+              "endLine": 49,
+              "endColumn": 1
+            },
+            "api#/surfaces/app/routes": {
+              "file": "api.yaml",
+              "line": 38,
+              "column": 5,
+              "endLine": 49,
+              "endColumn": 1
+            },
+            "api#/surfaces/app": {
+              "file": "api.yaml",
+              "line": 35,
+              "column": 3,
+              "endLine": 49,
+              "endColumn": 1
+            },
+            "api#/surfaces/admin/prefix": {
+              "file": "api.yaml",
+              "line": 50,
+              "column": 5,
+              "endLine": 50,
+              "endColumn": 30
+            },
+            "api#/surfaces/admin/access/public": {
+              "file": "api.yaml",
+              "line": 51,
+              "column": 15,
+              "endLine": 51,
+              "endColumn": 62
+            },
+            "api#/surfaces/admin/access": {
+              "file": "api.yaml",
+              "line": 51,
+              "column": 5,
+              "endLine": 51,
+              "endColumn": 64
+            },
+            "api#/surfaces/admin/routes/purge/method": {
+              "file": "api.yaml",
+              "line": 54,
+              "column": 9,
+              "endLine": 54,
+              "endColumn": 21
+            },
+            "api#/surfaces/admin/routes/purge/internal": {
+              "file": "api.yaml",
+              "line": 55,
+              "column": 9,
+              "endLine": 55,
+              "endColumn": 23
+            },
+            "api#/surfaces/admin/routes/purge/responses/204": {
+              "file": "api.yaml",
+              "line": 57,
+              "column": 11,
+              "endLine": 57,
+              "endColumn": 18
+            },
+            "api#/surfaces/admin/routes/purge/responses": {
+              "file": "api.yaml",
+              "line": 56,
+              "column": 9,
+              "endLine": 58,
+              "endColumn": 1
+            },
+            "api#/surfaces/admin/routes/purge": {
+              "file": "api.yaml",
+              "line": 53,
+              "column": 7,
+              "endLine": 58,
+              "endColumn": 1
+            },
+            "api#/surfaces/admin/routes": {
+              "file": "api.yaml",
+              "line": 52,
+              "column": 5,
+              "endLine": 58,
+              "endColumn": 1
+            },
+            "api#/surfaces/admin": {
+              "file": "api.yaml",
+              "line": 49,
+              "column": 3,
+              "endLine": 58,
+              "endColumn": 1
+            },
+            "api#/surfaces": {
+              "file": "api.yaml",
+              "line": 34,
+              "column": 1,
+              "endLine": 58,
+              "endColumn": 1
+            }
+          },
+          "ir": {
+            "api": {
+              "compat": {
+                "policy": "none"
+              },
+              "docs": {
+                "description": "Tasks, read from a side file.\n",
+                "summary": "A small tasks api."
+              },
+              "documents": {
+                "full": {
+                  "internal": "include",
+                  "surfaces": [
+                    "admin",
+                    "app"
+                  ]
+                },
+                "public": {
+                  "internal": "exclude",
+                  "surfaces": [
+                    "app"
+                  ]
+                }
+              },
+              "extensions": {},
+              "id": "tasks",
+              "kind": "product",
+              "maturity": "provisional",
+              "name": {
+                "role": "schema",
+                "segments": [
+                  "tasks"
+                ]
+              },
+              "origin": {
+                "layer": "api",
+                "pointer": "/api"
+              },
+              "pathVersion": {
+                "origin": {
+                  "layer": "api",
+                  "pointer": "/api/version"
+                },
+                "value": "prefix"
+              },
+              "surfaces": {
+                "admin": {
+                  "name": {
+                    "role": "schema",
+                    "segments": [
+                      "admin"
+                    ]
+                  },
+                  "origin": {
+                    "layer": "api",
+                    "pointer": "/surfaces/admin"
+                  },
+                  "pathVersion": "prefix",
+                  "prefix": "/v1/admin"
+                },
+                "app": {
+                  "name": {
+                    "role": "schema",
+                    "segments": [
+                      "app"
+                    ]
+                  },
+                  "origin": {
+                    "layer": "api",
+                    "pointer": "/surfaces/app"
+                  },
+                  "pathVersion": "prefix",
+                  "prefix": "/v1"
+                }
+              },
+              "version": {
+                "kind": "path",
+                "number": 1
+              },
+              "wire": {
+                "int64": "string",
+                "outputEnums": "enum",
+                "urls": "relative"
+              }
+            },
+            "buckets": {},
+            "conventions": {},
+            "enums": {},
+            "errors": {
+              "api.internal": {
+                "code": "api.internal",
+                "default": "undeclaredStatus",
+                "docs": {},
+                "family": "api",
+                "http": {
+                  "status": 500
+                },
+                "nature": "failed",
+                "origin": {
+                  "layer": "core",
+                  "pointer": "/errors/api.internal"
+                }
+              },
+              "api.not_found": {
+                "code": "api.not_found",
+                "default": "notFound",
+                "docs": {},
+                "family": "api",
+                "http": {
+                  "status": 404
+                },
+                "nature": "refused",
+                "origin": {
+                  "layer": "core",
+                  "pointer": "/errors/api.not_found"
+                }
+              },
+              "api.schema_invalid": {
+                "code": "api.schema_invalid",
+                "default": "schemaInvalid",
+                "docs": {},
+                "family": "api",
+                "http": {
+                  "status": 400
+                },
+                "nature": "refused",
+                "origin": {
+                  "layer": "core",
+                  "pointer": "/errors/api.schema_invalid"
+                },
+                "params": "ApiSchemaInvalidParams"
+              }
+            },
+            "extensionKeys": {},
+            "features": [],
+            "formats": {
+              "bare": {
+                "absent": "omit",
+                "error": {
+                  "body": {
+                    "kind": "object",
+                    "members": [
+                      {
+                        "name": {
+                          "kind": "text",
+                          "text": "type"
+                        },
+                        "value": {
+                          "kind": "slot",
+                          "path": [],
+                          "slot": "code"
+                        }
+                      },
+                      {
+                        "name": {
+                          "kind": "text",
+                          "text": "title"
+                        },
+                        "value": {
+                          "kind": "slot",
+                          "path": [],
+                          "slot": "title"
+                        }
+                      },
+                      {
+                        "name": {
+                          "kind": "text",
+                          "text": "status"
+                        },
+                        "value": {
+                          "kind": "slot",
+                          "path": [],
+                          "slot": "status"
+                        }
+                      },
+                      {
+                        "name": {
+                          "kind": "text",
+                          "text": "detail"
+                        },
+                        "value": {
+                          "kind": "slot",
+                          "path": [],
+                          "slot": "detail"
+                        }
+                      },
+                      {
+                        "name": {
+                          "kind": "text",
+                          "text": "instance"
+                        },
+                        "value": {
+                          "kind": "slot",
+                          "path": [],
+                          "slot": "instance"
+                        }
+                      },
+                      {
+                        "name": {
+                          "kind": "text",
+                          "text": "code"
+                        },
+                        "value": {
+                          "kind": "slot",
+                          "path": [],
+                          "slot": "code"
+                        }
+                      },
+                      {
+                        "name": {
+                          "kind": "text",
+                          "text": "nature"
+                        },
+                        "value": {
+                          "kind": "slot",
+                          "path": [],
+                          "slot": "nature"
+                        }
+                      },
+                      {
+                        "name": {
+                          "kind": "text",
+                          "text": "traceId"
+                        },
+                        "value": {
+                          "kind": "slot",
+                          "path": [],
+                          "slot": "traceId"
+                        }
+                      }
+                    ],
+                    "merge": "params"
+                  },
+                  "headers": [],
+                  "media": "application/problem+json"
+                },
+                "id": "bare",
+                "media": "application/json",
+                "meta": {},
+                "origin": {
+                  "layer": "core",
+                  "pointer": "/formats/bare"
+                },
+                "success": {
+                  "item": {
+                    "body": {
+                      "kind": "slot",
+                      "path": [],
+                      "slot": "payload"
+                    },
+                    "headers": []
+                  },
+                  "list": {
+                    "body": {
+                      "kind": "slot",
+                      "path": [],
+                      "slot": "payload"
+                    },
+                    "headers": []
+                  },
+                  "page": {
+                    "body": {
+                      "kind": "slot",
+                      "path": [],
+                      "slot": "items"
+                    },
+                    "headers": []
+                  },
+                  "table": {
+                    "body": {
+                      "kind": "slot",
+                      "path": [],
+                      "slot": "payload"
+                    },
+                    "headers": []
+                  }
+                }
+              }
+            },
+            "headers": {},
+            "identities": {},
+            "irRevision": 6,
+            "irVersion": 1,
+            "kinds": [
+              "httpOperation"
+            ],
+            "lint": {
+              "allows": [],
+              "rules": {}
+            },
+            "natures": {},
+            "operations": [
+              {
+                "access": {
+                  "kind": "public",
+                  "origin": {
+                    "layer": "api",
+                    "pointer": "/surfaces/app/access"
+                  },
+                  "reason": "Anyone may call this api: it has no accounts."
+                },
+                "bindings": [],
+                "callerKinds": [
+                  "anonymous"
+                ],
+                "docs": {},
+                "errors": [
+                  {
+                    "code": "api.schema_invalid",
+                    "derivedFrom": {
+                      "derivation": "input.invalid",
+                      "from": [
+                        {
+                          "layer": "api",
+                          "pointer": "/surfaces/app/routes/tasks/ops/get"
+                        }
+                      ]
+                    },
+                    "roles": [
+                      {
+                        "params": {
+                          "kind": "object",
+                          "members": [
+                            {
+                              "name": {
+                                "kind": "text",
+                                "text": "issues"
+                              },
+                              "value": {
+                                "kind": "slot",
+                                "path": [],
+                                "slot": "issues"
+                              }
+                            }
+                          ]
+                        },
+                        "role": "schemaInvalid"
+                      }
+                    ]
+                  },
+                  {
+                    "code": "api.not_found",
+                    "derivedFrom": {
+                      "derivation": "member.notFound",
+                      "from": [
+                        {
+                          "layer": "api",
+                          "pointer": "/surfaces/app/routes/tasks/ops/get"
+                        }
+                      ]
+                    },
+                    "roles": [
+                      {
+                        "role": "notFound"
+                      }
+                    ]
+                  },
+                  {
+                    "code": "api.internal",
+                    "derivedFrom": {
+                      "derivation": "response.undeclared",
+                      "from": [
+                        {
+                          "layer": "api",
+                          "pointer": "/surfaces/app/routes/tasks/ops/get"
+                        }
+                      ]
+                    },
+                    "roles": [
+                      {
+                        "role": "undeclaredStatus"
+                      }
+                    ]
+                  }
+                ],
+                "examples": {},
+                "extensions": {},
+                "features": [],
+                "fieldRights": [],
+                "format": "bare",
+                "id": "getTask",
+                "internal": false,
+                "kind": "httpOperation",
+                "maturity": {
+                  "level": "provisional",
+                  "origin": {
+                    "layer": "api",
+                    "pointer": "/api/maturity"
+                  },
+                  "source": "api"
+                },
+                "method": "get",
+                "name": {
+                  "role": "operation",
+                  "segments": [
+                    "get",
+                    "task"
+                  ]
+                },
+                "op": "get",
+                "origin": {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/routes/tasks/ops/get"
+                },
+                "params": {
+                  "header": [],
+                  "path": [
+                    {
+                      "name": "taskId",
+                      "origin": {
+                        "layer": "api",
+                        "pointer": "/surfaces/app/routes/tasks/id/taskId"
+                      },
+                      "required": true,
+                      "type": {
+                        "format": "uuid",
+                        "kind": "scalar",
+                        "refinements": {},
+                        "type": "string"
+                      }
+                    }
+                  ],
+                  "query": []
+                },
+                "path": "/v1/tasks/{taskId}",
+                "principalRequires": [],
+                "requires": [],
+                "resource": {
+                  "idParam": "taskId",
+                  "idProperty": "taskId",
+                  "type": "tasks"
+                },
+                "responses": [
+                  {
+                    "body": {
+                      "kind": "ref",
+                      "schema": "Task"
+                    },
+                    "derivedFrom": {
+                      "derivation": "response.format",
+                      "from": [
+                        {
+                          "layer": "core",
+                          "pointer": "/formats/bare"
+                        }
+                      ]
+                    },
+                    "headers": [],
+                    "media": "application/json",
+                    "origin": {
+                      "layer": "api",
+                      "pointer": "/surfaces/app/routes/tasks/item"
+                    },
+                    "shape": "item",
+                    "status": 200
+                  }
+                ],
+                "safe": true,
+                "scopes": [],
+                "surface": "app",
+                "tags": [],
+                "unknownQuery": {
+                  "policy": "refuse"
+                },
+                "upstream": []
+              },
+              {
+                "access": {
+                  "kind": "public",
+                  "origin": {
+                    "layer": "api",
+                    "pointer": "/surfaces/app/access"
+                  },
+                  "reason": "Anyone may call this api: it has no accounts."
+                },
+                "bindings": [],
+                "callerKinds": [
+                  "anonymous"
+                ],
+                "docs": {},
+                "errors": [
+                  {
+                    "code": "api.schema_invalid",
+                    "derivedFrom": {
+                      "derivation": "input.invalid",
+                      "from": [
+                        {
+                          "layer": "api",
+                          "pointer": "/surfaces/app/routes/health"
+                        }
+                      ]
+                    },
+                    "roles": [
+                      {
+                        "params": {
+                          "kind": "object",
+                          "members": [
+                            {
+                              "name": {
+                                "kind": "text",
+                                "text": "issues"
+                              },
+                              "value": {
+                                "kind": "slot",
+                                "path": [],
+                                "slot": "issues"
+                              }
+                            }
+                          ]
+                        },
+                        "role": "schemaInvalid"
+                      }
+                    ]
+                  },
+                  {
+                    "code": "api.internal",
+                    "derivedFrom": {
+                      "derivation": "response.undeclared",
+                      "from": [
+                        {
+                          "layer": "api",
+                          "pointer": "/surfaces/app/routes/health"
+                        }
+                      ]
+                    },
+                    "roles": [
+                      {
+                        "role": "undeclaredStatus"
+                      }
+                    ]
+                  }
+                ],
+                "examples": {},
+                "extensions": {},
+                "features": [],
+                "fieldRights": [],
+                "format": "bare",
+                "id": "health",
+                "internal": false,
+                "kind": "httpOperation",
+                "maturity": {
+                  "level": "provisional",
+                  "origin": {
+                    "layer": "api",
+                    "pointer": "/api/maturity"
+                  },
+                  "source": "api"
+                },
+                "method": "get",
+                "name": {
+                  "role": "operation",
+                  "segments": [
+                    "health"
+                  ]
+                },
+                "origin": {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/routes/health"
+                },
+                "params": {
+                  "header": [],
+                  "path": [],
+                  "query": []
+                },
+                "path": "/v1/health",
+                "principalRequires": [],
+                "requires": [],
+                "responses": [
+                  {
+                    "body": {
+                      "kind": "ref",
+                      "schema": "Health"
+                    },
+                    "derivedFrom": {
+                      "derivation": "response.format",
+                      "from": [
+                        {
+                          "layer": "core",
+                          "pointer": "/formats/bare"
+                        }
+                      ]
+                    },
+                    "headers": [],
+                    "media": "application/json",
+                    "origin": {
+                      "layer": "api",
+                      "pointer": "/surfaces/app/routes/health/output"
+                    },
+                    "shape": "item",
+                    "status": 200
+                  }
+                ],
+                "safe": true,
+                "scopes": [],
+                "surface": "app",
+                "tags": [],
+                "unknownQuery": {
+                  "policy": "refuse"
+                },
+                "upstream": []
+              },
+              {
+                "access": {
+                  "kind": "public",
+                  "origin": {
+                    "layer": "api",
+                    "pointer": "/surfaces/app/access"
+                  },
+                  "reason": "Anyone may call this api: it has no accounts."
+                },
+                "bindings": [],
+                "callerKinds": [
+                  "anonymous"
+                ],
+                "docs": {},
+                "errors": [
+                  {
+                    "code": "api.schema_invalid",
+                    "derivedFrom": {
+                      "derivation": "input.invalid",
+                      "from": [
+                        {
+                          "layer": "api",
+                          "pointer": "/surfaces/app/routes/tasks/ops/list"
+                        },
+                        {
+                          "layer": "api",
+                          "pointer": "/surfaces/app/routes/tasks/ops/list/paging"
+                        }
+                      ]
+                    },
+                    "roles": [
+                      {
+                        "params": {
+                          "kind": "object",
+                          "members": [
+                            {
+                              "name": {
+                                "kind": "text",
+                                "text": "issues"
+                              },
+                              "value": {
+                                "kind": "slot",
+                                "path": [],
+                                "slot": "issues"
+                              }
+                            }
+                          ]
+                        },
+                        "role": "schemaInvalid"
+                      }
+                    ]
+                  },
+                  {
+                    "code": "api.internal",
+                    "derivedFrom": {
+                      "derivation": "response.undeclared",
+                      "from": [
+                        {
+                          "layer": "api",
+                          "pointer": "/surfaces/app/routes/tasks/ops/list"
+                        }
+                      ]
+                    },
+                    "roles": [
+                      {
+                        "role": "undeclaredStatus"
+                      }
+                    ]
+                  }
+                ],
+                "examples": {},
+                "extensions": {},
+                "features": [],
+                "fieldRights": [],
+                "format": "bare",
+                "id": "listTasks",
+                "internal": false,
+                "kind": "httpOperation",
+                "maturity": {
+                  "level": "provisional",
+                  "origin": {
+                    "layer": "api",
+                    "pointer": "/api/maturity"
+                  },
+                  "source": "api"
+                },
+                "method": "get",
+                "name": {
+                  "role": "operation",
+                  "segments": [
+                    "list",
+                    "tasks"
+                  ]
+                },
+                "op": "list",
+                "origin": {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/routes/tasks/ops/list"
+                },
+                "paging": {
+                  "defaultLimit": 50,
+                  "maxLimit": 50,
+                  "origin": {
+                    "layer": "api",
+                    "pointer": "/surfaces/app/routes/tasks/ops/list/paging"
+                  },
+                  "overLimit": "reject",
+                  "sortKeys": [],
+                  "style": "cursor"
+                },
+                "params": {
+                  "header": [],
+                  "path": [],
+                  "query": [
+                    {
+                      "derivedFrom": {
+                        "derivation": "paging.params",
+                        "from": [
+                          {
+                            "layer": "api",
+                            "pointer": "/surfaces/app/routes/tasks/ops/list/paging"
+                          },
+                          {
+                            "layer": "api",
+                            "pointer": "/pagings/cursor"
+                          }
+                        ]
+                      },
+                      "name": "cursor",
+                      "required": false,
+                      "type": {
+                        "kind": "scalar",
+                        "refinements": {},
+                        "type": "string"
+                      },
+                      "wire": {
+                        "brackets": false,
+                        "explode": true,
+                        "kind": "text",
+                        "style": "form"
+                      }
+                    },
+                    {
+                      "derivedFrom": {
+                        "derivation": "paging.params",
+                        "from": [
+                          {
+                            "layer": "api",
+                            "pointer": "/surfaces/app/routes/tasks/ops/list/paging"
+                          },
+                          {
+                            "layer": "api",
+                            "pointer": "/pagings/cursor"
+                          }
+                        ]
+                      },
+                      "name": "limit",
+                      "required": false,
+                      "type": {
+                        "kind": "scalar",
+                        "refinements": {
+                          "maximum": "50",
+                          "minimum": "1"
+                        },
+                        "type": "integer"
+                      },
+                      "wire": {
+                        "brackets": false,
+                        "explode": true,
+                        "kind": "number",
+                        "style": "form"
+                      }
+                    }
+                  ]
+                },
+                "path": "/v1/tasks",
+                "principalRequires": [],
+                "requires": [],
+                "resource": {
+                  "idProperty": "taskId",
+                  "type": "tasks"
+                },
+                "responses": [
+                  {
+                    "body": {
+                      "kind": "ref",
+                      "schema": "Task"
+                    },
+                    "derivedFrom": {
+                      "derivation": "response.format",
+                      "from": [
+                        {
+                          "layer": "core",
+                          "pointer": "/formats/bare"
+                        }
+                      ]
+                    },
+                    "headers": [
+                      {
+                        "derivedFrom": {
+                          "derivation": "paging.params",
+                          "from": [
+                            {
+                              "layer": "api",
+                              "pointer": "/surfaces/app/routes/tasks/ops/list/paging"
+                            },
+                            {
+                              "layer": "api",
+                              "pointer": "/pagings/cursor"
+                            }
+                          ]
+                        },
+                        "name": "Link",
+                        "required": false,
+                        "type": {
+                          "kind": "scalar",
+                          "refinements": {},
+                          "type": "string"
+                        }
+                      }
+                    ],
+                    "media": "application/json",
+                    "origin": {
+                      "layer": "api",
+                      "pointer": "/surfaces/app/routes/tasks/item"
+                    },
+                    "shape": "page",
+                    "status": 200
+                  }
+                ],
+                "safe": true,
+                "scopes": [],
+                "surface": "app",
+                "tags": [],
+                "unknownQuery": {
+                  "policy": "refuse"
+                },
+                "upstream": []
+              },
+              {
+                "access": {
+                  "kind": "public",
+                  "origin": {
+                    "layer": "api",
+                    "pointer": "/surfaces/admin/access"
+                  },
+                  "reason": "Operators call it behind the gateway."
+                },
+                "bindings": [],
+                "callerKinds": [
+                  "anonymous"
+                ],
+                "docs": {},
+                "errors": [
+                  {
+                    "code": "api.schema_invalid",
+                    "derivedFrom": {
+                      "derivation": "input.invalid",
+                      "from": [
+                        {
+                          "layer": "api",
+                          "pointer": "/surfaces/admin/routes/purge"
+                        }
+                      ]
+                    },
+                    "roles": [
+                      {
+                        "params": {
+                          "kind": "object",
+                          "members": [
+                            {
+                              "name": {
+                                "kind": "text",
+                                "text": "issues"
+                              },
+                              "value": {
+                                "kind": "slot",
+                                "path": [],
+                                "slot": "issues"
+                              }
+                            }
+                          ]
+                        },
+                        "role": "schemaInvalid"
+                      }
+                    ]
+                  },
+                  {
+                    "code": "api.internal",
+                    "derivedFrom": {
+                      "derivation": "response.undeclared",
+                      "from": [
+                        {
+                          "layer": "api",
+                          "pointer": "/surfaces/admin/routes/purge"
+                        }
+                      ]
+                    },
+                    "roles": [
+                      {
+                        "role": "undeclaredStatus"
+                      }
+                    ]
+                  }
+                ],
+                "examples": {},
+                "extensions": {},
+                "features": [],
+                "fieldRights": [],
+                "format": "bare",
+                "id": "purge",
+                "internal": true,
+                "kind": "httpOperation",
+                "maturity": {
+                  "level": "provisional",
+                  "origin": {
+                    "layer": "api",
+                    "pointer": "/api/maturity"
+                  },
+                  "source": "api"
+                },
+                "method": "post",
+                "name": {
+                  "role": "operation",
+                  "segments": [
+                    "purge"
+                  ]
+                },
+                "origin": {
+                  "layer": "api",
+                  "pointer": "/surfaces/admin/routes/purge"
+                },
+                "params": {
+                  "header": [],
+                  "path": [],
+                  "query": []
+                },
+                "path": "/v1/admin/purge",
+                "principalRequires": [],
+                "requires": [],
+                "responses": [
+                  {
+                    "derivedFrom": {
+                      "derivation": "response.format",
+                      "from": [
+                        {
+                          "layer": "core",
+                          "pointer": "/formats/bare"
+                        }
+                      ]
+                    },
+                    "headers": [],
+                    "origin": {
+                      "layer": "api",
+                      "pointer": "/surfaces/admin/routes/purge/responses/204"
+                    },
+                    "shape": "empty",
+                    "status": 204
+                  }
+                ],
+                "safe": false,
+                "scopes": [],
+                "surface": "admin",
+                "tags": [],
+                "unknownQuery": {
+                  "policy": "refuse"
+                },
+                "upstream": []
+              }
+            ],
+            "packs": [],
+            "pagings": {
+              "cursor": {
+                "absent": "omit",
+                "handlerResult": [
+                  "nextCursor"
+                ],
+                "id": "cursor",
+                "origin": {
+                  "layer": "api",
+                  "pointer": "/pagings/cursor"
+                },
+                "position": "cursor",
+                "request": [
+                  {
+                    "in": "query",
+                    "name": "cursor",
+                    "role": "cursor"
+                  },
+                  {
+                    "in": "query",
+                    "name": "limit",
+                    "role": "limit"
+                  }
+                ],
+                "response": {
+                  "body": {
+                    "kind": "slot",
+                    "path": [],
+                    "slot": "items"
+                  },
+                  "headers": [],
+                  "links": [
+                    {
+                      "rel": "next",
+                      "role": "next"
+                    }
+                  ],
+                  "meta": []
+                }
+              }
+            },
+            "rights": {},
+            "rules": {},
+            "scalars": {},
+            "schemas": {
+              "ApiSchemaInvalidIssue": {
+                "directions": [
+                  "output"
+                ],
+                "docs": {},
+                "examples": [],
+                "extensions": {},
+                "id": "ApiSchemaInvalidIssue",
+                "kind": "object",
+                "name": {
+                  "role": "schema",
+                  "segments": [
+                    "api",
+                    "schema",
+                    "invalid",
+                    "issue"
+                  ]
+                },
+                "origin": {
+                  "layer": "core",
+                  "pointer": "/errors/api.schema_invalid/params/issues/items"
+                },
+                "properties": [
+                  {
+                    "deprecated": false,
+                    "docs": {},
+                    "extensions": {},
+                    "name": "in",
+                    "nullable": false,
+                    "optional": false,
+                    "origin": {
+                      "layer": "core",
+                      "pointer": "/errors/api.schema_invalid/params/issues/items/properties/in"
+                    },
+                    "sensitive": false,
+                    "type": {
+                      "kind": "scalar",
+                      "refinements": {
+                        "pattern": {
+                          "normalized": "^(?:path|query|header|body)$",
+                          "source": "^(?:path|query|header|body)$"
+                        }
+                      },
+                      "type": "string"
+                    }
+                  },
+                  {
+                    "deprecated": false,
+                    "docs": {},
+                    "extensions": {},
+                    "name": "pointer",
+                    "nullable": false,
+                    "optional": false,
+                    "origin": {
+                      "layer": "core",
+                      "pointer": "/errors/api.schema_invalid/params/issues/items/properties/pointer"
+                    },
+                    "sensitive": false,
+                    "type": {
+                      "kind": "scalar",
+                      "refinements": {},
+                      "type": "string"
+                    }
+                  },
+                  {
+                    "deprecated": false,
+                    "docs": {},
+                    "extensions": {},
+                    "name": "rule",
+                    "nullable": false,
+                    "optional": false,
+                    "origin": {
+                      "layer": "core",
+                      "pointer": "/errors/api.schema_invalid/params/issues/items/properties/rule"
+                    },
+                    "sensitive": false,
+                    "type": {
+                      "kind": "scalar",
+                      "refinements": {},
+                      "type": "string"
+                    }
+                  }
+                ]
+              },
+              "ApiSchemaInvalidParams": {
+                "directions": [
+                  "output"
+                ],
+                "docs": {},
+                "examples": [],
+                "extensions": {},
+                "id": "ApiSchemaInvalidParams",
+                "kind": "object",
+                "name": {
+                  "role": "params",
+                  "segments": [
+                    "api",
+                    "schema",
+                    "invalid"
+                  ]
+                },
+                "origin": {
+                  "layer": "core",
+                  "pointer": "/errors/api.schema_invalid/params"
+                },
+                "properties": [
+                  {
+                    "deprecated": false,
+                    "docs": {},
+                    "extensions": {},
+                    "name": "issues",
+                    "nullable": false,
+                    "optional": false,
+                    "origin": {
+                      "layer": "core",
+                      "pointer": "/errors/api.schema_invalid/params/issues"
+                    },
+                    "sensitive": false,
+                    "type": {
+                      "items": {
+                        "kind": "ref",
+                        "schema": "ApiSchemaInvalidIssue"
+                      },
+                      "kind": "array"
+                    }
+                  }
+                ]
+              },
+              "Health": {
+                "directions": [
+                  "output"
+                ],
+                "docs": {},
+                "examples": [],
+                "extensions": {},
+                "id": "Health",
+                "kind": "object",
+                "name": {
+                  "role": "schema",
+                  "segments": [
+                    "health"
+                  ]
+                },
+                "origin": {
+                  "layer": "api",
+                  "pointer": "/schemas/Health"
+                },
+                "properties": [
+                  {
+                    "deprecated": false,
+                    "docs": {},
+                    "extensions": {},
+                    "name": "status",
+                    "nullable": false,
+                    "optional": false,
+                    "origin": {
+                      "layer": "api",
+                      "pointer": "/schemas/Health/properties/status"
+                    },
+                    "sensitive": false,
+                    "type": {
+                      "kind": "scalar",
+                      "refinements": {},
+                      "type": "string"
+                    }
+                  }
+                ]
+              },
+              "Task": {
+                "directions": [
+                  "output"
+                ],
+                "docs": {},
+                "examples": [],
+                "extensions": {},
+                "id": "Task",
+                "kind": "object",
+                "name": {
+                  "role": "schema",
+                  "segments": [
+                    "task"
+                  ]
+                },
+                "origin": {
+                  "layer": "api",
+                  "pointer": "/schemas/Task"
+                },
+                "properties": [
+                  {
+                    "deprecated": false,
+                    "docs": {},
+                    "extensions": {},
+                    "name": "taskId",
+                    "nullable": false,
+                    "optional": false,
+                    "origin": {
+                      "layer": "api",
+                      "pointer": "/schemas/Task/properties/taskId"
+                    },
+                    "sensitive": false,
+                    "type": {
+                      "format": "uuid",
+                      "kind": "scalar",
+                      "refinements": {},
+                      "type": "string"
+                    }
+                  },
+                  {
+                    "deprecated": false,
+                    "docs": {},
+                    "extensions": {},
+                    "name": "title",
+                    "nullable": false,
+                    "optional": false,
+                    "origin": {
+                      "layer": "api",
+                      "pointer": "/schemas/Task/properties/title"
+                    },
+                    "sensitive": false,
+                    "type": {
+                      "kind": "scalar",
+                      "refinements": {
+                        "maxLength": 100,
+                        "minLength": 1
+                      },
+                      "type": "string"
+                    }
+                  }
+                ]
+              }
+            },
+            "schemes": {},
+            "scopes": {},
+            "services": {}
+          },
+          "sourceMap": {
+            "irRevision": 6,
+            "locations": {
+              "api#/api": {
+                "column": 1,
+                "endColumn": 1,
+                "endLine": 11,
+                "file": "api.yaml",
+                "line": 1
+              },
+              "api#/api/maturity": {
+                "column": 3,
+                "endColumn": 24,
+                "endLine": 5,
+                "file": "api.yaml",
+                "line": 5
+              },
+              "api#/api/version": {
+                "column": 3,
+                "endColumn": 13,
+                "endLine": 3,
+                "file": "api.yaml",
+                "line": 3
+              },
+              "api#/pagings/cursor": {
+                "column": 3,
+                "endColumn": 1,
+                "endLine": 20,
+                "file": "api.yaml",
+                "line": 13
+              },
+              "api#/schemas/Health": {
+                "column": 3,
+                "endColumn": 1,
+                "endLine": 27,
+                "file": "api.yaml",
+                "line": 23
+              },
+              "api#/schemas/Health/properties/status": {
+                "column": 19,
+                "endColumn": 43,
+                "endLine": 26,
+                "file": "api.yaml",
+                "line": 26
+              },
+              "api#/schemas/Task": {
+                "column": 3,
+                "endColumn": 1,
+                "endLine": 33,
+                "file": "api.yaml",
+                "line": 27
+              },
+              "api#/schemas/Task/properties/taskId": {
+                "column": 7,
+                "endColumn": 21,
+                "endLine": 31,
+                "file": "api.yaml",
+                "line": 31
+              },
+              "api#/schemas/Task/properties/title": {
+                "column": 7,
+                "endColumn": 60,
+                "endLine": 32,
+                "file": "api.yaml",
+                "line": 32
+              },
+              "api#/surfaces/admin": {
+                "column": 3,
+                "endColumn": 1,
+                "endLine": 58,
+                "file": "api.yaml",
+                "line": 49
+              },
+              "api#/surfaces/admin/access": {
+                "column": 5,
+                "endColumn": 64,
+                "endLine": 51,
+                "file": "api.yaml",
+                "line": 51
+              },
+              "api#/surfaces/admin/routes/purge": {
+                "column": 7,
+                "endColumn": 1,
+                "endLine": 58,
+                "file": "api.yaml",
+                "line": 53
+              },
+              "api#/surfaces/admin/routes/purge/responses/204": {
+                "column": 11,
+                "endColumn": 18,
+                "endLine": 57,
+                "file": "api.yaml",
+                "line": 57
+              },
+              "api#/surfaces/app": {
+                "column": 3,
+                "endColumn": 1,
+                "endLine": 49,
+                "file": "api.yaml",
+                "line": 35
+              },
+              "api#/surfaces/app/access": {
+                "column": 5,
+                "endColumn": 72,
+                "endLine": 37,
+                "file": "api.yaml",
+                "line": 37
+              },
+              "api#/surfaces/app/routes/health": {
+                "column": 7,
+                "endColumn": 1,
+                "endLine": 42,
+                "file": "api.yaml",
+                "line": 39
+              },
+              "api#/surfaces/app/routes/health/output": {
+                "column": 9,
+                "endColumn": 23,
+                "endLine": 41,
+                "file": "api.yaml",
+                "line": 41
+              },
+              "api#/surfaces/app/routes/tasks/id/taskId": {
+                "column": 15,
+                "endColumn": 29,
+                "endLine": 44,
+                "file": "api.yaml",
+                "line": 44
+              },
+              "api#/surfaces/app/routes/tasks/item": {
+                "column": 9,
+                "endColumn": 19,
+                "endLine": 45,
+                "file": "api.yaml",
+                "line": 45
+              },
+              "api#/surfaces/app/routes/tasks/ops/get": {
+                "column": 11,
+                "endColumn": 18,
+                "endLine": 48,
+                "file": "api.yaml",
+                "line": 48
+              },
+              "api#/surfaces/app/routes/tasks/ops/list": {
+                "column": 11,
+                "endColumn": 57,
+                "endLine": 47,
+                "file": "api.yaml",
+                "line": 47
+              },
+              "api#/surfaces/app/routes/tasks/ops/list/paging": {
+                "column": 19,
+                "endColumn": 55,
+                "endLine": 47,
+                "file": "api.yaml",
+                "line": 47
+              }
+            }
+          },
+          "declared": [
+            {
+              "catalogue": "schemas",
+              "id": "TaskId",
+              "origin": {
+                "layer": "api",
+                "pointer": "/schemas/TaskId"
+              },
+              "reached": true
+            },
+            {
+              "catalogue": "schemas",
+              "id": "Health",
+              "origin": {
+                "layer": "api",
+                "pointer": "/schemas/Health"
+              },
+              "reached": true
+            },
+            {
+              "catalogue": "schemas",
+              "id": "Task",
+              "origin": {
+                "layer": "api",
+                "pointer": "/schemas/Task"
+              },
+              "reached": true
+            },
+            {
+              "catalogue": "pagings",
+              "id": "cursor",
+              "origin": {
+                "layer": "api",
+                "pointer": "/pagings/cursor"
+              },
+              "reached": true
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "step": 2
+}

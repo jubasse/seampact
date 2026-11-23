@@ -1,0 +1,5 @@
+sources:
+  a: { path: ./a }
+targets:
+  - { id: shared, use: probe-provider, api: tasks, options: { refusals: [{ code: probe.describe, message: "The provider refuses to describe.", fix: "Remove the refusal." }] } }
+  - { id: server, use: probe-server, api: tasks, link: { validators: shared } }

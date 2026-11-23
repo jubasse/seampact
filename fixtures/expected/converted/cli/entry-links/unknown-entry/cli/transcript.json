@@ -1,0 +1,7 @@
+{
+  "exit": 1,
+  "stdout": "",
+  "stderr": "link.entry.unknown: entry 'server' linked to 'nowhere': The 'validators' link names 'nowhere', and no target entry has that id. Fix: Name the id of the target entry that provides the link.\n",
+  "written": {},
+  "removed": []
+}

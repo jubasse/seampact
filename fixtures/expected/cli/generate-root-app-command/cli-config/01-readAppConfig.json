@@ -1,0 +1,18 @@
+{
+  "function": "readAppConfig",
+  "args": [
+    "<root>/seampact.config.yaml",
+    "seampact.config.yaml"
+  ],
+  "result": {
+    "status": "refused",
+    "problems": [
+      {
+        "code": "config.root.not-an-app",
+        "message": "This file is a monorepo root config (it holds `apps`), and the command runs on one app's config.",
+        "fix": "Run the command in one of the apps the root config lists, or pass that app's config with `--config`.",
+        "where": "seampact.config.yaml:1:1 apps"
+      }
+    ]
+  }
+}

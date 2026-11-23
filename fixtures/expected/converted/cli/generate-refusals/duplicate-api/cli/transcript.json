@@ -1,0 +1,7 @@
+{
+  "exit": 1,
+  "stdout": "",
+  "stderr": "config.api.duplicate: entry 'both', api 'tasks': The entry 'both' names the api 'tasks' more than once ('a/tasks', 'b/tasks'); 'b/tasks' is one of them. Fix: Keep one of them, or give the sources' apis different names.\n",
+  "written": {},
+  "removed": []
+}

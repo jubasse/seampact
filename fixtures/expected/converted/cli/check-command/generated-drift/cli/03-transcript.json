@@ -1,0 +1,7 @@
+{
+  "exit": 1,
+  "stdout": "",
+  "stderr": "check.generated.drift: entry 'server', api 'tasks': The generated files of entry 'server', api 'tasks' differ from the committed files: '<root>/__generated__/server/a.ts' was edited by hand since it was generated, so it is not overwritten or removed. Fix: Move the hand-written code next to the generated files, then delete the edited file and generate again, or run `seampact generate --force` to overwrite it.\n",
+  "written": {},
+  "removed": []
+}

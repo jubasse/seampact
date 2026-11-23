@@ -1,0 +1,11 @@
+{
+  "steps": [
+    { "argv": ["generate"] },
+    {
+      "write": {
+        "seampact.config.yaml": "openapi: none\nsources:\n  a: { path: ./a }\ntargets:\n  - { id: server, use: probe-server, api: tasks, options: { files: [{ path: a.ts, contents: \"export const a = 3;\\n\" }] } }\n"
+      }
+    },
+    { "argv": ["check"] }
+  ]
+}

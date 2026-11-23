@@ -1,0 +1,4 @@
+sources:
+  a: { path: ./a }
+targets:
+  - { id: server, use: probe-server, api: tasks, operations: { include: [health] }, artefacts: { nativeDocs: true }, options: { echo: true } }

@@ -1,0 +1,9 @@
+{
+  "steps": [
+    { "argv": ["generate"] },
+    { "write": { "seampact.config.yaml": "sources:\n  a: { path: ./a }\nopenapi: none\n" } },
+    { "argv": ["check"] },
+    { "argv": ["generate"] },
+    { "argv": ["check"] }
+  ]
+}

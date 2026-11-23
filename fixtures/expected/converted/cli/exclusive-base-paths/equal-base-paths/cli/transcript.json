@@ -1,0 +1,7 @@
+{
+  "exit": 1,
+  "stdout": "",
+  "stderr": "path.base.shared.unsupported: entry 'two', api 'tasks': The api 'tasks' of entry 'one' is served under '/v1/admin' and the api 'tasks' of entry 'two' under '/v1/admin': the more specific route would take the other api's paths. Fix: Give the two apis base paths that neither equal nor contain each other, through their prefixes or the entries' 'mount'.\npath.base.shared.unsupported: entry 'two', api 'tasks': The api 'tasks' of entry 'one' is served under '/v1/admin' and the api 'tasks' of entry 'two' under '/v1': the more specific route would take the other api's paths. Fix: Give the two apis base paths that neither equal nor contain each other, through their prefixes or the entries' 'mount'.\npath.base.shared.unsupported: entry 'two', api 'tasks': The api 'tasks' of entry 'one' is served under '/v1' and the api 'tasks' of entry 'two' under '/v1/admin': the more specific route would take the other api's paths. Fix: Give the two apis base paths that neither equal nor contain each other, through their prefixes or the entries' 'mount'.\npath.base.shared.unsupported: entry 'two', api 'tasks': The api 'tasks' of entry 'one' is served under '/v1' and the api 'tasks' of entry 'two' under '/v1': the more specific route would take the other api's paths. Fix: Give the two apis base paths that neither equal nor contain each other, through their prefixes or the entries' 'mount'.\n",
+  "written": {},
+  "removed": []
+}

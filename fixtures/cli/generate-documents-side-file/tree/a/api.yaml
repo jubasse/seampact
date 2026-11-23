@@ -1,0 +1,57 @@
+api:
+  name: tasks
+  version: 1
+  kind: product
+  maturity: provisional
+  summary: A small tasks api.
+  description: { $file: ./docs/api.md }
+  documents:
+    public: { surfaces: [app], internal: exclude }
+    full: {}
+
+pagings:
+  cursor:
+    request:
+      cursor: { query: cursor }
+      limit: { query: limit }
+    response:
+      body: $items
+      links: { next: $next }
+
+schemas:
+  TaskId: { type: string, format: uuid }
+  Health:
+    type: object
+    required: [status]
+    properties: { status: { type: string } }
+  Task:
+    type: object
+    required: [taskId, title]
+    properties:
+      taskId: TaskId
+      title: { type: string, minLength: 1, maxLength: 100 }
+
+surfaces:
+  app:
+    prefix: /v{version}
+    access: { public: "Anyone may call this api: it has no accounts." }
+    routes:
+      health:
+        method: get
+        output: Health
+      tasks:
+        kind: collection
+        id: { taskId: TaskId }
+        item: Task
+        ops:
+          list: { paging: { cursor: { maxLimit: 50 } } }
+          get: {}
+  admin:
+    prefix: /v{version}/admin
+    access: { public: "Operators call it behind the gateway." }
+    routes:
+      purge:
+        method: post
+        internal: true
+        responses:
+          204: {}

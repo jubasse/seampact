@@ -1,0 +1,4 @@
+sources:
+  solo: { path: ./solo }
+targets:
+  - { id: server, use: probe-server, api: solo }

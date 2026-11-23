@@ -1,0 +1,53 @@
+{
+  "function": "planAppDocuments",
+  "args": [
+    {
+      "file": "<root>/seampact.config.yaml",
+      "outDir": "<root>/__generated__",
+      "sources": {
+        "a": {
+          "kind": "path",
+          "directory": "<root>/a"
+        }
+      },
+      "entries": [],
+      "openapi": {
+        "tasks": {
+          "full": {
+            "path": "docs/tasks.full.yaml",
+            "extensions": "none"
+          }
+        }
+      },
+      "checks": {
+        "openapi": "disabled"
+      }
+    },
+    {},
+    [
+      {
+        "source": "a",
+        "api": "tasks",
+        "documents": [
+          "full",
+          "public"
+        ]
+      }
+    ]
+  ],
+  "result": {
+    "status": "planned",
+    "documents": [
+      {
+        "source": "a",
+        "api": "tasks",
+        "document": "full",
+        "file": "<root>/docs/tasks.full.yaml",
+        "options": {
+          "extensions": "none"
+        }
+      }
+    ]
+  },
+  "step": 1
+}

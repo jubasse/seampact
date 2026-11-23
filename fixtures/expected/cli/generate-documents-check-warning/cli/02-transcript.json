@@ -1,0 +1,7 @@
+{
+  "exit": 0,
+  "stdout": "check: the generated files and documents match the committed ones.\n",
+  "stderr": "warning: check.openapi.drift: openapi documents in <root>/docs: The seampact OpenAPI documents in <root>/docs differ from the committed files: '<root>/docs/tasks.full.yaml' was edited by hand since it was generated, so it is not overwritten or removed. Fix: Move the hand-written code next to the generated files, then delete the edited file and generate again, or run `seampact generate --force` to overwrite it.\n",
+  "written": {},
+  "removed": []
+}

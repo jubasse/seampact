@@ -1,0 +1,50 @@
+{
+  "function": "readRunConfig",
+  "args": [
+    "<root>/seampact.config.yaml",
+    "seampact.config.yaml",
+    null
+  ],
+  "result": {
+    "status": "read",
+    "run": {
+      "kind": "app",
+      "config": {
+        "file": "<root>/seampact.config.yaml",
+        "outDir": "<root>/__generated__",
+        "sources": {
+          "a": {
+            "kind": "path",
+            "directory": "<root>/a"
+          }
+        },
+        "entries": [
+          {
+            "entry": {
+              "id": "server",
+              "use": "probe-server",
+              "api": "tasks",
+              "options": {
+                "refusals": [
+                  {
+                    "code": "access.optional.unsupported",
+                    "message": "Optional authentication is not generated yet.",
+                    "fix": "Ask the user first: make the access required or public.",
+                    "member": "/operations/0/access",
+                    "docs": "https://jubasse.github.io/seampact/troubleshooting/generate/#node-servers"
+                  },
+                  {
+                    "code": "options.unknown",
+                    "message": "The option 'x' is unknown.",
+                    "fix": "Remove 'x'."
+                  }
+                ]
+              }
+            },
+            "root": "<root>/__generated__/server"
+          }
+        ]
+      }
+    }
+  }
+}

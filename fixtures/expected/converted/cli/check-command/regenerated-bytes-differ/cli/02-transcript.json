@@ -1,0 +1,7 @@
+{
+  "exit": 1,
+  "stdout": "",
+  "stderr": "check.generated.drift: entry 'server', api 'tasks': The generated files of entry 'server', api 'tasks' differ from the committed files: a.ts (differs at line 2). Fix: Run `seampact generate` and commit the result, or set `checks.generated` to `warning` or `disabled` in the app config.\n",
+  "written": {},
+  "removed": []
+}

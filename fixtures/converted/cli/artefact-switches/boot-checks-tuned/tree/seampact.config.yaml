@@ -1,0 +1,4 @@
+sources:
+  a: { path: ./a }
+targets:
+  - { id: server, use: probe-server, api: tasks, mount: /api, artefacts: { bootCheck: { frameworkRoutes: strict, hooks: warn } }, frameworkRoutes: [{ method: GET, path: /ping, reason: Liveness probe }], options: { echo: true } }

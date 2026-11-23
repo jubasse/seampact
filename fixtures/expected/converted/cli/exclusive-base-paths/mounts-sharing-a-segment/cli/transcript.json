@@ -1,0 +1,16 @@
+{
+  "exit": 0,
+  "stdout": "entry 'one', api 'tasks': 0 written, 0 unchanged, 0 removed (<root>/__generated__/one).\nentry 'two', api 'tasks': 0 written, 0 unchanged, 0 removed (<root>/__generated__/two).\n",
+  "stderr": "",
+  "written": {
+    "__generated__/one/.seampact-manifest.json": {
+      "sha256": "5012db71d5c26dfbdd86c7b847d98aef7db8e123dd795da2c4a5224e59b3f8db",
+      "text": "{\n  \"owner\": \"one\",\n  \"files\": []\n}\n"
+    },
+    "__generated__/two/.seampact-manifest.json": {
+      "sha256": "1b8e067e8a5138b7c4ceffc22c762c32d7dbe578cd84b408d0d0d9e9a607d1dc",
+      "text": "{\n  \"owner\": \"two\",\n  \"files\": []\n}\n"
+    }
+  },
+  "removed": []
+}

@@ -1,0 +1,7 @@
+{
+  "exit": 1,
+  "stdout": "",
+  "stderr": "config.frameworkDocs.unsupported: entry 'server': The target 'probe-server' cannot switch its framework's own OpenAPI document off. Fix: Remove the `probe.docs()` call.\n",
+  "written": {},
+  "removed": []
+}

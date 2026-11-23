@@ -1,0 +1,64 @@
+{
+  "function": "selectArtefacts",
+  "args": [
+    {
+      "id": "client",
+      "use": "probe-client",
+      "api": "tasks",
+      "artefacts": {
+        "mutations": false
+      }
+    },
+    {
+      "metadata": {
+        "packageName": "probe-client",
+        "packageVersion": "1.0.0",
+        "irSupport": {
+          "irVersions": [
+            1
+          ],
+          "irRevision": 6,
+          "kinds": [],
+          "features": []
+        },
+        "role": "client",
+        "artefacts": [
+          {
+            "id": "queries",
+            "defaultOn": true
+          },
+          {
+            "id": "mutations",
+            "defaultOn": true,
+            "needs": [
+              "queries"
+            ]
+          }
+        ],
+        "consumes": {
+          "client": {
+            "styles": [
+              "fetch"
+            ]
+          },
+          "types": {
+            "styles": [
+              "typescript"
+            ],
+            "optional": {
+              "ownLibrary": "probe-types"
+            }
+          }
+        },
+        "provides": {},
+        "importSpecifiers": "extensionless"
+      }
+    }
+  ],
+  "result": {
+    "status": "selected",
+    "artefacts": [
+      "queries"
+    ]
+  }
+}

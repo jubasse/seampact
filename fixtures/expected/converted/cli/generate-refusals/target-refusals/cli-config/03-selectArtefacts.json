@@ -1,0 +1,85 @@
+{
+  "function": "selectArtefacts",
+  "args": [
+    {
+      "id": "server",
+      "use": "probe-server",
+      "api": "tasks",
+      "options": {
+        "refusals": [
+          {
+            "code": "access.optional.unsupported",
+            "message": "Optional authentication is not generated yet.",
+            "fix": "Ask the user first: make the access required or public.",
+            "member": "/operations/0/access",
+            "docs": "https://jubasse.github.io/seampact/troubleshooting/generate/#node-servers"
+          },
+          {
+            "code": "options.unknown",
+            "message": "The option 'x' is unknown.",
+            "fix": "Remove 'x'."
+          }
+        ]
+      }
+    },
+    {
+      "metadata": {
+        "packageName": "probe-server",
+        "packageVersion": "1.0.0",
+        "irSupport": {
+          "irVersions": [
+            1
+          ],
+          "irRevision": 6,
+          "kinds": [
+            "httpOperation"
+          ],
+          "features": []
+        },
+        "role": "server",
+        "artefacts": [
+          {
+            "id": "routes",
+            "defaultOn": true
+          },
+          {
+            "id": "nativeDocs",
+            "defaultOn": false
+          },
+          {
+            "id": "hooks",
+            "defaultOn": false,
+            "needs": [
+              "routes"
+            ],
+            "leftOffWithoutNeeds": true
+          }
+        ],
+        "consumes": {
+          "validators": {
+            "styles": [
+              "standard-schema",
+              "class-validator"
+            ],
+            "optional": {
+              "ownLibrary": "ajv"
+            }
+          }
+        },
+        "provides": {},
+        "bootChecks": [
+          "frameworkRoutes",
+          "hooks"
+        ],
+        "frameworkDocsOffFix": "Remove the `probe.docs()` call.",
+        "exclusiveBasePaths": true
+      }
+    }
+  ],
+  "result": {
+    "status": "selected",
+    "artefacts": [
+      "routes"
+    ]
+  }
+}

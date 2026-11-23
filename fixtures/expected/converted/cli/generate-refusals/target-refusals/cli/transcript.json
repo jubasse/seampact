@@ -1,0 +1,7 @@
+{
+  "exit": 1,
+  "stdout": "",
+  "stderr": "api.yaml:36: access.optional.unsupported: entry 'server', api 'tasks': Optional authentication is not generated yet. (IR member '/operations/0/access') Fix: Ask the user first: make the access required or public. Docs: https://jubasse.github.io/seampact/troubleshooting/generate/#node-servers\noptions.unknown: entry 'server', api 'tasks': The option 'x' is unknown. Fix: Remove 'x'. Docs: https://jubasse.github.io/seampact/troubleshooting/generate/\n",
+  "written": {},
+  "removed": []
+}

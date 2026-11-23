@@ -1,0 +1,7 @@
+{
+  "exit": 1,
+  "stdout": "",
+  "stderr": "config.key.unsupported: entry 'types': The target 'probe-provider' is no server target, so it cannot read 'frameworkDocs'. Fix: Remove 'frameworkDocs' from the entry; it belongs to a server target's entry.\n",
+  "written": {},
+  "removed": []
+}

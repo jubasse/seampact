@@ -1,0 +1,4 @@
+sources:
+  a: { path: ./a }
+targets:
+  - { id: server, use: probe-server, api: tasks, options: {"files":[{"path":"a.txt","contents":"text\n"}]} }

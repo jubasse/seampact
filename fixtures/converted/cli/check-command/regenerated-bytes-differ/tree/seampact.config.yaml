@@ -1,0 +1,5 @@
+openapi: none
+sources:
+  a: { path: ./a }
+targets:
+  - { id: server, use: probe-server, api: tasks, options: { files: [{ path: a.ts, contents: "export const a = 1;\n" }] } }
