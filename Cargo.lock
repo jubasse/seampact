@@ -2310,6 +2310,12 @@ dependencies = [
 [[package]]
 name = "seampact-writer"
 version = "2.0.0"
+dependencies = [
+ "camino",
+ "seampact-diagnostics",
+ "seampact-target",
+ "thiserror",
+]
 
 [[package]]
 name = "security-framework"
