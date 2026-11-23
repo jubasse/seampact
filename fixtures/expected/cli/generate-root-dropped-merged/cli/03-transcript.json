@@ -1,0 +1,14 @@
+{
+  "exit": 0,
+  "stdout": "openapi document 'tasks.full': unchanged (<root>/apps/api/docs/tasks.full.yaml).\nopenapi document <root>/all.yaml: removed.\n",
+  "stderr": "",
+  "written": {
+    ".seampact-manifest.json": {
+      "sha256": "ed7351e8839eb0fdabd5a2257d8cc22aff28802113250dc3b8a379e9c7ffa8be",
+      "text": "{\n  \"owner\": \"openapi\",\n  \"files\": []\n}\n"
+    }
+  },
+  "removed": [
+    "all.yaml"
+  ]
+}

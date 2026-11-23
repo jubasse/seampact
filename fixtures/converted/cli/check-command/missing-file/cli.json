@@ -1,0 +1,8 @@
+{
+  "steps": [
+    { "argv": ["check"] },
+    { "argv": ["generate"] },
+    { "remove": ["__generated__/server/a.ts"] },
+    { "argv": ["check"] }
+  ]
+}

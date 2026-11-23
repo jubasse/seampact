@@ -1,0 +1,4 @@
+sources:
+  a: { path: ./a }
+targets:
+  - { id: types, use: probe-provider, api: tasks, frameworkDocs: keep }

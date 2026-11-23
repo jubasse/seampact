@@ -228,6 +228,18 @@ describe("checkTraces", () => {
     ]);
   });
 
+  it("reads the generator layer's table of the crate too", () => {
+    const root = repositoryWithTrace(COMPLETE_TRACE);
+    const table = "brief\tfunction\tfile\n1\topen\topen.ts\n";
+
+    mkdirSync(join(root, "docs/maintainers/rust-design/generators"), { recursive: true });
+    writeFileSync(join(root, "docs/maintainers/rust-design/generators/load.tsv"), table);
+
+    expect(checkTraces(root)).toEqual([
+      "crates/load/trace.tsv: `packages/core/open.ts` is in `docs/maintainers/rust-design/generators/load.tsv` but has no line",
+    ]);
+  });
+
   it("fails on a function traced twice", () => {
     const trace = `${COMPLETE_TRACE}src/lib.rs#load\tpackages/core/load.ts#load\n`;
 

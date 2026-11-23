@@ -1,0 +1,44 @@
+{
+  "function": "selectArtefacts",
+  "args": [
+    {
+      "id": "one",
+      "use": "probe-provider",
+      "api": "a/tasks"
+    },
+    {
+      "metadata": {
+        "packageName": "probe-provider",
+        "packageVersion": "1.0.0",
+        "irSupport": {
+          "irVersions": [
+            1
+          ],
+          "irRevision": 6,
+          "kinds": [
+            "httpOperation"
+          ],
+          "features": []
+        },
+        "role": "provider",
+        "artefacts": [],
+        "consumes": {},
+        "provides": {
+          "validators": {
+            "style": "standard-schema"
+          },
+          "types": {
+            "style": "typescript"
+          },
+          "client": {
+            "style": "fetch"
+          }
+        }
+      }
+    }
+  ],
+  "result": {
+    "status": "selected",
+    "artefacts": []
+  }
+}

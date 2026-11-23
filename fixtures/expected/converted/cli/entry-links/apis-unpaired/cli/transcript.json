@@ -1,0 +1,7 @@
+{
+  "exit": 1,
+  "stdout": "",
+  "stderr": "link.apis.unpaired: entry 'server' linked to 'shared', api 'tasks': 'shared' does not generate the api 'tasks' that 'server' generates. Fix: Add 'tasks' to the apis of 'shared', or remove it from 'server'.\n",
+  "written": {},
+  "removed": []
+}

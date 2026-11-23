@@ -1,0 +1,7 @@
+{
+  "exit": 1,
+  "stdout": "",
+  "stderr": "link.importSpecifiers.mixed: entry 'shared': The entry 'shared' is linked from entries that import its files differently: 'server' import with 'js' specifiers; 'client', 'client' import with 'extensionless' specifiers. Fix: Give each group of entries its own 'shared' entry, with its own 'out', and link each group to its own.\n",
+  "written": {},
+  "removed": []
+}

@@ -1,0 +1,7 @@
+{
+  "exit": 1,
+  "stdout": "",
+  "stderr": "config.artefacts.needed: entry 'client': The artefact 'mutations' of the target 'probe-client' needs 'queries', which the entry leaves off. Fix: Switch 'queries' on, or switch 'mutations' off too.\n",
+  "written": {},
+  "removed": []
+}

@@ -1,0 +1,24 @@
+{
+  "function": "readAppConfig",
+  "args": [
+    "<root>/seampact.config.yaml",
+    "seampact.config.yaml",
+    null
+  ],
+  "result": {
+    "status": "read",
+    "config": {
+      "file": "<root>/seampact.config.yaml",
+      "outDir": "<root>/__generated__",
+      "sources": {
+        "a": {
+          "kind": "path",
+          "directory": "<root>/a"
+        }
+      },
+      "entries": [],
+      "openapi": "none"
+    }
+  },
+  "step": 4
+}

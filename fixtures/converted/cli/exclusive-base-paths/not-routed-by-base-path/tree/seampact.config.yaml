@@ -1,0 +1,7 @@
+openapi: none
+sources:
+  a: { path: ./a }
+  b: { path: ./b }
+targets:
+  - { id: one, use: probe-provider, api: a/tasks }
+  - { id: two, use: probe-provider, api: b/tasks }

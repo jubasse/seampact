@@ -1,0 +1,7 @@
+{
+  "exit": 1,
+  "stdout": "",
+  "stderr": "config.artefacts.unknown: entry 'server': The target 'probe-server' declares no artefact 'nope'; it declares 'routes', 'nativeDocs', 'hooks'. Fix: Remove 'nope' from the entry's `artefacts`, or switch one of the artefacts the target declares.\n",
+  "written": {},
+  "removed": []
+}

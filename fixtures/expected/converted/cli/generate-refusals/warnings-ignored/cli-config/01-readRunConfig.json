@@ -1,0 +1,61 @@
+{
+  "function": "readRunConfig",
+  "args": [
+    "<root>/seampact.config.yaml",
+    "seampact.config.yaml",
+    null
+  ],
+  "result": {
+    "status": "read",
+    "run": {
+      "kind": "app",
+      "config": {
+        "file": "<root>/seampact.config.yaml",
+        "outDir": "<root>/__generated__",
+        "sources": {
+          "a": {
+            "kind": "path",
+            "directory": "<root>/a"
+          }
+        },
+        "entries": [
+          {
+            "entry": {
+              "id": "server",
+              "use": "probe-server",
+              "api": "tasks",
+              "options": {
+                "warnings": [
+                  {
+                    "code": "owner.handler",
+                    "message": "The caller ownership is not enforced by the generated boundary.",
+                    "fix": "Scope the handler's reads and writes to the authenticated principal.",
+                    "operation": "health"
+                  },
+                  {
+                    "code": "sortKeys.handler",
+                    "message": "Not enforced by the generated boundary.",
+                    "fix": "Handle it in the handler."
+                  }
+                ],
+                "files": [
+                  {
+                    "path": "a.ts",
+                    "contents": "export const a = 1;\n"
+                  }
+                ]
+              }
+            },
+            "root": "<root>/__generated__/server"
+          }
+        ],
+        "openapi": "none",
+        "warnings": {
+          "ignore": [
+            "owner"
+          ]
+        }
+      }
+    }
+  }
+}

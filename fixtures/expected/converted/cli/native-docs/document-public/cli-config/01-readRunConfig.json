@@ -1,0 +1,42 @@
+{
+  "function": "readRunConfig",
+  "args": [
+    "<root>/seampact.config.yaml",
+    "seampact.config.yaml",
+    null
+  ],
+  "result": {
+    "status": "read",
+    "run": {
+      "kind": "app",
+      "config": {
+        "file": "<root>/seampact.config.yaml",
+        "outDir": "<root>/__generated__",
+        "sources": {
+          "a": {
+            "kind": "path",
+            "directory": "<root>/a"
+          }
+        },
+        "entries": [
+          {
+            "entry": {
+              "id": "server",
+              "use": "probe-server",
+              "api": "tasks",
+              "document": "public",
+              "artefacts": {
+                "nativeDocs": true
+              },
+              "options": {
+                "echo": true
+              }
+            },
+            "root": "<root>/__generated__/server"
+          }
+        ]
+      }
+    }
+  },
+  "step": 1
+}

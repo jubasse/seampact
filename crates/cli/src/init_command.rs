@@ -6,14 +6,15 @@ use std::io::ErrorKind;
 
 use camino::{Utf8Path, Utf8PathBuf};
 use seampact_bundle_fetch::{LocalSourcePolicy, local_source_policy, local_source_refusal_reason};
+use seampact_cli_config::CliIo;
 use seampact_cli_config::{
     CliProblem, RootDiscovery, find_root_config, is_path_taken, resolved_path,
 };
+use seampact_cli_config::{located_problem, unlocated_problem};
 use seampact_editor_schemas::DEFAULT_EDITOR_SCHEMAS_DIRECTORY;
+use seampact_generate::run_environment;
 
-use crate::cli_problem::{located_problem, unlocated_problem};
 use crate::compile_command::{CompileOutputs, EditorSchemasMode, compile_command};
-use crate::compile_sources::run_environment;
 use crate::config_location::{APP_CONFIG_FILE_NAME, ConfigLocation, config_location, display_path};
 use crate::git_ignore::{GitIgnoreChange, git_ignore_with_entries};
 use crate::init_modelines::init_modelines;
@@ -22,7 +23,7 @@ use crate::init_starter::{
     starter_contract,
 };
 use crate::modelines::{INSTALLED_AUTHORING_SCHEMAS, modeline_of, with_modeline};
-use crate::{CliError, CliIo, EXIT_SUCCESS, refuse};
+use crate::{CliError, EXIT_SUCCESS, refuse};
 
 /// The ignore entry of the default editor schemas directory, at any depth below the app root.
 pub(crate) const DEFAULT_IGNORE_ENTRY: &str = ".seampact/";

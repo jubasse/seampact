@@ -1,30 +1,32 @@
 //! `seampact init --modelines`: the modeline of every file of the app config's `path` sources.
 
+use std::fs;
+
 use camino::{Utf8Path, Utf8PathBuf};
+use seampact_cli_config::CliIo;
 use seampact_cli_config::{
     ReadAppConfigOutcome, ResolvedSource, directory_of, is_strictly_inside, read_app_config,
     relative_path, resolved_path,
 };
 use seampact_diagnostics::InternalError;
 use seampact_editor_schemas::{DEFAULT_EDITOR_SCHEMAS_DIRECTORY, write_editor_schemas};
+use seampact_generate::LocalBundles;
+use seampact_generate::compile_sources;
+use seampact_generate::source_entry_file;
+use seampact_generate::source_reader;
 use seampact_load::{LoadOptions, load_workspace};
-use std::fs;
 
 use crate::compile_command::{PlannedEditorSchemas, plan_sources_editor_schemas};
-use crate::compile_sources::compile_sources;
 use crate::config_location::{ConfigLocation, display_path};
 use crate::git_ignore::GitIgnoreChange;
 use crate::init_command::{
     DEFAULT_IGNORE_ENTRY, EditorSchemasPolicy, InitWrite, ignore_file_link_problem,
     no_path_source_problem, planned_ignore, write_ignore,
 };
-use crate::local_bundle::LocalBundles;
 use crate::modelines::{
     INSTALLED_AUTHORING_SCHEMAS, modeline_of, with_modeline, workspace_file_kinds,
 };
-use crate::source_reader::source_reader;
-use crate::workspace_api_names::source_entry_file;
-use crate::{CliError, CliIo, EXIT_SUCCESS, refuse};
+use crate::{CliError, EXIT_SUCCESS, refuse};
 
 /// A file whose modeline is missing or points elsewhere, and the text it gets.
 struct ModelineEdit {

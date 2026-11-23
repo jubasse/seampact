@@ -5,12 +5,15 @@ use std::ffi::OsString;
 
 use camino::{Utf8Path, Utf8PathBuf};
 use indexmap::IndexMap;
+use seampact_cli_config::CliIo;
 use seampact_oracle::{
-    CASE_TODAY, CliCase, GIT_SOURCE_REPOSITORY, ROOT_TOKEN, SubjectAnswer, Transcript,
+    CASE_TODAY, CliCase, CliCommand, GIT_SOURCE_REPOSITORY, ROOT_TOKEN, SubjectAnswer, Transcript,
 };
 
+use crate::CliError;
+use crate::oracle::generator_registry::oracle_registry;
 use crate::oracle::stub_answer::{StubError, failed_answer};
-use crate::{CliError, CliIo, run_command};
+use crate::run_cli::run_command_with;
 
 impl StubError for CliError {
     fn is_not_ported(&self) -> bool {
@@ -59,9 +62,13 @@ impl CliIo for CaseIo {
     }
 }
 
-/// Runs the command of `case` in `root`, a fresh copy of its tree, and records what it printed,
-/// wrote and removed.
-pub(crate) fn cli_answer(case: &CliCase, root: &Utf8Path) -> SubjectAnswer<Transcript> {
+/// Runs `command` of `case` in `root`, a copy of its tree as the earlier steps left it, and
+/// records what it printed, wrote and removed.
+pub(crate) fn cli_answer(
+    case: &CliCase,
+    command: &CliCommand,
+    root: &Utf8Path,
+) -> SubjectAnswer<Transcript> {
     let before = match files_under(root) {
         Ok(files) => files,
         Err(message) => return SubjectAnswer::InternalError { message },
@@ -77,18 +84,18 @@ pub(crate) fn cli_answer(case: &CliCase, root: &Utf8Path) -> SubjectAnswer<Trans
     }
 
     let mut io = CaseIo {
-        cwd: root.join(&case.cwd),
+        cwd: root.join(&command.cwd),
         environment,
         stdout: String::new(),
         stderr: String::new(),
     };
-    let argv: Vec<OsString> = case
+    let argv: Vec<OsString> = command
         .argv
         .iter()
         .map(|argument| OsString::from(argument.replace(ROOT_TOKEN, root.as_str())))
         .collect();
 
-    let exit = match run_command(&argv, &mut io) {
+    let exit = match run_command_with(&argv, &mut io, &oracle_registry()) {
         Ok(exit) => exit,
         Err(error) => return failed_answer(&error),
     };

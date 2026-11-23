@@ -1,0 +1,1 @@
+{ "steps": [{ "argv": ["check"] }, { "argv": ["generate"] }, { "argv": ["check"] }] }

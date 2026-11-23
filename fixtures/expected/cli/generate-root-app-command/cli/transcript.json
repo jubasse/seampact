@@ -1,0 +1,7 @@
+{
+  "exit": 1,
+  "stdout": "",
+  "stderr": "config.root.not-an-app: seampact.config.yaml:1:1 apps: This file is a monorepo root config (it holds `apps`), and the command runs on one app's config. Fix: Run the command in one of the apps the root config lists, or pass that app's config with `--config`.\n",
+  "written": {},
+  "removed": []
+}

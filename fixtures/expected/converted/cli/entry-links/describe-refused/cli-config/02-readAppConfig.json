@@ -1,0 +1,51 @@
+{
+  "function": "readAppConfig",
+  "args": [
+    "<root>/seampact.config.yaml",
+    "seampact.config.yaml",
+    null
+  ],
+  "result": {
+    "status": "read",
+    "config": {
+      "file": "<root>/seampact.config.yaml",
+      "outDir": "<root>/__generated__",
+      "sources": {
+        "a": {
+          "kind": "path",
+          "directory": "<root>/a"
+        }
+      },
+      "entries": [
+        {
+          "entry": {
+            "id": "shared",
+            "use": "probe-provider",
+            "api": "tasks",
+            "options": {
+              "refusals": [
+                {
+                  "code": "probe.describe",
+                  "message": "The provider refuses to describe.",
+                  "fix": "Remove the refusal."
+                }
+              ]
+            }
+          },
+          "root": "<root>/__generated__/shared"
+        },
+        {
+          "entry": {
+            "id": "server",
+            "use": "probe-server",
+            "api": "tasks",
+            "link": {
+              "validators": "shared"
+            }
+          },
+          "root": "<root>/__generated__/server"
+        }
+      ]
+    }
+  }
+}

@@ -70,7 +70,8 @@ deny = [
     { crate = "eyre" },
     { crate = "icu_collator" },
     { crate = "icu_casemap" },
-    { crate = "icu_segmenter" },
+    # oxc_diagnostics reaches it through textwrap, the formatter of seampact-format.
+    { crate = "icu_segmenter", wrappers = ["textwrap"] },
     # idna is gone with jsonschema's default features.
     { crate = "icu_normalizer" },
     { crate = "icu_properties" },
@@ -83,5 +84,5 @@ deny = [
 unknown-registry = "deny"
 unknown-git = "deny"
 allow-registry = ["https://github.com/rust-lang/crates.io-index"]
-# Git sources come later, with oxc_formatter.
-allow-git = []
+# The formatter of seampact-format, pinned to one git rev: oxc publishes no formatter on crates.io.
+allow-git = ["https://github.com/oxc-project/oxc"]

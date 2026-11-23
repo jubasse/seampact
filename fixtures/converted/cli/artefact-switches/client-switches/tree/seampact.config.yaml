@@ -1,0 +1,5 @@
+sources:
+  a: { path: ./a }
+targets:
+  - { id: shared, use: probe-provider, api: tasks, options: { echo: true, descriptors: { validators: { kind: validators, style: standard-schema, schemas: {}, operations: {} }, types: { kind: types, style: typescript, schemas: {}, operations: {} }, client: { kind: client, style: fetch, errorStyle: result, exports: { createClient: { module: client, export: createClient }, Client: { module: client, export: Client }, ContractError: { module: client, export: ContractError }, CallOptions: { module: client, export: CallOptions } }, operations: {} } } } }
+  - { id: client, use: probe-client, api: tasks, link: { client: shared, types: shared }, artefacts: { mutations: false }, options: { echo: true } }

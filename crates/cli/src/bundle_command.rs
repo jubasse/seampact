@@ -6,17 +6,18 @@ use seampact_bundle::{
     BundleWriteResult, write_bundle,
 };
 use seampact_bundle_fetch::BundleSourceFailure;
+use seampact_cli_config::CliIo;
+use seampact_cli_config::unlocated_problem;
 use seampact_cli_config::{
     CliProblem, LoadedAppConfig, ReadAppConfigOutcome, ResolvedSource, read_app_config,
     resolved_path,
 };
+use seampact_generate::source_entry_file;
+use seampact_generate::source_reader;
+use seampact_generate::{bundle_problem, no_workspace_problem, print_source_diagnostics};
 
-use crate::cli_problem::unlocated_problem;
-use crate::compile_sources::{bundle_problem, no_workspace_problem, print_source_diagnostics};
 use crate::config_location::ConfigLocation;
-use crate::source_reader::source_reader;
-use crate::workspace_api_names::source_entry_file;
-use crate::{CliError, CliIo, EXIT_SUCCESS, refuse};
+use crate::{CliError, EXIT_SUCCESS, refuse};
 
 /// The flags that each name where the bundle is written; a command line gives exactly one.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

@@ -1,0 +1,19 @@
+{
+  "function": "readAppConfig",
+  "args": [
+    "<root>/seampact.config.yaml",
+    "seampact.config.yaml",
+    null
+  ],
+  "result": {
+    "status": "refused",
+    "problems": [
+      {
+        "code": "config.key.conflict",
+        "message": "The entry 'server' sets 'frameworkDocs: off' and 'artefacts.nativeDocs: true': one switches the framework's document off, the other completes it.",
+        "fix": "Keep one: remove 'frameworkDocs: off' to complete the framework's document, or switch 'artefacts.nativeDocs' off.",
+        "where": "seampact.config.yaml:4:50 targets[0].frameworkDocs"
+      }
+    ]
+  }
+}

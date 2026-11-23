@@ -1,0 +1,7 @@
+{
+  "exit": 1,
+  "stdout": "",
+  "stderr": "link.operations.missing: entry 'server' linked to 'shared', api 'tasks': 'shared' leaves out operations 'server' keeps: getTask, listTasks, purge. Fix: Keep these operations in the `document` and `operations` of 'shared', or drop them from 'server'.\n",
+  "written": {},
+  "removed": []
+}

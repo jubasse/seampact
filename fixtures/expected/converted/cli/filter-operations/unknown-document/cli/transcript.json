@@ -1,0 +1,7 @@
+{
+  "exit": 1,
+  "stdout": "",
+  "stderr": "filter.document.unknown: entry 'server', api 'tasks': The api 'tasks' declares no document 'nope' (full, public). Fix: Name one of the api's `documents` in `document`, or remove `document`.\n",
+  "written": {},
+  "removed": []
+}

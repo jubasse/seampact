@@ -11,6 +11,7 @@ mod differences;
 mod error;
 mod expected;
 mod fixtures;
+mod generated_compare;
 mod glob;
 mod matcher;
 mod raw_text;
@@ -45,6 +46,10 @@ pub use fixtures::{
     EXPECTED_DIRECTORY, ExcludedFixtures, FIXTURES_DIRECTORY, Fixture, discover_fixtures,
     read_excluded,
 };
+pub use generated_compare::{
+    GENERATED_MANIFEST_FILE, generated_file_mismatch, generated_file_pointer,
+    manifest_v2_mismatches,
+};
 pub use glob::{FixtureGlob, entry_glob_matches};
 pub use matcher::{ComparedFile, DifferenceLedger, MatchOutcome, entry_matches};
 pub use rule_ids::{
@@ -59,9 +64,10 @@ pub use subject::{
 };
 pub use time_limit::TimeLimitAction;
 pub use tool_cases::{
-    BundleCase, CASE_TODAY, CliCase, DiffCase, DiffSide, ExpectedTranscript, ExpectedWrittenFile,
-    MergeCase, MergeCaseInput, RecordedToolFile, Tool, read_bundle_case, read_cli_case,
-    read_diff_case, read_expected_transcript, read_merge_case, read_recorded_tool_file,
+    BundleCase, CASE_TODAY, CliCase, CliCaseForm, CliCommand, CliStep, DiffCase, DiffSide,
+    ExpectedTranscript, ExpectedWrittenFile, MergeCase, MergeCaseInput, RecordedToolFile, Tool,
+    read_bundle_case, read_cli_case, read_diff_case, read_expected_transcript, read_merge_case,
+    read_recorded_tool_file,
 };
 pub use tool_compare::{
     BUNDLE_MANIFEST_FILE, line_mismatches, manifest_mismatches, normalized_manifest, sha256_hex,

@@ -1,0 +1,7 @@
+{
+  "exit": 1,
+  "stdout": "",
+  "stderr": "check.openapi.drift: openapi documents in <root>/docs: The seampact OpenAPI documents in <root>/docs differ from the committed files: tasks.full.yaml (missing). Fix: Run `seampact generate` and commit the result, or set `checks.openapi` to `warning` or `disabled` in the config that writes them.\n",
+  "written": {},
+  "removed": []
+}

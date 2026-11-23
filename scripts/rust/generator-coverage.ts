@@ -15,9 +15,7 @@ import { REPO_ROOT } from "../oracle/fixtures.ts";
 import { CoverageProbe, coverageTable, cutBriefs, pairsOf } from "./pass-coverage.ts";
 import { type ToolCrateSpec, toolSourceFileOf, toolUnitsOf } from "./tools-coverage.ts";
 import { collectToolRecords } from "./tools-pairs.ts";
-
-/** Where the tables go; the trace check reads them beside `TOOL_TABLES_DIR` once the generator seam extends it. */
-export const GENERATOR_TABLES_DIR = "docs/maintainers/rust-design/generators";
+import { GENERATOR_TABLES_DIR } from "./trace.ts";
 
 const OUTPUT_DIRECTORY = join(REPO_ROOT, GENERATOR_TABLES_DIR);
 

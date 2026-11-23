@@ -1,0 +1,71 @@
+{
+  "function": "selectArtefacts",
+  "args": [
+    {
+      "id": "client",
+      "use": "probe-client",
+      "api": "tasks",
+      "artefacts": {
+        "nativeDocs": true
+      }
+    },
+    {
+      "metadata": {
+        "packageName": "probe-client",
+        "packageVersion": "1.0.0",
+        "irSupport": {
+          "irVersions": [
+            1
+          ],
+          "irRevision": 6,
+          "kinds": [
+            "httpOperation"
+          ],
+          "features": []
+        },
+        "role": "client",
+        "artefacts": [
+          {
+            "id": "queries",
+            "defaultOn": true
+          },
+          {
+            "id": "mutations",
+            "defaultOn": true,
+            "needs": [
+              "queries"
+            ]
+          }
+        ],
+        "consumes": {
+          "client": {
+            "styles": [
+              "fetch"
+            ]
+          },
+          "types": {
+            "styles": [
+              "typescript"
+            ],
+            "optional": {
+              "ownLibrary": "probe-types"
+            }
+          }
+        },
+        "provides": {},
+        "importSpecifiers": "extensionless"
+      }
+    }
+  ],
+  "result": {
+    "status": "refused",
+    "problems": [
+      {
+        "code": "config.artefacts.unknown",
+        "message": "The target 'probe-client' declares no artefact 'nativeDocs'; it declares 'queries', 'mutations'.",
+        "fix": "Remove 'nativeDocs' from the entry's `artefacts`: this target completes no framework-native document, and the seampact OpenAPI document `generate` writes (`openapi/<api>.yaml` unless the app's `openapi` key places it) describes the api.",
+        "where": "entry 'client'"
+      }
+    ]
+  }
+}

@@ -1,0 +1,5 @@
+sources:
+  a: { path: ./a }
+  b: { path: ./b }
+targets:
+  - { id: both, use: probe-provider, apis: [a/tasks, b/tasks] }

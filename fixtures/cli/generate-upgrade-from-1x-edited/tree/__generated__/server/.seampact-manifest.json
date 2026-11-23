@@ -1,0 +1,13 @@
+{
+  "owner": "server",
+  "files": [
+    {
+      "path": "a.ts",
+      "sha256": "dab694de3cb32949b12a7de8baef9e16c61f1bff63930c435a6ab8a8b5f7bb40"
+    },
+    {
+      "path": "data.json",
+      "sha256": "3cda4fbab998a617c3c4f4b3697c29c441ace7d1b06a57e70dff48b927c61532"
+    }
+  ]
+}

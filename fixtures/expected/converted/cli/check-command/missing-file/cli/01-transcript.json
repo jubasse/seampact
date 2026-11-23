@@ -1,0 +1,7 @@
+{
+  "exit": 1,
+  "stdout": "",
+  "stderr": "check.generated.drift: entry 'server', api 'tasks': The generated files of entry 'server', api 'tasks' differ from the committed files: a.ts (missing). Fix: Run `seampact generate` and commit the result, or set `checks.generated` to `warning` or `disabled` in the app config.\ncheck.openapi.drift: openapi documents in <root>/openapi: The seampact OpenAPI documents in <root>/openapi differ from the committed files: tasks.full.yaml (missing); tasks.public.yaml (missing). Fix: Run `seampact generate` and commit the result, or set `checks.openapi` to `warning` or `disabled` in the config that writes them.\n",
+  "written": {},
+  "removed": []
+}

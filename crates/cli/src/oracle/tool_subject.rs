@@ -3,12 +3,12 @@
 use camino::Utf8Path;
 use seampact_json::JsonValue;
 use seampact_oracle::{
-    BundleAnswer, BundleCase, CliCase, DiffAnswer, DiffCase, Fixture, MergeCase, OpenApiAnswer,
-    RecordedAnswer, RecordedToolCall, RecordedUnit, RuleIdRegistry, StagePorting, StageRuleIds,
-    SubjectAnswer, ToolSubject, Transcript,
+    BundleAnswer, BundleCase, CliCase, CliCommand, DiffAnswer, DiffCase, Fixture, MergeCase,
+    OpenApiAnswer, RecordedAnswer, RecordedToolCall, RecordedUnit, RuleIdRegistry, StagePorting,
+    StageRuleIds, SubjectAnswer, ToolSubject, Transcript,
 };
 
-use crate::oracle::{bundle, cli_case, diff, lint, openapi, recorded};
+use crate::oracle::{bundle, cli_case, diff, generator_registry, lint, openapi, recorded};
 
 /// The tools of layer 3.2, each case run through the entry functions of the port.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -48,8 +48,17 @@ impl ToolSubject for CliToolSubject {
         recorded::recorded_answer(unit, call, root)
     }
 
-    fn cli(&self, case: &CliCase, root: &Utf8Path) -> SubjectAnswer<Transcript> {
-        cli_case::cli_answer(case, root)
+    fn cli(
+        &self,
+        case: &CliCase,
+        command: &CliCommand,
+        root: &Utf8Path,
+    ) -> SubjectAnswer<Transcript> {
+        cli_case::cli_answer(case, command, root)
+    }
+
+    fn target_short_id(&self, package_name: &str) -> Option<String> {
+        generator_registry::short_id_of_package(package_name)
     }
 
     fn rule_id_registry(&self) -> RuleIdRegistry {

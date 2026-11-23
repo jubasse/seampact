@@ -19,6 +19,7 @@ use crate::oracle::stub_answer::{StubError, failed_answer};
 impl StubError for CliConfigError {
     fn is_not_ported(&self) -> bool {
         match self {
+            Self::NotPortedYet { .. } => true,
             Self::Internal(_) | Self::Io { .. } => false,
         }
     }

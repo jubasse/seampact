@@ -1,0 +1,7 @@
+openapi: none
+sources:
+  a: { path: ./a }
+  b: { path: ./b }
+targets:
+  - { id: one, use: probe-server, api: a/tasks, mount: /one }
+  - { id: two, use: probe-server, api: b/tasks, mount: /two }

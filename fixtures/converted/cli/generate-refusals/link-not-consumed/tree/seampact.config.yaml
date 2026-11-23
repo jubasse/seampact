@@ -1,0 +1,5 @@
+sources:
+  a: { path: ./a }
+targets:
+  - { id: types, use: probe-provider, api: tasks, link: { validators: zod } }
+  - { id: zod, use: probe-provider, api: tasks }

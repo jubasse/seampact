@@ -1,0 +1,7 @@
+{
+  "exit": 1,
+  "stdout": "",
+  "stderr": "filter.include.removed: entry 'server', api 'tasks': The api 'tasks' keeps no operation for the include item 'purge' once the document 'public' has run. Fix: Remove the item from `operations.include`, or choose a document that keeps it.\n",
+  "written": {},
+  "removed": []
+}

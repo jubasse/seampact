@@ -1,0 +1,32 @@
+src/generated_paths.rs#check_generated_paths	packages/core/codegen-core/src/generated-paths.ts#checkGeneratedPaths	pending: brief 1
+src/finish_files.rs#finish_files	packages/core/codegen-core/src/finish-files.ts#finishFiles	pending: brief 1
+-	packages/core/codegen-core/src/file-presence.ts#isMissingFileError	pending: brief 1
+-	packages/core/codegen-core/src/generated-paths.ts#directoryPrefixes	pending: brief 1
+src/finish_files.rs#generated_header	packages/core/codegen-core/src/finish-files.ts#generatedHeader
+-	packages/core/codegen-core/src/generated-paths.ts#manifestRefusalReason	pending: brief 1
+-	packages/core/codegen-core/src/writer.ts#sha256Of	pending: brief 1
+-	packages/core/codegen-core/src/generated-paths.ts#rememberPath	pending: brief 1
+-	packages/core/codegen-core/src/generated-paths.ts#pathRefusalReason	pending: brief 1
+-	packages/core/codegen-core/src/generated-paths.ts#directoryRefusalReason	pending: brief 1
+-	packages/core/codegen-core/src/finish-files.ts#fileKindOf	pending: brief 1
+-	packages/core/codegen-core/src/finish-files.ts#finishFile	pending: brief 1
+src/manifest.rs#serialize_manifest	packages/core/codegen-core/src/manifest.ts#serializeManifest	pending: brief 1
+src/file_presence.rs#read_file_if_present	packages/core/codegen-core/src/file-presence.ts#readFileIfPresent	pending: brief 1
+src/file_presence.rs#lstat_if_present	packages/core/codegen-core/src/file-presence.ts#lstatIfPresent	pending: brief 1
+-	packages/core/codegen-core/src/writer.ts#realpathOfMissing	pending: brief 1
+-	packages/core/codegen-core/src/writer.ts#manifestFileRefusal	pending: brief 1
+-	packages/core/codegen-core/src/writer.ts#planFile	pending: brief 1
+src/manifest.rs#read_manifest	packages/core/codegen-core/src/manifest.ts#readManifest	pending: brief 1
+-	packages/core/codegen-core/src/writer.ts#leavesRoot	pending: brief 1
+-	packages/core/codegen-core/src/writer.ts#isOutside	pending: brief 1
+-	packages/core/codegen-core/src/writer.ts#refusedState	pending: brief 1
+src/generated_write.rs#commit_generated_write	packages/core/codegen-core/src/writer.ts#commitGeneratedWrite	pending: brief 1
+src/generated_write.rs#plan_generated_write	packages/core/codegen-core/src/writer.ts#planGeneratedWrite	pending: brief 1
+-	packages/core/codegen-core/src/writer.ts#existingFileState	pending: brief 1
+-	packages/core/codegen-core/src/manifest.ts#isEntryShape	pending: brief 1
+-	packages/core/codegen-core/src/manifest.ts#invalidEntryReason	pending: brief 1
+-	packages/core/codegen-core/src/manifest.ts#entriesOf	pending: brief 1
+-	packages/core/codegen-core/src/writer.ts#removeEmptyDirectories	pending: brief 1
+src/generated_write.rs#write_generated_files	packages/core/codegen-core/src/writer.ts#writeGeneratedFiles	pending: brief 1
+-	packages/core/codegen-core/src/generated-paths.ts#unsafePathReason	merged: ../paths/src/unsafe_path_reason.rs#output_path_problem
+-	packages/core/codegen-core/src/generated-paths.ts#caseFolded	merged: ../paths/src/case_folded.rs#case_folded

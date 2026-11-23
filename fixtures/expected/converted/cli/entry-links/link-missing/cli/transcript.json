@@ -1,0 +1,7 @@
+{
+  "exit": 1,
+  "stdout": "",
+  "stderr": "link.missing: entry 'client', api 'tasks': This target consumes a 'client' link in style fetch, and none is given. Fix: Link `@seampact/codegen-fetch` or `@seampact/codegen-axios` in the target's `link` entry. Docs: https://jubasse.github.io/seampact/troubleshooting/link/\n",
+  "written": {},
+  "removed": []
+}

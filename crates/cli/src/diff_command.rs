@@ -1,22 +1,23 @@
 //! `seampact diff`: classifies what changed since the IRs `--against` names.
 
 use indexmap::IndexMap;
+use seampact_cli_config::CliIo;
+use seampact_cli_config::unlocated_problem;
 use seampact_cli_config::{
     ReadAppConfigOutcome, open_api_api_names, read_app_config, resolved_path,
 };
 use seampact_diagnostics::InternalError;
 use seampact_diff::{diff_contract_sets, format_diff_report};
 use seampact_diff_table::{DiffExemption, DiffGateScope, DiffOptions, DiffResult};
+use seampact_generate::LocalBundles;
+use seampact_generate::compile_sources;
+use seampact_generate::{UsedSources, add_qualify_fix, entry_api_refs, used_sources};
 use seampact_json::JsonValue;
 
-use crate::api_refs::{UsedSources, add_qualify_fix, entry_api_refs, used_sources};
-use crate::cli_problem::unlocated_problem;
-use crate::compile_sources::compile_sources;
 use crate::config_location::ConfigLocation;
 use crate::diff_baseline::read_baseline;
-use crate::local_bundle::LocalBundles;
 use crate::step::Step;
-use crate::{CliError, CliIo, EXIT_REFUSED, EXIT_SUCCESS, refuse};
+use crate::{CliError, EXIT_REFUSED, EXIT_SUCCESS, refuse};
 
 /// Compares the compiled sources with the baseline at `against`, one report per api; answers
 /// the exit code, refused when a comparison fails its gate.

@@ -1,0 +1,7 @@
+{
+  "exit": 1,
+  "stdout": "",
+  "stderr": "probe.describe: entry 'shared', api 'tasks': The provider refuses to describe. Fix: Remove the refusal. Docs: https://jubasse.github.io/seampact/troubleshooting/generate/\nprobe.describe: entry 'server' linked to 'shared', api 'tasks': The provider refuses to describe. Fix: Remove the refusal. Docs: https://jubasse.github.io/seampact/troubleshooting/generate/\n",
+  "written": {},
+  "removed": []
+}

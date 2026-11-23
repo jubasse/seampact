@@ -4,7 +4,7 @@ use indexmap::IndexMap;
 use seampact_json::{JsonValue, is_text, items_of, js_text_of, object_of};
 use seampact_span::Location;
 
-use crate::contract_position::origin_position;
+use seampact_generate::origin_position;
 
 /// The text of an origin: a core declaration is `built in`, a located one its `file:line`, else
 /// its api, layer and pointer.

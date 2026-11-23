@@ -7,6 +7,11 @@ export const TRACE_FILE = "trace.tsv";
 export const XTASK_DIR = "xtask";
 /** The per-crate tables of the tools layer: the TypeScript functions each crate ports, by brief. */
 export const TOOL_TABLES_DIR = "docs/maintainers/rust-design/cli-and-tools";
+/** The per-crate tables of the generator layer; a crate may have a table here and in `TOOL_TABLES_DIR`. */
+export const GENERATOR_TABLES_DIR = "docs/maintainers/rust-design/generators";
+
+const TABLE_DIRECTORIES = [TOOL_TABLES_DIR, GENERATOR_TABLES_DIR];
+
 /** The root the file column of a tool table is relative to. */
 export const TOOL_SOURCES_ROOT = "packages/core";
 /** The module a crate keeps while some of its functions wait for a later brief. */
@@ -269,8 +274,9 @@ function checkPendingLines(
 }
 
 /**
- * Once a crate's trace has a line, every TypeScript file of its tool table has one too, so a file
- * left out of the first brief cannot hide a stub. An empty trace is a crate not started.
+ * Once a crate's trace has a line, every TypeScript file of its tables (the tools layer's and the generator
+ * layer's) has one too, so a file left out of the first brief cannot hide a stub. An empty trace is a crate not
+ * started.
  */
 function checkToolTableFiles(
   root: string,
@@ -278,19 +284,23 @@ function checkToolTableFiles(
   traceName: string,
   lines: TraceLine[],
 ): string[] {
+  if (lines.length === 0) return [];
+
   const crateName = crateDirectory.split("/").at(-1) ?? crateDirectory;
-  const tablePath = join(root, TOOL_TABLES_DIR, `${crateName}.tsv`);
-
-  if (lines.length === 0 || !existsSync(tablePath)) return [];
-
   const tracedFiles = new Set(lines.map((line) => line.typeScriptFile));
 
-  return toolTableFiles(readFileSync(tablePath, "utf8"))
-    .filter((file) => !tracedFiles.has(file))
-    .map(
-      (file) =>
-        `${traceName}: \`${file}\` is in \`${TOOL_TABLES_DIR}/${crateName}.tsv\` but has no line`,
-    );
+  return TABLE_DIRECTORIES.flatMap((directory) => {
+    const tablePath = join(root, directory, `${crateName}.tsv`);
+
+    if (!existsSync(tablePath)) return [];
+
+    return toolTableFiles(readFileSync(tablePath, "utf8"))
+      .filter((file) => !tracedFiles.has(file))
+      .map(
+        (file) =>
+          `${traceName}: \`${file}\` is in \`${directory}/${crateName}.tsv\` but has no line`,
+      );
+  });
 }
 
 /** The distinct TypeScript files of a tool table, relative to the repository root. */

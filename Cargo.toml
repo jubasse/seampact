@@ -23,6 +23,10 @@ seampact-diff = { path = "crates/diff", version = "2.0.0" }
 seampact-diff-table = { path = "crates/diff-table", version = "2.0.0" }
 seampact-editor-schemas = { path = "crates/editor-schemas", version = "2.0.0" }
 seampact-finalize = { path = "crates/finalize", version = "2.0.0" }
+seampact-format = { path = "crates/format", version = "2.0.0" }
+seampact-gen-probe = { path = "crates/gen-probe", version = "2.0.0" }
+seampact-generate = { path = "crates/generate", version = "2.0.0" }
+seampact-generators = { path = "crates/generators", version = "2.0.0" }
 seampact-ir = { path = "crates/ir", version = "2.0.0" }
 seampact-ir-check = { path = "crates/ir-check", version = "2.0.0" }
 seampact-js = { path = "crates/js", version = "2.0.0" }
@@ -46,6 +50,7 @@ seampact-span = { path = "crates/span", version = "2.0.0" }
 seampact-target = { path = "crates/target", version = "2.0.0" }
 seampact-templates = { path = "crates/templates", version = "2.0.0" }
 seampact-validate = { path = "crates/validate", version = "2.0.0" }
+seampact-writer = { path = "crates/writer", version = "2.0.0" }
 # Parse surface and ordered maps; the number features follow the IR types design note, section 3.
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = { version = "1.0.154", features = ["preserve_order", "arbitrary_precision", "float_roundtrip", "unbounded_depth"] }
@@ -66,6 +71,11 @@ unicode-normalization = "0.1.26"
 annotate-snippets = "0.12.18"
 flate2 = "1.1.11"
 sha2 = "0.11.1"
+# The formatter of generated TypeScript and JavaScript, seampact-format only: one git rev (tag oxfmt_v0.78.0), each
+# with its version so cargo-deny reads no wildcard. The pin moves only in a lead PR that reruns the oracle.
+oxc_formatter = { git = "https://github.com/oxc-project/oxc", rev = "7d8e1f49", version = "0.78.0" }
+oxc_allocator = { git = "https://github.com/oxc-project/oxc", rev = "7d8e1f49", version = "0.158.0" }
+oxc_span = { git = "https://github.com/oxc-project/oxc", rev = "7d8e1f49", version = "0.158.0" }
 # The release channel of seampact-bundle-fetch only: HTTPS through rustls with the ring provider and the OS store.
 ureq = { version = "3.5.2", default-features = false, features = ["rustls-no-provider", "platform-verifier"] }
 rustls = { version = "0.23.46", default-features = false, features = ["ring", "std", "tls12"] }

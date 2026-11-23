@@ -1,0 +1,7 @@
+{
+  "steps": [
+    { "argv": ["generate"] },
+    { "write": { "__generated__/server/a.ts": "export const a = 2;\n" } },
+    { "argv": ["check"] }
+  ]
+}

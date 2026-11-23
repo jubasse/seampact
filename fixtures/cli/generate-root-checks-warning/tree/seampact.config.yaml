@@ -1,0 +1,4 @@
+apps: [apps/api]
+checks: { openapi: warning }
+openapi:
+  all: { path: all.yaml }

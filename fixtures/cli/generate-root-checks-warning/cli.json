@@ -1,0 +1,7 @@
+{
+  "steps": [
+    { "argv": ["generate"] },
+    { "write": { "all.yaml": "extra: 1\n" } },
+    { "argv": ["check"] }
+  ]
+}

@@ -4,6 +4,8 @@
 use std::fs;
 
 use camino::Utf8Path;
+use seampact_cli_config::CliIo;
+use seampact_cli_config::unlocated_problem;
 use seampact_cli_config::{
     CliProblem, LoadedAppConfig, ReadAppConfigOutcome, ResolvedSource, open_api_api_names,
     read_app_config, resolved_path,
@@ -14,15 +16,14 @@ use seampact_editor_schemas::{
     plan_editor_schemas, write_editor_schemas,
 };
 use seampact_finalize::finalize_serialize_ir;
+use seampact_generate::LocalBundles;
+use seampact_generate::source_entry_file;
+use seampact_generate::source_reader;
+use seampact_generate::{CompiledApi, compile_sources};
+use seampact_generate::{UsedSources, add_qualify_fix, entry_api_refs, used_sources};
 
-use crate::api_refs::{UsedSources, add_qualify_fix, entry_api_refs, used_sources};
-use crate::cli_problem::unlocated_problem;
-use crate::compile_sources::{CompiledApi, compile_sources};
 use crate::config_location::ConfigLocation;
-use crate::local_bundle::LocalBundles;
-use crate::source_reader::source_reader;
-use crate::workspace_api_names::source_entry_file;
-use crate::{CliError, CliIo, EXIT_SUCCESS, refuse};
+use crate::{CliError, EXIT_SUCCESS, refuse};
 
 /// The suffix of the IR file `compile --out` writes for an api.
 pub(crate) const IR_FILE_SUFFIX: &str = ".ir.json";

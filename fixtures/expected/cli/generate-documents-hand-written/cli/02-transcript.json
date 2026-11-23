@@ -1,0 +1,7 @@
+{
+  "exit": 1,
+  "stdout": "",
+  "stderr": "check.openapi.drift: openapi documents in <root>/docs: The seampact OpenAPI documents in <root>/docs differ from the committed files: '<root>/docs/tasks.full.yaml' exists and the writer did not generate it, so it is not overwritten. Fix: Move it out of the output directory <root>/docs, or rename it.\n",
+  "written": {},
+  "removed": []
+}

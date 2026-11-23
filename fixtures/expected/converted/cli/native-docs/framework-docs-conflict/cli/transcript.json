@@ -1,0 +1,7 @@
+{
+  "exit": 1,
+  "stdout": "",
+  "stderr": "config.key.conflict: seampact.config.yaml:4:50 targets[0].frameworkDocs: The entry 'server' sets 'frameworkDocs: off' and 'artefacts.nativeDocs: true': one switches the framework's document off, the other completes it. Fix: Keep one: remove 'frameworkDocs: off' to complete the framework's document, or switch 'artefacts.nativeDocs' off.\n",
+  "written": {},
+  "removed": []
+}

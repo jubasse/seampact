@@ -1,0 +1,7 @@
+{
+  "exit": 1,
+  "stdout": "",
+  "stderr": "openapi.document.edited: openapi documents in <root>: '<root>/all.yaml' was edited by hand since it was generated, so it is not overwritten or removed. Fix: Delete the edited document so that `generate` writes it again, run `seampact generate --force` to write it over the edit, or give the document another path in `openapi`.\n",
+  "written": {},
+  "removed": []
+}

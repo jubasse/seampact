@@ -1,3 +1,4 @@
+import { createRequire } from "node:module";
 import { resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -48,6 +49,14 @@ export interface OracleCliIo {
   today(): string;
 }
 
+/** What the probe generators' twins read from `globalThis.seampactOracleProbe`. */
+export interface ProbeTools {
+  defineTarget: (definition: object) => object;
+  format: (source: string, options: { parser: string }) => Promise<string>;
+  irVersion: number;
+  irRevision: number;
+}
+
 export interface OracleTools {
   emitDocuments(ir: object, options?: object): EmitOutcomeLike;
   parseEmitterOptions(raw: unknown): ParsedOptionsLike;
@@ -77,6 +86,7 @@ export interface OracleTools {
   runCli(argv: readonly string[], io: OracleCliIo): Promise<number>;
   /** The IR writer: members in UTF-16 order, the bytes the compile oracle writes. */
   finalizeSerializeJson(value: unknown): string;
+  probe: ProbeTools;
 }
 
 const isObject = (value: unknown): value is Record<string, unknown> =>
@@ -100,6 +110,17 @@ function functionOf<Function extends (...args: never[]) => unknown>(
   return value as Function;
 }
 
+// Prettier as the first-party targets pin it, loaded from the package that pins it.
+const CODEGEN_TS_PACKAGE_JSON = resolve(PACKAGES, "../targets/codegen-ts/package.json");
+
+function numberOf(module: unknown, name: string, from: string): number {
+  const value = member(module, name, from);
+
+  if (typeof value !== "number") throw new Error(`${from}: ${name} is not a number`);
+
+  return value;
+}
+
 const importSource = (relative: string): Promise<unknown> =>
   import(pathToFileURL(resolve(PACKAGES, relative)).href);
 
@@ -115,6 +136,9 @@ async function loadTools(): Promise<OracleTools> {
   const cli = await importSource("cli/src/index.ts");
   // Not exported by the package: the recorded calls write each compiled IR as the compile oracle does.
   const finalize = await importSource("compiler/src/finalize/index.ts");
+  const codegenCore = await importSource("codegen-core/src/index.ts");
+  const specIr = await importSource("spec/src/ir/index.ts");
+  const prettier: unknown = createRequire(CODEGEN_TS_PACKAGE_JSON)("prettier");
   const from = (name: string) => `${PACKAGES}/${name}`;
 
   return {
@@ -140,6 +164,12 @@ async function loadTools(): Promise<OracleTools> {
       "finalizeSerializeJson",
       from("compiler/src/finalize"),
     ),
+    probe: {
+      defineTarget: functionOf(codegenCore, "defineTarget", from("codegen-core")),
+      format: functionOf(prettier, "format", "prettier"),
+      irVersion: numberOf(specIr, "IR_VERSION", from("spec/src/ir")),
+      irRevision: numberOf(specIr, "IR_REVISION", from("spec/src/ir")),
+    },
   };
 }
 

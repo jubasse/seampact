@@ -1,0 +1,7 @@
+{
+  "exit": 1,
+  "stdout": "",
+  "stderr": "filter.operation.unknown: entry 'server', api 'tasks': The api 'tasks' has no operation id or tag 'nope'. Fix: Name an operation id or a tag of the api in `operations.include` or `operations.exclude`.\n",
+  "written": {},
+  "removed": []
+}

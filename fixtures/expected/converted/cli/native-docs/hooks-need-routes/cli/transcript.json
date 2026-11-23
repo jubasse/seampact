@@ -1,0 +1,7 @@
+{
+  "exit": 1,
+  "stdout": "",
+  "stderr": "config.artefacts.needed: entry 'server': The artefact 'hooks' of the target 'probe-server' needs 'routes', which the entry leaves off. Fix: Switch 'routes' on, or switch 'hooks' off too.\n",
+  "written": {},
+  "removed": []
+}

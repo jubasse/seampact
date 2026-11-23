@@ -5,9 +5,7 @@ use std::io::Write as _;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use camino::{Utf8Path, Utf8PathBuf};
-use seampact_cli_config::CliProblem;
-
-use crate::format_problem;
+use seampact_cli_config::{CliIo, CliProblem, print_problems};
 
 /// The exit code of a command that wrote everything.
 pub const EXIT_SUCCESS: i32 = 0;
@@ -18,45 +16,11 @@ pub const EXIT_REFUSED: i32 = 1;
 /// The exit code of a usage error.
 pub const EXIT_USAGE: i32 = 2;
 
-/// What a command reads and writes besides files; the binary passes [`ProcessIo`], the oracle a
-/// recording one.
-pub trait CliIo {
-    /// The directory relative paths of the command line resolve against.
-    fn cwd(&self) -> &Utf8Path;
-
-    /// Writes `text` to the standard output.
-    fn stdout(&mut self, text: &str);
-
-    /// Writes `text` to the standard error.
-    fn stderr(&mut self, text: &str);
-
-    /// The value of the environment variable `name`, when set.
-    fn environment_variable(&self, name: &str) -> Option<String>;
-
-    /// Today as `YYYY-MM-DD`, the diff's only time input.
-    fn today(&self) -> String;
-}
-
-/// Prints each problem on its own stderr line.
-pub fn print_problems(io: &mut dyn CliIo, problems: &[CliProblem]) {
-    for problem in problems {
-        io.stderr(&format!("{}\n", format_problem(problem)));
-    }
-}
-
 /// Prints the problems of a refusal and answers the refusal exit code.
 pub(crate) fn refuse(io: &mut dyn CliIo, problems: &[CliProblem]) -> i32 {
     print_problems(io, problems);
 
     EXIT_REFUSED
-}
-
-/// Prints each warning on its own stderr line: what the generated files leave to the developer's
-/// code, the command going on.
-pub fn print_warnings(io: &mut dyn CliIo, warnings: &[CliProblem]) {
-    for warning in warnings {
-        io.stderr(&format!("warning: {}\n", format_problem(warning)));
-    }
 }
 
 /// The process: its working directory, streams, environment and the UTC date of the system clock.

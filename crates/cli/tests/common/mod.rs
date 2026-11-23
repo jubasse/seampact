@@ -3,7 +3,8 @@
 use std::ffi::OsString;
 
 use camino::{Utf8Path, Utf8PathBuf};
-use seampact_cli::{CliError, CliIo, run_command};
+use seampact_cli::{CliError, run_command};
+use seampact_cli_config::CliIo;
 
 pub type TestResult = Result<(), Box<dyn std::error::Error>>;
 

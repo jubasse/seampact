@@ -315,6 +315,10 @@ In pipeline order (ADR 0006 section 1).
 - `crates/diff-table`: The contract diff's data: the diff codes, the change table, the options and the result types.
 - `crates/editor-schemas`: The editor schemas `compile --editor-schemas` writes: the declarations of each api and the schema files.
 - `crates/finalize`: The finalize stage: the complete draft of one api to its canonical IR and source map, ported from packages/core/compiler/src/finalize.
+- `crates/format`: Formats generated TypeScript and JavaScript over oxc_formatter, as Prettier at 80 columns.
+- `crates/gen-probe`: The three probe generators the oracle's CLI cases run in place of a family, and their options.
+- `crates/generate`: The run planning of generate and check: run preparation, the app plan, entries, documents, writes and drift.
+- `crates/generators`: The registry of every first-party generator of the build.
 - `crates/ir`: The seampact IR and source-map types, their open enums, unions and registries, the embedded IR schema files and the canonical document roots.
 - `crates/ir-check`: The strict IR JSON Schema check and the shared JsonValue to serde_json conversion that writes each number from its f64.
 - `crates/js`: JavaScript semantics shared by every port lane: UTF-16 string order, JavaScript object key order, ECMAScript number text and UTF-16 prefixes.
@@ -338,6 +342,7 @@ In pipeline order (ADR 0006 section 1).
 - `crates/target`: What OpenAPI, the CLI and the generator planning share from `codegen-core`: refusals, IR locations and the not-generated fixes.
 - `crates/templates`: The template reader of ADR 0002 section 13: a raw template read into the IR's template, with the slots of its place.
 - `crates/validate`: The validate stage: the authoring tree checked against the authoring JSON Schemas, ported from packages/core/compiler/src/validate.
+- `crates/writer`: Writes and checks generated files: paths, headers, formatting, the manifest and hand edits.
 
 ### `scripts`
 

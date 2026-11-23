@@ -1,0 +1,7 @@
+{
+  "exit": 1,
+  "stdout": "",
+  "stderr": "file.extension.unsupported: entry 'server', api 'tasks': The target generated 'a.txt', whose extension is not one codegen-core formats (.ts, .tsx, .js, .mjs, .cjs, .json). Fix: Report this to the target's maintainers: codegen-core must learn the extension before a target emits it. Docs: https://jubasse.github.io/seampact/troubleshooting/generate/\n",
+  "written": {},
+  "removed": []
+}

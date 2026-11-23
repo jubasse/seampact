@@ -1,0 +1,7 @@
+{
+  "exit": 1,
+  "stdout": "",
+  "stderr": "config.artefacts.none: entry 'server': The entry leaves off every artefact the target 'probe-server' declares ('routes', 'nativeDocs', 'hooks'), so it would generate nothing. Fix: Remove the entry from `targets`, or switch one of its artefacts on.\n",
+  "written": {},
+  "removed": []
+}

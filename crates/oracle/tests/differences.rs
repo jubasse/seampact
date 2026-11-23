@@ -173,7 +173,9 @@ fn it_refuses_an_api_or_a_half_on_an_output_that_has_none() {
 
     assert_eq!(
         problems(&[entry(&json!({
-            "applies": { "fixtures": ["x"], "output": "generated", "path": "**", "api": "tasks", "half": "tree" }
+            "applies": { "fixtures": ["x"], "output": "generated", "path": "src/index.ts", "api": "tasks", "half": "tree" },
+            "from": "a",
+            "to": "b"
         }))]),
         Vec::<String>::new()
     );

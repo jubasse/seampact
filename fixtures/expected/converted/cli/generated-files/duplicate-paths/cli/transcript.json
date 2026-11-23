@@ -1,0 +1,7 @@
+{
+  "exit": 1,
+  "stdout": "",
+  "stderr": "file.path.invalid: entry 'server', api 'tasks': The target generated the path 'a.ts', and it is generated twice. Fix: Report this to the target's maintainers, or, if two paths differ only by letter case, rename one of the two contract names: a target emits distinct relative POSIX paths inside its output root. Docs: https://jubasse.github.io/seampact/troubleshooting/generate/\n",
+  "written": {},
+  "removed": []
+}
