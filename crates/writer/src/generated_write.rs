@@ -5,7 +5,8 @@ use std::collections::{HashMap, HashSet};
 use std::fs;
 
 use camino::{Utf8Path, Utf8PathBuf};
-use seampact_paths::{absolute_normalised, case_folded};
+use seampact_paths::case_folded;
+use seampact_paths::node_path::resolve_from_working_directory;
 use seampact_target::{GeneratedFile, Refusal, Refused, refusal_code};
 
 use crate::existing_file::{ExistingFileState, existing_file_state};
@@ -80,7 +81,7 @@ pub fn plan_generated_write(
     let checked = check_generated_paths(files)?;
 
     let root_directory = real_path_of_missing(
-        &absolute_normalised(out_directory)
+        &resolve_from_working_directory(out_directory)
             .map_err(|error| WriterError::io(out_directory, &error))?,
     )?;
 

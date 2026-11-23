@@ -1,6 +1,5 @@
 //! The probe adapter: a generator whose answers are its options.
 
-use seampact_diagnostics::InternalError;
 use seampact_ir::ContractIr;
 use seampact_json::JsonValue;
 use seampact_target::{
@@ -49,9 +48,7 @@ impl TargetDefinition for Probe {
         let mut files = options.files.clone();
 
         if options.echo == Some(true) {
-            let contents = request_text(input, &self.metadata).map_err(|error| {
-                InternalError::new(format!("the probe request is not JSON: {error}"))
-            })?;
+            let contents = request_text(input, &self.metadata)?;
 
             files.push(GeneratedFile {
                 path: REQUEST_FILE.to_owned(),

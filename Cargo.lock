@@ -2091,6 +2091,7 @@ dependencies = [
  "seampact-ir",
  "seampact-js",
  "seampact-json",
+ "seampact-paths",
  "seampact-span",
  "serde_json",
  "tempfile",
@@ -2273,6 +2274,7 @@ version = "2.0.0"
 dependencies = [
  "camino",
  "seampact-js",
+ "tempfile",
  "thiserror",
  "unicode-normalization",
 ]
