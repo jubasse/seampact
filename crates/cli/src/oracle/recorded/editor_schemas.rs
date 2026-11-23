@@ -10,10 +10,12 @@ use seampact_editor_schemas::{
     write_editor_schemas,
 };
 use seampact_ir::{Layer, Origin};
-use seampact_json::{JsonNumber, JsonObject, JsonValue, stringify_json};
+use seampact_json::{JsonObject, JsonValue, stringify_json};
 use seampact_oracle::{ROOT_TOKEN, RecordedAnswer, RecordedToolCall, SubjectAnswer};
 use seampact_pipeline::PipelineDeclared;
 use seampact_span::Location;
+
+use crate::oracle::json::{array_of, integer};
 
 /// Replays a recorded call of the editor schemas on the case root.
 pub(super) fn editor_schemas_answer(
@@ -48,7 +50,7 @@ fn editor_declarations_answer(call: &RecordedToolCall) -> Result<RecordedAnswer,
         .map_err(|error| error.to_string())?;
 
     Ok(RecordedAnswer {
-        result: JsonValue::Array(declarations.iter().map(declaration_json).collect()),
+        result: array_of(&declarations, declaration_json),
         written: IndexMap::new(),
     })
 }
@@ -78,7 +80,7 @@ fn write_editor_schemas_answer(
     }
 
     Ok(RecordedAnswer {
-        result: JsonValue::Number(JsonNumber::from_i64(count)),
+        result: integer(count),
         written,
     })
 }
@@ -193,24 +195,10 @@ fn count_member(members: &JsonObject, name: &str) -> Option<u32> {
 }
 
 fn declaration_json(declaration: &EditorDeclaration) -> JsonValue {
-    let mut members = JsonObject::new();
-
-    members.insert(
-        "catalogue".to_owned(),
-        JsonValue::String(declaration.catalogue.clone()),
-    );
-    members.insert(
-        "name".to_owned(),
-        JsonValue::String(declaration.name.clone()),
-    );
-    members.insert(
-        "file".to_owned(),
-        JsonValue::String(declaration.file.clone()),
-    );
-    members.insert(
-        "line".to_owned(),
-        JsonValue::Number(JsonNumber::from_i64(i64::from(declaration.line))),
-    );
-
-    JsonValue::Object(members)
+    JsonValue::object([
+        ("catalogue", JsonValue::text(&declaration.catalogue)),
+        ("name", JsonValue::text(&declaration.name)),
+        ("file", JsonValue::text(&declaration.file)),
+        ("line", integer(i64::from(declaration.line))),
+    ])
 }

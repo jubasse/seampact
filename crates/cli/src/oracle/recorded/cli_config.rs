@@ -13,6 +13,7 @@ use seampact_cli_config::{
 use seampact_json::JsonValue;
 use seampact_oracle::{ROOT_TOKEN, RecordedAnswer, RecordedToolCall, SubjectAnswer};
 
+use crate::oracle::json::{array_of, coded_problem_json, push_present_texts};
 use crate::oracle::stub_answer::{StubError, failed_answer};
 
 impl StubError for CliConfigError {
@@ -108,10 +109,7 @@ fn read_json(member: &'static str, value: JsonValue) -> JsonValue {
 fn refused_json(problems: &[CliProblem]) -> JsonValue {
     JsonValue::object([
         ("status", JsonValue::text("refused")),
-        (
-            "problems",
-            JsonValue::Array(problems.iter().map(problem_json).collect()),
-        ),
+        ("problems", array_of(problems, problem_json)),
     ])
 }
 
@@ -133,18 +131,12 @@ fn loaded_workspace_json(workspace: &LoadedWorkspace) -> JsonValue {
         ("root", loaded_root_config_json(&workspace.root)),
         (
             "apps",
-            JsonValue::Array(
-                workspace
-                    .apps
-                    .iter()
-                    .map(|each| {
-                        JsonValue::object([
-                            ("app", workspace_app_json(&each.app)),
-                            ("config", loaded_app_config_json(&each.config)),
-                        ])
-                    })
-                    .collect(),
-            ),
+            array_of(&workspace.apps, |each| {
+                JsonValue::object([
+                    ("app", workspace_app_json(&each.app)),
+                    ("config", loaded_app_config_json(&each.config)),
+                ])
+            }),
         ),
     ])
 }
@@ -161,10 +153,7 @@ fn loaded_root_config_json(config: &LoadedRootConfig) -> JsonValue {
     let mut members = vec![
         ("file", JsonValue::text(config.file.as_str())),
         ("displayName", JsonValue::text(&config.display_name)),
-        (
-            "apps",
-            JsonValue::Array(config.apps.iter().map(workspace_app_json).collect()),
-        ),
+        ("apps", array_of(&config.apps, workspace_app_json)),
         ("sources", sources_json(&config.sources)),
     ];
 
@@ -172,10 +161,7 @@ fn loaded_root_config_json(config: &LoadedRootConfig) -> JsonValue {
         members.push(("allowLocal", JsonValue::Bool(allow_local)));
     }
 
-    members.push((
-        "openapi",
-        JsonValue::Array(config.openapi.iter().map(merged_document_json).collect()),
-    ));
+    members.push(("openapi", array_of(&config.openapi, merged_document_json)));
     members.push(("checks", config.checks.clone()));
 
     JsonValue::object(members)
@@ -187,13 +173,7 @@ fn merged_document_json(document: &LoadedMergedDocument) -> JsonValue {
         ("file", JsonValue::text(document.file.as_str())),
         (
             "apps",
-            JsonValue::Array(
-                document
-                    .apps
-                    .iter()
-                    .map(|name| JsonValue::text(name))
-                    .collect(),
-            ),
+            array_of(&document.apps, |name| JsonValue::text(name)),
         ),
         ("prefix", document.prefix.clone()),
         ("options", document.options.clone()),
@@ -243,17 +223,8 @@ fn path_argument(call: &RecordedToolCall, position: usize, root: &Utf8Path) -> O
 
 fn app_outcome_json(outcome: &ReadAppConfigOutcome) -> JsonValue {
     match outcome {
-        ReadAppConfigOutcome::Read(config) => JsonValue::object([
-            ("status", JsonValue::text("read")),
-            ("config", loaded_app_config_json(config)),
-        ]),
-        ReadAppConfigOutcome::Refused(problems) => JsonValue::object([
-            ("status", JsonValue::text("refused")),
-            (
-                "problems",
-                JsonValue::Array(problems.iter().map(problem_json).collect()),
-            ),
-        ]),
+        ReadAppConfigOutcome::Read(config) => read_json("config", loaded_app_config_json(config)),
+        ReadAppConfigOutcome::Refused(problems) => refused_json(problems),
     }
 }
 
@@ -270,18 +241,12 @@ fn loaded_app_config_json(config: &LoadedAppConfig) -> JsonValue {
     members.push(("sources", sources_json(&config.sources)));
     members.push((
         "entries",
-        JsonValue::Array(
-            config
-                .entries
-                .iter()
-                .map(|each| {
-                    JsonValue::object([
-                        ("entry", each.entry.clone()),
-                        ("root", JsonValue::text(each.root.as_str())),
-                    ])
-                })
-                .collect(),
-        ),
+        array_of(&config.entries, |each| {
+            JsonValue::object([
+                ("entry", each.entry.clone()),
+                ("root", JsonValue::text(each.root.as_str())),
+            ])
+        }),
     ));
 
     for (name, value) in [
@@ -295,9 +260,13 @@ fn loaded_app_config_json(config: &LoadedAppConfig) -> JsonValue {
         }
     }
 
-    if let Some(root_file) = &config.root_file {
-        members.push(("rootFile", JsonValue::text(root_file.as_str())));
-    }
+    push_present_texts(
+        &mut members,
+        [(
+            "rootFile",
+            config.root_file.as_ref().map(|file| file.as_str()),
+        )],
+    );
 
     JsonValue::object(members)
 }
@@ -343,32 +312,23 @@ fn bundle_json(bundle: &BundleSource) -> JsonValue {
                 ("tag", JsonValue::text(&git.tag)),
             ];
 
-            if let Some(directory) = &git.directory {
-                git_members.push(("directory", JsonValue::text(directory)));
-            }
+            push_present_texts(&mut git_members, [("directory", git.directory.as_deref())]);
 
             vec![("git", JsonValue::object(git_members))]
         }
         BundleSourceForm::Maven(coordinate) => vec![("maven", JsonValue::text(coordinate))],
     };
 
-    if let Some(integrity) = &bundle.integrity {
-        members.push(("integrity", JsonValue::text(integrity)));
-    }
+    push_present_texts(&mut members, [("integrity", bundle.integrity.as_deref())]);
 
     JsonValue::object(members)
 }
 
 fn problem_json(problem: &CliProblem) -> JsonValue {
-    let mut members = vec![
-        ("code", JsonValue::text(&problem.code)),
-        ("message", JsonValue::text(&problem.message)),
-        ("fix", JsonValue::text(&problem.fix)),
-    ];
-
-    if let Some(location) = &problem.location {
-        members.push(("where", JsonValue::text(location)));
-    }
-
-    JsonValue::object(members)
+    coded_problem_json(
+        &problem.code,
+        &problem.message,
+        &problem.fix,
+        [("where", problem.location.as_deref())],
+    )
 }
