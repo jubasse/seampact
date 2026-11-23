@@ -1,0 +1,18 @@
+[package]
+name = "seampact-format"
+description = "Formats generated TypeScript and JavaScript with oxc's formatter at Prettier's settings."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+oxc_allocator.workspace = true
+oxc_formatter.workspace = true
+oxc_formatter_core.workspace = true
+oxc_span.workspace = true
+thiserror.workspace = true
+
+[lints]
+workspace = true
