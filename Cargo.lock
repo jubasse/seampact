@@ -1955,7 +1955,6 @@ version = "2.0.0"
 dependencies = [
  "oxc_allocator",
  "oxc_formatter",
- "oxc_formatter_core",
  "oxc_span",
  "thiserror",
 ]
