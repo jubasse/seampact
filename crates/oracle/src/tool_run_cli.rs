@@ -13,25 +13,90 @@ use crate::tool_discovery::{ToolCaseKind, ToolCasePath};
 use crate::tool_outputs::{CaseOutcome, ComparedOutput, below, output_file};
 use crate::tool_run::{ToolRun, read_json};
 use crate::{
-    CliCase, OracleError, OutputKind, RecordedUnit, SubjectAnswer, Tool, ToolTally, Transcript,
-    read_cli_case, read_expected_transcript, read_recorded_tool_file,
+    CliCase, CliCommand, CliStep, OracleError, OutputKind, RecordedUnit, SubjectAnswer, Tool,
+    ToolTally, Transcript, read_cli_case, read_expected_transcript, read_recorded_tool_file,
 };
-
-/// The transcript of a CLI case, under its expected directory.
-const TRANSCRIPT_FILE: &str = "cli/transcript.json";
 
 /// The recorded function whose result holds a bundle manifest.
 const FETCH_BUNDLE_FUNCTION: &str = "fetchBundle";
 
 impl ToolRun<'_> {
+    /// Runs the steps of a CLI case on one root, comparing each command with its transcript; the
+    /// first command not ported, or failing, ends the case with that outcome.
     pub(crate) fn cli_case(&self, case: &str) -> Result<CaseOutcome, OracleError> {
         let cli_case = read_cli_case(self.repository_root, case)?;
-        let transcript_path = self.expected_directory(case).join(TRANSCRIPT_FILE);
+        let root = run_root_of(&cli_case)?;
+        let mut compared = Vec::new();
+        let mut position = 0;
+
+        for step in &cli_case.steps {
+            let CliStep::Command(command) = step else {
+                apply_file_step(&cli_case, step, root.path())?;
+
+                continue;
+            };
+
+            position += 1;
+
+            match self.command_case(&cli_case, command, position, root.path())? {
+                CaseOutcome::Compared(outputs) => compared.extend(outputs),
+                other => return Ok(other),
+            }
+        }
+
+        Ok(CaseOutcome::Compared(compared))
+    }
+
+    /// Runs the steps before the command at `position` on `root`; `Some` outcome when one of
+    /// those commands is not ported or fails.
+    fn run_steps_before(
+        &self,
+        cli_case: &CliCase,
+        position: usize,
+        root: &Utf8Path,
+    ) -> Result<Option<CaseOutcome>, OracleError> {
+        let mut commands_run = 0;
+
+        for step in &cli_case.steps {
+            let CliStep::Command(command) = step else {
+                apply_file_step(cli_case, step, root)?;
+
+                continue;
+            };
+
+            commands_run += 1;
+
+            if commands_run >= position {
+                break;
+            }
+
+            match self.subject.cli(cli_case, command, root) {
+                SubjectAnswer::Ported(_) => {}
+                SubjectAnswer::NotPorted => return Ok(Some(CaseOutcome::NotPorted)),
+                SubjectAnswer::InternalError { message } => {
+                    return Ok(Some(CaseOutcome::InternalError(message)));
+                }
+            }
+        }
+
+        Ok(None)
+    }
+
+    fn command_case(
+        &self,
+        cli_case: &CliCase,
+        command: &CliCommand,
+        position: usize,
+        root: &Utf8Path,
+    ) -> Result<CaseOutcome, OracleError> {
+        let transcript_file = cli_case.transcript_file(position);
+        let transcript_path = self
+            .expected_directory(&cli_case.path)
+            .join(&transcript_file);
         let expected_text = read_text(&transcript_path)?;
         let expected = read_expected_transcript(&transcript_path, &expected_text)?;
-        let root = run_root_of(&cli_case)?;
 
-        let transcript = match self.subject.cli(&cli_case, root.path()) {
+        let transcript = match self.subject.cli(cli_case, command, root) {
             SubjectAnswer::Ported(transcript) => transcript,
             SubjectAnswer::NotPorted => return Ok(CaseOutcome::NotPorted),
             SubjectAnswer::InternalError { message } => {
@@ -39,7 +104,7 @@ impl ToolRun<'_> {
             }
         };
 
-        let root_text = root.path().as_str();
+        let root_text = root.as_str();
         let stdout = transcript.stdout.replace(root_text, ROOT_TOKEN);
         let stderr = transcript.stderr.replace(root_text, ROOT_TOKEN);
         let mut removed = transcript.removed.clone();
@@ -78,7 +143,7 @@ impl ToolRun<'_> {
         let compared = fields
             .into_iter()
             .map(|(output, mismatches)| ComparedOutput {
-                name: TRANSCRIPT_FILE.to_owned(),
+                name: transcript_file.clone(),
                 file: output_file(output),
                 mismatches,
                 expected_text: Some(expected_text.clone()),
@@ -145,6 +210,12 @@ impl ToolRun<'_> {
         let expected_file: Value = read_json(&path)?;
         let root = run_root_of(cli_case)?;
 
+        if let Some(position) = recorded.step
+            && let Some(outcome) = self.run_steps_before(cli_case, position, root.path())?
+        {
+            return Ok(outcome);
+        }
+
         let answer = match self
             .subject
             .recorded_call(unit, &recorded.call, root.path())
@@ -200,6 +271,51 @@ const fn unit_output(unit: RecordedUnit) -> OutputKind {
         RecordedUnit::CliConfig => OutputKind::CliConfig,
         RecordedUnit::EditorSchemas => OutputKind::EditorSchemas,
         RecordedUnit::BundleFetch => OutputKind::BundleFetch,
+    }
+}
+
+/// Applies a `write` or `remove` step under `root`; a path to remove that is absent, or a file
+/// that cannot be written, is a case error.
+fn apply_file_step(case: &CliCase, step: &CliStep, root: &Utf8Path) -> Result<(), OracleError> {
+    let case_error = |problem: String| OracleError::RunRoot {
+        case: case.path.clone(),
+        problem,
+    };
+
+    match step {
+        CliStep::Command(_) => Ok(()),
+        CliStep::Write { write } => {
+            for (path, text) in write {
+                let file = root.join(path);
+
+                if let Some(parent) = file.parent() {
+                    std::fs::create_dir_all(parent)
+                        .map_err(|error| case_error(format!("cannot create {parent}: {error}")))?;
+                }
+
+                std::fs::write(&file, text)
+                    .map_err(|error| case_error(format!("cannot write {file}: {error}")))?;
+            }
+
+            Ok(())
+        }
+        CliStep::Remove { remove } => {
+            for path in remove {
+                let target = root.join(path);
+                let metadata = std::fs::symlink_metadata(&target).map_err(|error| {
+                    case_error(format!("the step removes {path}, which is absent: {error}"))
+                })?;
+                let removed = if metadata.is_dir() {
+                    std::fs::remove_dir_all(&target)
+                } else {
+                    std::fs::remove_file(&target)
+                };
+
+                removed.map_err(|error| case_error(format!("cannot remove {target}: {error}")))?;
+            }
+
+            Ok(())
+        }
     }
 }
 

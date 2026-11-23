@@ -59,9 +59,10 @@ pub use subject::{
 };
 pub use time_limit::TimeLimitAction;
 pub use tool_cases::{
-    BundleCase, CASE_TODAY, CliCase, DiffCase, DiffSide, ExpectedTranscript, ExpectedWrittenFile,
-    MergeCase, MergeCaseInput, RecordedToolFile, Tool, read_bundle_case, read_cli_case,
-    read_diff_case, read_expected_transcript, read_merge_case, read_recorded_tool_file,
+    BundleCase, CASE_TODAY, CliCase, CliCaseForm, CliCommand, CliStep, DiffCase, DiffSide,
+    ExpectedTranscript, ExpectedWrittenFile, MergeCase, MergeCaseInput, RecordedToolFile, Tool,
+    read_bundle_case, read_cli_case, read_diff_case, read_expected_transcript, read_merge_case,
+    read_recorded_tool_file,
 };
 pub use tool_compare::{
     BUNDLE_MANIFEST_FILE, line_mismatches, manifest_mismatches, normalized_manifest, sha256_hex,

@@ -3,9 +3,9 @@
 use camino::Utf8Path;
 use seampact_json::JsonValue;
 use seampact_oracle::{
-    BundleAnswer, BundleCase, CliCase, DiffAnswer, DiffCase, Fixture, MergeCase, OpenApiAnswer,
-    RecordedAnswer, RecordedToolCall, RecordedUnit, RuleIdRegistry, StagePorting, StageRuleIds,
-    SubjectAnswer, ToolSubject, Transcript,
+    BundleAnswer, BundleCase, CliCase, CliCommand, DiffAnswer, DiffCase, Fixture, MergeCase,
+    OpenApiAnswer, RecordedAnswer, RecordedToolCall, RecordedUnit, RuleIdRegistry, StagePorting,
+    StageRuleIds, SubjectAnswer, ToolSubject, Transcript,
 };
 
 use crate::oracle::{bundle, cli_case, diff, lint, openapi, recorded};
@@ -48,8 +48,13 @@ impl ToolSubject for CliToolSubject {
         recorded::recorded_answer(unit, call, root)
     }
 
-    fn cli(&self, case: &CliCase, root: &Utf8Path) -> SubjectAnswer<Transcript> {
-        cli_case::cli_answer(case, root)
+    fn cli(
+        &self,
+        case: &CliCase,
+        command: &CliCommand,
+        root: &Utf8Path,
+    ) -> SubjectAnswer<Transcript> {
+        cli_case::cli_answer(case, command, root)
     }
 
     fn rule_id_registry(&self) -> RuleIdRegistry {

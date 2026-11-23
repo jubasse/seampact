@@ -147,14 +147,67 @@ pub struct CliCase {
     pub path: String,
     /// The case directory, holding `tree/` and, for the git channel, `git-source/`.
     pub directory: Utf8PathBuf,
-    /// The arguments after the binary name.
-    pub argv: Vec<String>,
-    /// The working directory, relative to the run root.
-    pub cwd: String,
+    /// The steps, in order: the one command of the `argv` form, or the `steps` form's list.
+    pub steps: Vec<CliStep>,
+    /// Which form `cli.json` holds, which names the expected transcripts.
+    pub form: CliCaseForm,
     /// `SEAMPACT_CACHE_DIR`, relative to the run root; `.cache` when the case sets none.
     pub cache_directory: String,
     /// `SEAMPACT_ALLOW_LOCAL`, when set.
     pub allow_local: Option<String>,
+}
+
+/// The two forms of `cli.json`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum CliCaseForm {
+    /// `{ "argv" }`: one command, `cli/transcript.json`.
+    Command,
+    /// `{ "steps" }`: several steps on one root, `cli/<NN>-transcript.json` per command.
+    Steps,
+}
+
+/// One command line of a CLI case.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct CliCommand {
+    /// The arguments after the binary name.
+    pub argv: Vec<String>,
+    /// The working directory, relative to the run root; `.` when the case sets none.
+    #[serde(default = "current_directory")]
+    pub cwd: String,
+}
+
+/// One step of a `steps` case.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(untagged)]
+pub enum CliStep {
+    /// A command, compared with its transcript.
+    Command(CliCommand),
+    /// Files the harness writes under the root, by `/`-separated path.
+    Write {
+        /// The files and their text.
+        write: IndexMap<String, String>,
+    },
+    /// Files or directories the harness deletes under the root; an absent one is a case error.
+    Remove {
+        /// The paths.
+        remove: Vec<String>,
+    },
+}
+
+impl CliCase {
+    /// The expected transcript of the command at `position` (from 1) among the case's commands.
+    #[must_use]
+    pub fn transcript_file(&self, position: usize) -> String {
+        match self.form {
+            CliCaseForm::Command => "cli/transcript.json".to_owned(),
+            CliCaseForm::Steps => format!("cli/{position:02}-transcript.json"),
+        }
+    }
+}
+
+fn current_directory() -> String {
+    ".".to_owned()
 }
 
 /// An expected file a command or a recorded call wrote: its hash, its text when UTF-8, its listing
@@ -179,6 +232,8 @@ pub struct RecordedToolFile {
     pub result: JsonValue,
     /// The files the call created or changed.
     pub written: IndexMap<String, ExpectedWrittenFile>,
+    /// In a `steps` case, the position (from 1) of the command the call ran in.
+    pub step: Option<usize>,
 }
 
 /// `cli/transcript.json`.
@@ -226,8 +281,9 @@ struct BundleFile {
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 struct CliFile {
-    argv: Vec<String>,
+    argv: Option<Vec<String>>,
     cwd: Option<String>,
+    steps: Option<Vec<CliStep>>,
     #[serde(default)]
     env: CliFileEnvironment,
 }
@@ -250,6 +306,7 @@ struct RecordedFile {
     result: JsonValue,
     #[serde(default)]
     written: IndexMap<String, ExpectedWrittenFile>,
+    step: Option<usize>,
 }
 
 const DEFAULT_WORKSPACE_FILE: &str = "workspace.yaml";
@@ -416,12 +473,34 @@ pub fn read_bundle_case(
 /// When the file cannot be read, is no JSON, or has another shape.
 pub fn read_cli_case(repository_root: &Utf8Path, case_path: &str) -> Result<CliCase, OracleError> {
     let directory = repository_root.join(FIXTURES_DIRECTORY).join(case_path);
-    let file: CliFile = read_case_file(&directory.join("cli.json"))?;
+    let cli_file = directory.join("cli.json");
+    let file: CliFile = read_case_file(&cli_file)?;
+    let (steps, form) = match (file.argv, file.steps) {
+        (Some(argv), None) => (
+            vec![CliStep::Command(CliCommand {
+                argv,
+                cwd: file.cwd.unwrap_or_else(current_directory),
+            })],
+            CliCaseForm::Command,
+        ),
+        (None, Some(steps))
+            if file.cwd.is_none()
+                && steps.iter().any(|step| matches!(step, CliStep::Command(_))) =>
+        {
+            (steps, CliCaseForm::Steps)
+        }
+        _ => {
+            return Err(OracleError::Shape {
+                path: cli_file,
+                problem: "a case holds `argv` (with an optional `cwd`) or `steps` with at least one command, never both".to_owned(),
+            });
+        }
+    };
 
     Ok(CliCase {
         path: case_path.to_owned(),
-        argv: file.argv,
-        cwd: file.cwd.unwrap_or_else(|| ".".to_owned()),
+        steps,
+        form,
         cache_directory: file
             .env
             .cache_directory
@@ -449,6 +528,7 @@ pub fn read_recorded_tool_file(
         },
         result: file.result,
         written: file.written,
+        step: file.step,
     })
 }
 

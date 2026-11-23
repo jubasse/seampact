@@ -4,7 +4,9 @@ use camino::Utf8Path;
 use indexmap::IndexMap;
 use seampact_json::JsonValue;
 
-use crate::{BundleCase, CliCase, DiffCase, Fixture, MergeCase, RuleIdRegistry, SubjectAnswer};
+use crate::{
+    BundleCase, CliCase, CliCommand, DiffCase, Fixture, MergeCase, RuleIdRegistry, SubjectAnswer,
+};
 
 /// What emitting OpenAPI documents gave: the documents, or the refusals.
 #[derive(Debug, Clone, PartialEq)]
@@ -137,8 +139,14 @@ pub trait ToolSubject {
         root: &Utf8Path,
     ) -> SubjectAnswer<RecordedAnswer>;
 
-    /// Runs the command of a CLI case in `root`, a fresh copy of its tree the harness owns.
-    fn cli(&self, case: &CliCase, root: &Utf8Path) -> SubjectAnswer<Transcript>;
+    /// Runs `command`, one command of a CLI case, in `root`: a copy of the case's tree the harness
+    /// owns, as the case's earlier steps left it.
+    fn cli(
+        &self,
+        case: &CliCase,
+        command: &CliCommand,
+        root: &Utf8Path,
+    ) -> SubjectAnswer<Transcript>;
 
     /// The rule ids each tool crate declares.
     fn rule_id_registry(&self) -> RuleIdRegistry;
