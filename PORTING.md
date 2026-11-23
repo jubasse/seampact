@@ -59,6 +59,7 @@ Each row is a known trap. Use the shared helper named in the row, never a local 
 - Loop: build, run the touched crate's tests and the oracle on the brief's fixture subset, read the first mismatch (fixture, file, JSON pointer), fix, repeat. Never print whole IR or OpenAPI files.
 - Restart rule: a module that still fails the oracle after 3 loops on the same mismatch is stopped. Commit what is green, write the mismatch and what was tried in the report, and hand back. The lead amends the brief or this file and a fresh agent ports the module again from the branch tip, after the lead's commit that deletes the failed module's files; the failed attempt is not repaired.
 - The tools of layer 3.2 (OpenAPI, its merge, lint, the diff table, diff, bundles, the config, editor-schema and fetch calls the CLI cases record, CLI transcripts) have their own cases and expected files, compared by `cargo xtask oracle --tool <tool>`; OpenAPI YAML is compared parsed, since its text changes once ([cli and tools](docs/maintainers/rust-design/cli-and-tools.md), section 4).
+- `generate` and `check` cases are CLI cases, some run as `steps` (each side runs its own `generate` before a `check`); generated TypeScript and JavaScript compare as token streams with the header normalised, manifests by their paths with the version 2 hashes checked against the written bytes ([generators](docs/maintainers/rust-design/generators.md), section 5).
 - A pass half starts from the expected deltas of the halves before it, reads the schema service from the recorded calls (`schema-calls/<api>.json`), and compares its own delta and diagnostics (`<NN>-<half>.diagnostics.json`); the Rust schema service is checked against the same records ([passes](docs/maintainers/rust-design/passes.md), sections 4 and 5).
 
 ## 5. No shortcuts
@@ -120,6 +121,7 @@ Versions are pinned once in `[workspace.dependencies]`. Prefer:
 - `line-index`, `text-size`: byte to UTF-16 position conversion and span newtypes.
 - `unicode-normalization`: NFC; case mapping stays in `std`.
 - `annotate-snippets`: diagnostic rendering. `flate2` and `sha2`: bundles; the ustar format is ported from the TypeScript, not read with `tar`.
+- `oxc_formatter`, `oxc_formatter_core`, `oxc_allocator`, `oxc_span`: generated TypeScript and JavaScript, in `seampact-format` only, pinned to one git rev with its `version`; `icu_segmenter` is allowed only through `textwrap`, which `oxc_diagnostics` reaches ([generators](docs/maintainers/rust-design/generators.md), section 4).
 - `ureq` (default features off, `rustls-no-provider`, `platform-verifier`) and `rustls` with the `ring` provider: the release channel of bundles, in `seampact-bundle-fetch` only. `git` runs as a process, as in the TypeScript.
 - Tests: `insta`, `snapbox`, `libtest-mimic`, `proptest`, `criterion`, `arbitrary` with `libfuzzer-sys` in a separate `fuzz/` crate.
 - `anyhow` only in the CLI binary and `xtask`.
@@ -133,4 +135,4 @@ Avoid:
 - `internment`, `ustr`, `bumpalo`: supply-chain or global-state risk, or lifetimes leaking into every signature.
 - `tera`, `askama`: compile-time cost for five target layouts; generators share a hand-written `CodeWriter`.
 - `quickcheck`, `goldenfile`: `proptest` and `insta` cover them.
-- `aws-lc-rs`: C and CMake build, larger. `webpki-roots`: licence outside the allow list (the platform verifier reads the OS store). `git2`: C build; `gix`: a large tree for one `clone`. `clap`: its error texts differ from the CLI's (`util.parseArgs`). `tower-lsp`: unmaintained. `snafu`, `eyre`: a second error idiom. `icu_*`: data weight.
+- `aws-lc-rs`: C and CMake build, larger. `webpki-roots`: licence outside the allow list (the platform verifier reads the OS store). `git2`: C build; `gix`: a large tree for one `clone`. `clap`: its error texts differ from the CLI's (`util.parseArgs`). `tower-lsp`: unmaintained. `snafu`, `eyre`: a second error idiom. `icu_*`: data weight (but `icu_segmenter` through oxc, above).

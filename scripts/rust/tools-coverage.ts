@@ -246,7 +246,7 @@ export const LATER_LAYER_SOURCES: readonly string[] = [
 ];
 
 // A path under `packages/core/` with tests and test support left out.
-function toolSourceFileOf(path: string): string | undefined {
+export function toolSourceFileOf(path: string): string | undefined {
   if (path.endsWith(".test.ts") || path.endsWith("test-support.ts")) return undefined;
 
   if (!path.startsWith(`${PACKAGES}/`)) return undefined;

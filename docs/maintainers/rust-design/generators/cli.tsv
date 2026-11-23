@@ -1,0 +1,7 @@
+brief	function	file	lines	size	pairs
+1	generateCommand	cli/src/commands/generate-command.ts	11-36	26	0/0
+1	checkCommand	cli/src/commands/check-command.ts	10-36	27	0/0
+1	runGenerate	cli/src/run-cli.ts	201-216	16	0/0
+1	runCheck	cli/src/run-cli.ts	218-228	11	0/0
+1	pluginRunOf	cli/src/run-cli.ts	236-303	68	0/0
+1	nativeEntryPolicy	cli/src/run-cli.ts	306-310	5	0/0

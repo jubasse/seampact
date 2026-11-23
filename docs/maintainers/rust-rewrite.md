@@ -47,7 +47,7 @@ For maintainers and contributors. This page covers why seampact's compiler and g
   - the headers, the paging and the validation rules;
   - the shared target options.
 
-  Each family crate decides how a rule is checked in its stack (an annotation, a native argument or a runtime validator) and prints the code.
+  Each family crate decides how a rule is checked in its stack (an annotation, a native argument or a runtime validator) and prints the code. That shared crate comes with the families (layer 3.4); `seampact-plan` of layer 3.3 is the run planning of `generate` and `check` ([generators](rust-design/generators.md), section 3).
 - **One refusal code per fault**, from one list. The troubleshooting tables are generated from it.
 - **Generated code style.** Blank lines go before `return`, `if`, loops, `switch`, `try` and `throw`, after a group of declarations and after a block. Lines are at most 100 columns, or the language's norm. One code model and one printer serve PHP, Python and Java.
 - **Your own formatter.** A project can run its own formatter on the generated files. The manifest keeps the generator's output hash beside the formatted file's, so `check` never runs the formatter and reformatting is not reported as a hand edit ([ADR 0031](../adr/0031-rust-core.md#formatting)).
@@ -84,7 +84,7 @@ For maintainers and contributors. This page covers why seampact's compiler and g
 ## Order
 
 1. **Before the first port PR:** the scope ADR (ADR 0031), the rulebook and the agents' Rust skills, a formatter spike, the oracle tooling (expected outputs, pass-half dumps, the expected-differences format), and four small proofs of concept: oracle strength, a two-agent stress test of the rulebook, model choice and restart against repair, and how many lanes build at once on one machine.
-2. **Seams:** the workspace skeleton and lints, source spans and diagnostics, the IR and authoring types, the canonical JSON writer. The generator writer is the seam of layer 3.3 ([cli and tools](rust-design/cli-and-tools.md), section 1).
+2. **Seams:** the workspace skeleton and lints, source spans and diagnostics, the IR and authoring types, the canonical JSON writer. The generator writer is the seam of layer 3.3 ([generators](rust-design/generators.md), section 6).
 3. **Layers:**
    1. the loader and the passes, which are the critical path;
    2. OpenAPI, diff, lint, bundles and the CLI;
