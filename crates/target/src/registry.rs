@@ -102,15 +102,9 @@ pub struct Registry {
 
 impl std::fmt::Debug for Registry {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let ids: Vec<&str> = self
-            .generators
-            .iter()
-            .map(|generator| generator.metadata().id.as_str())
-            .collect();
-
         formatter
             .debug_struct("Registry")
-            .field("generators", &ids)
+            .field("generators", &self.generators)
             .finish()
     }
 }

@@ -15,13 +15,19 @@ pub use unsupported_kind_switch::UnsupportedKindSwitch;
 
 use seampact_ir::{IR_REVISION, IR_VERSION, IrSupport};
 use seampact_target::{
-    ArtefactDeclaration, ArtefactDefault, BasePathRouting, Generator, ImportSpecifierStyle,
-    LinkNeed, LinkNeeds, LinkOffers, LinkStyle, MissingNeed, NeedStyles, OptionalNeed, TargetId,
-    TargetMetadata, TargetRole, TunableBootCheck,
+    ArtefactDeclaration, ArtefactDefault, ArtefactId, BasePathRouting, Generator,
+    ImportSpecifierStyle, LinkNeed, LinkNeeds, LinkOffers, LinkStyle, MissingNeed, NeedStyles,
+    OptionalNeed, TargetId, TargetMetadata, TargetRole, TunableBootCheck,
 };
 
 /// The package version of every twin.
 const PROBE_VERSION: &str = "1.0.0";
+
+const ROUTES: ArtefactId = ArtefactId::new("routes");
+const NATIVE_DOCS: ArtefactId = ArtefactId::new("nativeDocs");
+const HOOKS: ArtefactId = ArtefactId::new("hooks");
+const QUERIES: ArtefactId = ArtefactId::new("queries");
+const MUTATIONS: ArtefactId = ArtefactId::new("mutations");
 
 /// Every declaration kind of the IR, the known values of its `DeclarationKind` open enum.
 const ALL_KINDS: &[&str] = &["httpOperation"];
@@ -39,26 +45,25 @@ const fn support(kinds: &'static [&'static str]) -> IrSupport<'static> {
 pub static PROBE_SERVER: Probe = Probe::new(TargetMetadata {
     id: TargetId::new("probe-server"),
     version: PROBE_VERSION,
-    legacy_names: &[],
     role: TargetRole::Server,
     ir_support: support(ALL_KINDS),
     artefacts: &[
         ArtefactDeclaration {
-            id: "routes",
+            id: ROUTES,
             default: ArtefactDefault::On,
             needs: &[],
             missing_need: MissingNeed::Refuse,
         },
         ArtefactDeclaration {
-            id: "nativeDocs",
+            id: NATIVE_DOCS,
             default: ArtefactDefault::Off,
             needs: &[],
             missing_need: MissingNeed::Refuse,
         },
         ArtefactDeclaration {
-            id: "hooks",
+            id: HOOKS,
             default: ArtefactDefault::Off,
-            needs: &["routes"],
+            needs: &[ROUTES],
             missing_need: MissingNeed::LeaveOff,
         },
     ],
@@ -70,55 +75,44 @@ pub static PROBE_SERVER: Probe = Probe::new(TargetMetadata {
         types: None,
         client: None,
     },
-    provides: LinkOffers::NONE,
     boot_checks: &[TunableBootCheck::FrameworkRoutes, TunableBootCheck::Hooks],
     framework_docs_off_fix: Some("Remove the `probe.docs()` call."),
-    import_specifiers: None,
     base_paths: BasePathRouting::Exclusive,
     runtime_packages: &["probe-runtime"],
-    compatibility: None,
+    ..TargetMetadata::BASE
 });
 
 /// A provider of every kind, whose `describe` answers its options.
 pub static PROBE_PROVIDER: Probe = Probe::new(TargetMetadata {
     id: TargetId::new("probe-provider"),
     version: PROBE_VERSION,
-    legacy_names: &[],
     role: TargetRole::Provider,
     ir_support: support(ALL_KINDS),
-    artefacts: &[],
-    consumes: LinkNeeds::NONE,
     provides: LinkOffers {
         validators: Some(LinkStyle::StandardSchema),
         types: Some(LinkStyle::Typescript),
         client: Some(LinkStyle::Fetch),
     },
-    boot_checks: &[],
-    framework_docs_off_fix: None,
-    import_specifiers: None,
-    base_paths: BasePathRouting::Shared,
-    runtime_packages: &[],
-    compatibility: None,
+    ..TargetMetadata::BASE
 });
 
 const fn client_metadata(kinds: &'static [&'static str]) -> TargetMetadata {
     TargetMetadata {
         id: TargetId::new("probe-client"),
         version: PROBE_VERSION,
-        legacy_names: &[],
         role: TargetRole::Client,
         ir_support: support(kinds),
         artefacts: &[
             ArtefactDeclaration {
-                id: "queries",
+                id: QUERIES,
                 default: ArtefactDefault::On,
                 needs: &[],
                 missing_need: MissingNeed::Refuse,
             },
             ArtefactDeclaration {
-                id: "mutations",
+                id: MUTATIONS,
                 default: ArtefactDefault::On,
-                needs: &["queries"],
+                needs: &[QUERIES],
                 missing_need: MissingNeed::Refuse,
             },
         ],
@@ -135,13 +129,8 @@ const fn client_metadata(kinds: &'static [&'static str]) -> TargetMetadata {
                 optional: None,
             }),
         },
-        provides: LinkOffers::NONE,
-        boot_checks: &[],
-        framework_docs_off_fix: None,
         import_specifiers: Some(ImportSpecifierStyle::Extensionless),
-        base_paths: BasePathRouting::Shared,
-        runtime_packages: &[],
-        compatibility: None,
+        ..TargetMetadata::BASE
     }
 }
 

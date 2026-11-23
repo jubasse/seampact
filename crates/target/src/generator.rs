@@ -288,6 +288,15 @@ pub trait Generator: Sync {
     ) -> Result<DescriptorSet, TargetFailure>;
 }
 
+impl fmt::Debug for dyn Generator + '_ {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_tuple("Generator")
+            .field(&self.metadata().id.as_str())
+            .finish()
+    }
+}
+
 impl<Definition: TargetDefinition> Generator for Definition {
     fn metadata(&self) -> &TargetMetadata {
         TargetDefinition::metadata(self)

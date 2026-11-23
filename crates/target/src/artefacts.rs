@@ -1,5 +1,7 @@
 //! The artefacts a target declares and the set an entry switches on.
 
+use std::fmt;
+
 use serde::Serialize;
 
 use crate::{Refusal, refusal_code};
@@ -22,15 +24,40 @@ pub enum MissingNeed {
     LeaveOff,
 }
 
+/// The id of an artefact a target declares, a constant of the family's table that both its
+/// declaration and its `generate` use, so a typo does not compile.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct ArtefactId(&'static str);
+
+impl ArtefactId {
+    /// The id `id`, `^[a-z][A-Za-z0-9]*$`; the registry test checks every declared id.
+    #[must_use]
+    pub const fn new(id: &'static str) -> Self {
+        Self(id)
+    }
+
+    /// The id as an app config writes it.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        self.0
+    }
+}
+
+impl fmt::Display for ArtefactId {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(self.0)
+    }
+}
+
 /// One artefact a target can write, switched by the app config's `artefacts` entry.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct ArtefactDeclaration {
     /// The id an app config switches, `^[a-z][A-Za-z0-9]*$`.
-    pub id: &'static str,
+    pub id: ArtefactId,
     /// Its state when the app config leaves it alone.
     pub default: ArtefactDefault,
     /// The artefacts it needs on.
-    pub needs: &'static [&'static str],
+    pub needs: &'static [ArtefactId],
     /// What happens when a needed artefact is off.
     pub missing_need: MissingNeed,
 }
@@ -93,7 +120,10 @@ pub fn refuse_undeclared_artefacts(
     requested: &ArtefactSet,
     declared: &[ArtefactDeclaration],
 ) -> Vec<Refusal> {
-    let declared_ids: Vec<&str> = declared.iter().map(|artefact| artefact.id).collect();
+    let declared_ids: Vec<&str> = declared
+        .iter()
+        .map(|artefact| artefact.id.as_str())
+        .collect();
     let listed = declared_ids.join(", ");
 
     requested
@@ -134,7 +164,7 @@ fn problems_of(
     let id = artefact.id;
     let mut problems = Vec::new();
 
-    if !is_switchable_id(id) {
+    if !is_switchable_id(id.as_str()) {
         problems.push(format!(
             "'{id}' is no id an app config can switch ({ARTEFACT_ID_PATTERN})."
         ));
@@ -182,21 +212,24 @@ mod tests {
     const fn artefact(
         id: &'static str,
         default: ArtefactDefault,
-        needs: &'static [&'static str],
+        needs: &'static [ArtefactId],
     ) -> ArtefactDeclaration {
         ArtefactDeclaration {
-            id,
+            id: ArtefactId::new(id),
             default,
             needs,
             missing_need: MissingNeed::Refuse,
         }
     }
 
+    const DOCS: ArtefactId = ArtefactId::new("docs");
+    const MISSING: ArtefactId = ArtefactId::new("missing");
+
     #[test]
     fn names_every_declaration_problem() {
         let declared = [
-            artefact("routes", ArtefactDefault::On, &["docs"]),
-            artefact("docs", ArtefactDefault::Off, &["docs", "missing"]),
+            artefact("routes", ArtefactDefault::On, &[DOCS]),
+            artefact("docs", ArtefactDefault::Off, &[DOCS, MISSING]),
             artefact("routes", ArtefactDefault::Off, &[]),
             artefact("Bad-id", ArtefactDefault::Off, &[]),
         ];

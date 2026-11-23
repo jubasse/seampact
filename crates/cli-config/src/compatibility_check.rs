@@ -34,7 +34,7 @@ pub struct CompatibilityOutcome {
 }
 
 /// What `check_compatibility` reads: the entries, their resolved targets and installed versions.
-#[expect(missing_debug_implementations, reason = "`dyn Generator` has no Debug")]
+#[derive(Debug)]
 pub struct CompatibilityInput<'input> {
     /// The target entries, in order.
     pub entries: &'input [TargetEntrySettings],

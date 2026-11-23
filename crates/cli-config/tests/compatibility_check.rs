@@ -19,7 +19,7 @@ use seampact_cli_config::{
 };
 use seampact_json::JsonValue;
 use seampact_target::{
-    ArtefactDeclaration, CompatibilityKey, CompatibilityMatrix, FrameworkSupport,
+    ArtefactDeclaration, ArtefactId, CompatibilityKey, CompatibilityMatrix, FrameworkSupport,
     IncompatibleMajor, LibrarySupport, OwnValidator, TargetCompatibility, TestedMajor,
 };
 use serde_json::{Value, json};
@@ -370,7 +370,7 @@ fn docs_record() -> TargetCompatibility {
 
 const DOCS_ARTEFACTS: &[ArtefactDeclaration] = &[
     artefact("boundary", true, &[], false),
-    artefact("nativeDocs", false, &["boundary"], false),
+    artefact("nativeDocs", false, &[ArtefactId::new("boundary")], false),
 ];
 
 #[test]
