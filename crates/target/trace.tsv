@@ -18,6 +18,38 @@ src/not_generated_fixes.rs#troubleshooting_url	packages/core/codegen-core/src/no
 -	packages/core/codegen-core/src/generated-paths.ts#pathRefusalReason	skip: the writer half of generated-paths, layer 3.3's seampact-writer
 -	packages/core/codegen-core/src/generated-paths.ts#directoryRefusalReason	skip: the writer half of generated-paths, layer 3.3's seampact-writer
 -	packages/core/codegen-core/src/generated-paths.ts#manifestRefusalReason	skip: the writer half of generated-paths, layer 3.3's seampact-writer
--	packages/core/codegen-core/src/ir-support-refusal.ts#refuseUnsupportedIr	skip: no tool reaches it; the first layer 3.3 generator ports it
--	packages/core/codegen-core/src/ir-support-refusal.ts#toRefusal	skip: no tool reaches it; the first layer 3.3 generator ports it
--	packages/core/codegen-core/src/ir-support-refusal.ts#fixFor	skip: no tool reaches it; the first layer 3.3 generator ports it
+src/generator.rs#generate	packages/core/codegen-core/src/define-target.ts#defineTarget
+src/artefacts.rs#refuse_undeclared_artefacts	packages/core/codegen-core/src/define-target.ts#refuseUndeclaredArtefacts
+-	packages/core/codegen-core/src/define-target.ts#isDeclaredArtefactSet	skip: the blanket impl tests the refusals of refuse_undeclared_artefacts for emptiness, as the TypeScript guard does
+src/artefacts.rs#artefact_declaration_problems	packages/core/codegen-core/src/define-target.ts#assertArtefactDeclarations
+src/artefacts.rs#problems_of	packages/core/codegen-core/src/define-target.ts#artefactDeclarationProblems
+src/ir_support_refusal.rs#refuse_unsupported_ir	packages/core/codegen-core/src/ir-support-refusal.ts#refuseUnsupportedIr
+src/ir_support_refusal.rs#refusal_of	packages/core/codegen-core/src/ir-support-refusal.ts#toRefusal
+src/ir_support_refusal.rs#fix_of	packages/core/codegen-core/src/ir-support-refusal.ts#fixFor
+src/link_check.rs#refuse_unmet_links	packages/core/codegen-core/src/link-check.ts#refuseUnmetLinks
+src/link_check.rs#refuse_unmet_links	packages/core/codegen-core/src/link-check.ts#linkCheckByKind.validators
+src/link_check.rs#refuse_unmet_links	packages/core/codegen-core/src/link-check.ts#linkCheckByKind.types
+src/link_check.rs#refuse_unmet_links	packages/core/codegen-core/src/link-check.ts#linkCheckByKind.client
+src/link_check.rs#meets_every_need	packages/core/codegen-core/src/link-check.ts#meetsEveryNeed
+src/link_check.rs#refuse_unmet_link	packages/core/codegen-core/src/link-check.ts#refuseUnmetLink
+src/link_check.rs#refuse_unmet_link	packages/core/codegen-core/src/link-check.ts#noLinkAlternative
+src/need_resolution.rs#resolve_need	packages/core/codegen-core/src/link-check.ts#providerList
+src/link_check.rs#provider_list	packages/core/codegen-core/src/link-check.ts#listOf
+src/import_specifier.rs#import_specifier	packages/core/codegen-core/src/import-specifier.ts#importSpecifier
+src/import_specifier.rs#relative_module_specifier	packages/core/codegen-core/src/import-specifier.ts#relativeModuleSpecifier
+src/generate_warning.rs#warn_left_to_handler	packages/core/codegen-core/src/generate-warning.ts#warnLeftToHandler
+src/no_options.rs#parse_no_options	packages/core/codegen-core/src/no-options.ts#parseNoOptions
+src/no_options.rs#refuse_unknown_option	packages/core/codegen-core/src/no-options.ts#refuseUnknownOption
+src/no_options.rs#described_value	packages/core/codegen-core/src/no-options.ts#describeValue
+-	packages/core/spec/src/compatibility/index.ts#isOneOf	skip: serde reads each style and kind into its enum
+src/compatibility.rs#check_styles	packages/core/spec/src/compatibility/index.ts#oneOf
+src/compatibility.rs#check_styles	packages/core/spec/src/compatibility/index.ts#targetOf
+src/compatibility.rs#check_php_floor	packages/core/spec/src/compatibility/index.ts#phpTargetOf
+-	packages/core/spec/src/compatibility/index.ts#pythonFrameworkOf	skip: serde reads the unit into PythonVersionUnit
+src/compatibility.rs#client_target	packages/core/spec/src/compatibility/index.ts#clientTargetCompatibility
+src/compatibility.rs#server_target	packages/core/spec/src/compatibility/index.ts#serverTargetCompatibility
+src/compatibility.rs#supported_majors_of	packages/core/spec/src/compatibility/index.ts#supportedMajorsOf
+src/compatibility.rs#first_party_packages_of_style	packages/core/spec/src/compatibility/index.ts#firstPartyPackagesOfStyle
+src/compatibility.rs#offered_validator_pairs	packages/core/spec/src/compatibility/index.ts#offeredValidatorPairs
+src/compatibility.rs#validator_packages_of	packages/core/spec/src/compatibility/index.ts#validatorPackagesOf
+src/compatibility.rs#validator_providers_of	packages/core/spec/src/compatibility/index.ts#validatorProvidersOf
