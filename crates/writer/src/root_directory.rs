@@ -1,45 +1,13 @@
 //! The output directory as the file system holds it: real paths, links that leave it, empty
 //! directories to clean.
 
-use std::{env, fs};
+use std::fs;
 
-use camino::{Utf8Component, Utf8Path, Utf8PathBuf};
+use camino::{Utf8Path, Utf8PathBuf};
 use seampact_diagnostics::InternalError;
 
 use crate::WriterError;
 use crate::file_presence::lstat_if_present;
-
-/// `path.resolve(directory)`: made absolute from the working directory and normalised, with no
-/// file system lookup of a symbolic link.
-pub(crate) fn absolute_normalised(directory: &Utf8Path) -> Result<Utf8PathBuf, WriterError> {
-    let absolute = if directory.is_absolute() {
-        directory.to_path_buf()
-    } else {
-        let current = env::current_dir().map_err(|error| WriterError::io(directory, &error))?;
-        let current = Utf8PathBuf::try_from(current)
-            .map_err(|error| WriterError::io(directory, &std::io::Error::other(error)))?;
-
-        current.join(directory)
-    };
-
-    let mut kept: Vec<Utf8Component<'_>> = Vec::new();
-
-    for component in absolute.components() {
-        match component {
-            Utf8Component::CurDir => {}
-            Utf8Component::ParentDir => {
-                if matches!(kept.last(), Some(Utf8Component::Normal(_))) {
-                    kept.pop();
-                }
-            }
-            Utf8Component::Normal(_) | Utf8Component::RootDir | Utf8Component::Prefix(_) => {
-                kept.push(component);
-            }
-        }
-    }
-
-    Ok(kept.iter().map(Utf8Component::as_str).collect())
-}
 
 fn real_path(path: &Utf8Path) -> Result<Utf8PathBuf, WriterError> {
     let resolved = fs::canonicalize(path).map_err(|error| WriterError::io(path, &error))?;

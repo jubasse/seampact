@@ -5,13 +5,13 @@ use std::collections::{HashMap, HashSet};
 use std::fs;
 
 use camino::{Utf8Path, Utf8PathBuf};
-use seampact_paths::case_folded;
+use seampact_paths::{absolute_normalised, case_folded};
 use seampact_target::{GeneratedFile, Refusal};
 
 use crate::existing_file::{ExistingFileState, existing_file_state};
 use crate::generated_paths::MANIFEST_FILE_NAME;
 use crate::manifest::{ManifestEntry, ManifestRead, read_manifest, serialize_manifest};
-use crate::root_directory::{absolute_normalised, real_path_of_missing, remove_empty_directories};
+use crate::root_directory::{real_path_of_missing, remove_empty_directories};
 use crate::sha256::sha256_hex;
 use crate::writer_refusal::writer_refusal;
 use crate::{FilesOutcome, HandEditPolicy, WriterError, check_generated_paths, lstat_if_present};
@@ -102,7 +102,10 @@ pub fn plan_generated_write(
         FilesOutcome::Refused(refusals) => return Ok(WritePlanOutcome::Refused(refusals)),
     };
 
-    let root_directory = real_path_of_missing(&absolute_normalised(out_directory)?)?;
+    let root_directory = real_path_of_missing(
+        &absolute_normalised(out_directory)
+            .map_err(|error| WriterError::io(out_directory, &error))?,
+    )?;
 
     if let Some(refusal) = manifest_file_refusal(&root_directory)? {
         return Ok(WritePlanOutcome::Refused(vec![refusal]));
