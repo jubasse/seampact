@@ -2347,7 +2347,14 @@ version = "2.0.0"
 dependencies = [
  "camino",
  "seampact-diagnostics",
+ "seampact-format",
+ "seampact-js",
+ "seampact-json",
+ "seampact-paths",
  "seampact-target",
+ "serde_json",
+ "sha2",
+ "tempfile",
  "thiserror",
 ]
 

@@ -1,9 +1,46 @@
 //! The finishing of generated files: the header line and the formatting their extension selects.
 
-use seampact_target::GeneratedFile;
+use seampact_format::{SourceKind, format_source};
+use seampact_json::{JsonValue, indented_json, write_json_string};
+use seampact_target::{GeneratedFile, Refusal};
 
-use crate::not_ported::not_ported_yet;
+use crate::writer_refusal::writer_refusal;
 use crate::{FilesOutcome, WriterError};
+
+const PHP_OPEN_TAG_LINE: &str = "<?php\n";
+const PHP_CLOSE_TAG: &str = "?>";
+const REPORT_FIX: &str = "Report this to the target's maintainers: the writer must learn the extension before a target emits it.";
+
+/// What the writer does with a file of one extension.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Finishing {
+    /// `// <header>` first, then the formatter of the language.
+    FormattedSource(SourceKind),
+    /// Parsed and rewritten with `indented_json`; JSON has no comment for a header.
+    Json,
+    /// `// <header>` on the line after the `<?php` open tag, then passed through.
+    Php,
+    /// `<comment> <header>` first, then passed through.
+    LineComment(&'static str),
+}
+
+/// The extensions the writer knows, in the order a refusal names them.
+const FINISHING_BY_EXTENSION: [(&str, Finishing); 14] = [
+    (".ts", Finishing::FormattedSource(SourceKind::TypeScript)),
+    (".tsx", Finishing::FormattedSource(SourceKind::TypeScript)),
+    (".js", Finishing::FormattedSource(SourceKind::JavaScript)),
+    (".mjs", Finishing::FormattedSource(SourceKind::JavaScript)),
+    (".cjs", Finishing::FormattedSource(SourceKind::JavaScript)),
+    (".json", Finishing::Json),
+    (".php", Finishing::Php),
+    (".java", Finishing::LineComment("//")),
+    (".kt", Finishing::LineComment("//")),
+    (".py", Finishing::LineComment("#")),
+    (".pyi", Finishing::LineComment("#")),
+    (".toml", Finishing::LineComment("#")),
+    (".yaml", Finishing::LineComment("#")),
+    (".properties", Finishing::LineComment("#")),
+];
 
 /// What the header of a generated file names.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -30,12 +67,148 @@ pub fn generated_header(source: &HeaderSource<'_>) -> String {
 ///
 /// # Errors
 ///
-/// [`WriterError::NotPortedYet`] until the function is ported.
+/// Never fails today; the `Result` keeps the writer's one signature.
 pub fn finish_files(
-    _files: &[GeneratedFile],
-    _header: &HeaderSource<'_>,
+    files: &[GeneratedFile],
+    header: &HeaderSource<'_>,
 ) -> Result<FilesOutcome, WriterError> {
-    Err(not_ported_yet("finishFiles"))
+    if let Some(refusal) = unsafe_header_refusal(header) {
+        return Ok(FilesOutcome::Refused(vec![refusal]));
+    }
+
+    let header_line = generated_header(header);
+    let mut finished: Vec<GeneratedFile> = Vec::with_capacity(files.len());
+    let mut refusals: Vec<Refusal> = Vec::new();
+
+    for file in files {
+        match finish_file(file, &header_line) {
+            Ok(done) => finished.push(done),
+            Err(refusal) => refusals.push(*refusal),
+        }
+    }
+
+    if refusals.is_empty() {
+        return Ok(FilesOutcome::Ready(finished));
+    }
+
+    Ok(FilesOutcome::Refused(refusals))
+}
+
+/// A control character ends a comment line, and a PHP close tag ends PHP mode even inside one.
+fn is_unsafe_header_field(value: &str) -> bool {
+    value
+        .chars()
+        .any(|character| matches!(character, '\u{0}'..='\u{1f}' | '\u{7f}'))
+        || value.contains(PHP_CLOSE_TAG)
+}
+
+fn unsafe_header_refusal(header: &HeaderSource<'_>) -> Option<Refusal> {
+    let fields = [
+        ("version", header.version),
+        ("short id", header.short_id),
+        ("api id", header.api_id),
+    ];
+
+    let (name, value) = fields
+        .into_iter()
+        .find(|(_, value)| is_unsafe_header_field(value))?;
+    let mut quoted = String::new();
+
+    write_json_string(&mut quoted, value);
+
+    Some(writer_refusal(
+        "file.header.unsafe",
+        format!(
+            "The {name} {quoted} holds a control character or `?>`, which would break the generated header line."
+        ),
+        format!("Correct the {name} in the target's metadata or in the contract, then run again."),
+    ))
+}
+
+/// The extension of the file name, with its dot; none for a name that starts with its only dot.
+fn extension_of(path: &str) -> Option<&str> {
+    let file_name = path.rsplit('/').next().unwrap_or(path);
+
+    match file_name.rfind('.') {
+        Some(dot) if dot > 0 => file_name.get(dot..),
+        _ => None,
+    }
+}
+
+fn finishing_of(path: &str) -> Option<Finishing> {
+    let extension = extension_of(path)?;
+
+    FINISHING_BY_EXTENSION
+        .iter()
+        .find(|(known, _)| *known == extension)
+        .map(|(_, finishing)| *finishing)
+}
+
+fn finish_file(file: &GeneratedFile, header_line: &str) -> Result<GeneratedFile, Box<Refusal>> {
+    let Some(finishing) = finishing_of(&file.path) else {
+        let known: Vec<&str> = FINISHING_BY_EXTENSION
+            .iter()
+            .map(|(extension, _)| *extension)
+            .collect();
+
+        return Err(Box::new(writer_refusal(
+            "file.extension.unsupported",
+            format!(
+                "The target generated '{}', whose extension is not one the writer formats ({}).",
+                file.path,
+                known.join(", ")
+            ),
+            REPORT_FIX,
+        )));
+    };
+
+    let contents = match finishing {
+        Finishing::FormattedSource(kind) => {
+            let source = format!("// {header_line}\n{}", file.contents);
+
+            format_source(&source, kind)
+                .map_err(|error| Box::new(format_failed(&file.path, &error)))?
+        }
+        Finishing::Json => json_rewritten(&file.contents)
+            .map_err(|reason| Box::new(format_failed(&file.path, &reason)))?,
+        Finishing::Php => php_headed(file, header_line)?,
+        Finishing::LineComment(comment) => format!("{comment} {header_line}\n{}", file.contents),
+    };
+
+    Ok(GeneratedFile {
+        path: file.path.clone(),
+        contents,
+    })
+}
+
+fn format_failed(path: &str, reason: &dyn std::fmt::Display) -> Refusal {
+    writer_refusal(
+        "file.format.failed",
+        format!("The writer could not format '{path}': {reason}"),
+        "Report this to the target's maintainers: the target generated source its parser rejects.",
+    )
+}
+
+fn json_rewritten(contents: &str) -> Result<String, serde_json::Error> {
+    serde_json::from_str::<JsonValue>(contents).map(|value| indented_json(&value))
+}
+
+/// The file with the header on the line after its `<?php` open tag; CRLF is read as LF.
+fn php_headed(file: &GeneratedFile, header_line: &str) -> Result<String, Box<Refusal>> {
+    let contents = file.contents.replace("\r\n", "\n");
+
+    let Some(rest) = contents.strip_prefix(PHP_OPEN_TAG_LINE) else {
+        return Err(Box::new(writer_refusal(
+            "file.php.open-tag",
+            format!(
+                "The target generated '{}', which does not start with `<?php` on a line of its own.",
+                file.path
+            ),
+            "Report this to the target's maintainers: a generated PHP file starts with its open tag line.",
+        )));
+    };
+
+    Ok(format!("{PHP_OPEN_TAG_LINE}// {header_line}\n{rest}"))
 }
 
 #[cfg(test)]

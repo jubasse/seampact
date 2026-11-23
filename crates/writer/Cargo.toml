@@ -10,8 +10,17 @@ publish.workspace = true
 [dependencies]
 camino.workspace = true
 seampact-diagnostics.workspace = true
+seampact-format.workspace = true
+seampact-js.workspace = true
+seampact-json.workspace = true
+seampact-paths.workspace = true
 seampact-target.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
 thiserror.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
 
 [lints]
 workspace = true

@@ -1,6 +1,7 @@
 //! Writes and checks generated files: paths, headers, formatting, the manifest and hand edits.
 
 mod error;
+mod existing_file;
 mod file_presence;
 mod files_outcome;
 mod finish_files;
@@ -8,7 +9,9 @@ mod generated_paths;
 mod generated_write;
 mod hand_edit_policy;
 mod manifest;
-mod not_ported;
+mod root_directory;
+mod sha256;
+mod writer_refusal;
 
 pub use error::WriterError;
 pub use file_presence::{lstat_if_present, read_file_if_present};

@@ -23,3 +23,13 @@ pub enum WriterError {
     #[error(transparent)]
     Internal(#[from] InternalError),
 }
+
+impl WriterError {
+    /// An [`WriterError::Io`] for `path` from the system's `error`.
+    pub(crate) fn io(path: &camino::Utf8Path, error: &std::io::Error) -> Self {
+        Self::Io {
+            path: path.to_string(),
+            message: error.to_string(),
+        }
+    }
+}
