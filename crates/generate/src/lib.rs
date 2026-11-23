@@ -29,13 +29,14 @@ mod planned_entry;
 mod refusal_problem;
 mod run_preparation;
 mod source_reader;
+mod stop;
 mod workspace_api_names;
 mod write_drift;
 mod write_plan;
 
 pub use api_refs::{
-    EntryApisOutcome, UsedSources, add_qualify_fix, entry_api_refs, resolve_entry_apis,
-    sources_holding_refs, unknown_source_problems, used_sources,
+    add_qualify_fix, entry_api_refs, resolve_entry_apis, sources_holding_refs,
+    unknown_source_problems, used_sources,
 };
 pub use app_entry_where::app_entry_where;
 pub use app_plan::{AppPlan, plan_app};
@@ -49,12 +50,12 @@ pub use drift_level::{DEFAULT_DRIFT_CHECK_LEVEL, strictest_level};
 pub use emitted_app_document::EmittedAppDocument;
 pub use entry_generation::generate_entries;
 pub use entry_links::{
-    EntryOrderOutcome, link_where, links_of, order_entries, paired_api, pairing_problems,
-    unconsumed_kind_problems, unknown_link_entry_problems, unprovided_kind_problems,
+    link_where, links_of, order_entries, paired_api, pairing_problems, unconsumed_kind_problems,
+    unknown_link_entry_problems, unprovided_kind_problems,
 };
 pub use error::GenerateError;
 pub use exclusive_base_paths::exclusive_base_path_problems;
-pub use filter_operations::{FilterOutcome, OperationSelection, filter_operations, is_in_document};
+pub use filter_operations::{OperationSelection, filter_operations, is_in_document};
 pub use framework_docs::framework_docs_problems;
 pub use framework_route_check::unread_framework_route_key_problems;
 pub use generated_output::{GeneratedApi, GeneratedOutput};
@@ -64,10 +65,11 @@ pub use local_bundle::{LocalBundleOutcome, LocalBundles, verify_local_bundle};
 pub use merged_documents::emit_merged_documents;
 pub use mounted_base_paths::mounted_base_paths;
 pub use planned_document::{PlannedDocument, document_name, plan_documents, served_ir};
-pub use planned_entry::{PlannedApi, PlannedEntry, planned_entry};
+pub use planned_entry::{PlannedApi, PlannedEntry};
 pub use refusal_problem::problem_from_refusal;
 pub use run_preparation::{PlanInputs, RunConfigLocation, prepare_run};
 pub use source_reader::source_reader;
+pub use stop::Stop;
 pub use workspace_api_names::{
     SINGLE_API_ENTRY, WORKSPACE_ENTRY, source_entry_file, workspace_api_names,
 };

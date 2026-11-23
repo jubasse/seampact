@@ -4,8 +4,9 @@ use std::fs;
 use std::io::ErrorKind;
 
 use camino::{Utf8Path, Utf8PathBuf};
-use seampact_cli_config::{is_symbolic_link, resolved_path};
+use seampact_cli_config::is_symbolic_link;
 use seampact_js::is_ecmascript_white_space;
+use seampact_paths::node_path;
 
 use crate::CliError;
 use crate::line_end::{first_line_end, split_lines};
@@ -43,7 +44,7 @@ pub(crate) fn git_ignore_with_entries(
     directory: &Utf8Path,
     entries: &[&str],
 ) -> Result<GitIgnoreChange, CliError> {
-    let file = resolved_path(directory, GIT_IGNORE_FILE);
+    let file = node_path::resolve(directory, GIT_IGNORE_FILE);
 
     if is_symbolic_link(&file)? {
         return Ok(GitIgnoreChange::Link { file });

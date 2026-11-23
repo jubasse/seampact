@@ -30,7 +30,7 @@ mod not_ported;
 #[cfg(feature = "oracle")]
 pub mod oracle;
 mod run_cli;
-mod step;
+mod stop;
 
 use seampact_diagnostics::RuleId;
 

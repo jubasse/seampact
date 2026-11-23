@@ -1,7 +1,7 @@
 //! Every write of a run, each checked by the writer before the first one is committed.
 
 use camino::{Utf8Path, Utf8PathBuf};
-use seampact_cli_config::{CheckLevel, CliIo, CliProblem, Step};
+use seampact_cli_config::{CheckLevel, CliIo, CliProblem, Problems};
 use seampact_target::{GeneratedFile, Refusal, Refused};
 use seampact_writer::{
     HandEditPolicy, ManifestRead, PlannedWrite, WriteStop, plan_generated_write, read_manifest,
@@ -10,6 +10,7 @@ use seampact_writer::{
 use crate::app_entry_where::app_entry_where;
 use crate::not_ported::not_ported_yet;
 use crate::refusal_problem::problem_from_refusal;
+use crate::stop::Stop;
 use crate::{EmittedAppDocument, GenerateError, GeneratedOutput};
 
 /// The writer's owner of a document directory's manifest.
@@ -105,8 +106,9 @@ pub fn plan_writes(
 ///
 /// # Errors
 ///
+/// [`Stop::Refused`] with every refusal of the run; [`Stop::Failed`] with
 /// [`GenerateError::NotPortedYet`] until `documentProblem` is ported.
-pub fn committable_writes(writes: PlannedWrites) -> Result<Step<CommittableWrites>, GenerateError> {
+pub fn committable_writes(writes: PlannedWrites) -> Result<CommittableWrites, Stop> {
     let mut problems: Vec<CliProblem> = writes
         .entries
         .iter()
@@ -117,9 +119,7 @@ pub fn committable_writes(writes: PlannedWrites) -> Result<Step<CommittableWrite
         problems.extend(document_write_problems(write)?);
     }
 
-    if !problems.is_empty() {
-        return Ok(Step::Refused(problems));
-    }
+    Problems::refuse_any(problems)?;
 
     let mut committable = CommittableWrites::default();
 
@@ -147,7 +147,7 @@ pub fn committable_writes(writes: PlannedWrites) -> Result<Step<CommittableWrite
         }
     }
 
-    Ok(Step::Done(committable))
+    Ok(committable)
 }
 
 /// The problems of an entry's write the writer refused.

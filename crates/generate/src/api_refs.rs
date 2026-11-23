@@ -3,41 +3,22 @@
 use std::collections::HashSet;
 
 use seampact_cli_config::{
-    ApiRef, CliProblem, LoadedAppConfig, ResolvedSource, api_refs_of, parse_api_ref,
+    ApiRef, CliProblem, LoadedAppConfig, Problems, ResolvedSource, TargetEntrySettings,
+    entry_where, located_problem, parse_api_ref,
 };
-use seampact_cli_config::{entry_where, located_problem};
-use seampact_diagnostics::InternalError;
-use seampact_json::JsonValue;
 
 use crate::compile_sources::CompiledApi;
 use crate::workspace_api_names::workspace_api_names;
 
-/// The sources a command reads: all of them named, or why the config refuses.
-#[derive(Debug, Clone, PartialEq)]
-pub enum UsedSources {
-    /// The names of the sources to compile, in config order.
-    Used(Vec<String>),
-    /// The config names a source it does not have.
-    Refused(Vec<CliProblem>),
-}
-
-/// The apis one target entry names, or the problems of the names that hold none or several.
-#[derive(Debug, Clone)]
-pub enum EntryApisOutcome<'compiled> {
-    /// Each named api, in the entry's order.
-    Resolved(Vec<&'compiled CompiledApi>),
-    /// What is wrong with the names.
-    Refused(Vec<CliProblem>),
-}
-
 /// The problem of an api an entry names twice: `text` is the reference that repeats `found`.
 fn duplicate_api_problem(
-    entry_id: &str,
-    entry: &JsonValue,
+    entry: &TargetEntrySettings,
     text: &str,
     found: &CompiledApi,
 ) -> CliProblem {
-    let items: Vec<String> = api_refs_of(entry)
+    let entry_id = &entry.id;
+    let items: Vec<String> = entry
+        .api_refs()
         .into_iter()
         .filter(|each| parse_api_ref(each).api == found.api)
         .map(|each| format!("'{each}'"))
@@ -55,18 +36,20 @@ fn duplicate_api_problem(
     )
 }
 
-/// Each api of the entry `entry_id` found among the `compiled` ones, or why a name does not
-/// resolve to exactly one.
-#[must_use]
+/// Each api of `entry` found among the `compiled` ones.
+///
+/// # Errors
+///
+/// [`Problems`] for a name that resolves to no api, to several, or to an api named twice.
 pub fn resolve_entry_apis<'compiled>(
-    entry_id: &str,
-    entry: &JsonValue,
+    entry: &TargetEntrySettings,
     compiled: &'compiled [CompiledApi],
-) -> EntryApisOutcome<'compiled> {
+) -> Result<Vec<&'compiled CompiledApi>, Problems> {
+    let entry_id = entry.id.as_str();
     let mut apis: Vec<&CompiledApi> = Vec::new();
     let mut problems = Vec::new();
 
-    for text in api_refs_of(entry) {
+    for text in entry.api_refs() {
         let reference = parse_api_ref(text);
         let candidates: Vec<&CompiledApi> = compiled
             .iter()
@@ -84,7 +67,7 @@ pub fn resolve_entry_apis<'compiled>(
                 entry_where(entry_id, Some(reference.api)),
             )),
             [found] if apis.iter().any(|each| each.api == found.api) => {
-                problems.push(duplicate_api_problem(entry_id, entry, text, found));
+                problems.push(duplicate_api_problem(entry, text, found));
             }
             [found] => apis.push(found),
             several => {
@@ -107,11 +90,9 @@ pub fn resolve_entry_apis<'compiled>(
         }
     }
 
-    if problems.is_empty() {
-        EntryApisOutcome::Resolved(apis)
-    } else {
-        EntryApisOutcome::Refused(problems)
-    }
+    Problems::refuse_any(problems)?;
+
+    Ok(apis)
 }
 
 /// Every api reference of every target entry, in config order.
@@ -120,16 +101,13 @@ pub fn entry_api_refs(config: &LoadedAppConfig) -> Vec<&str> {
     config
         .entries
         .iter()
-        .flat_map(|each| api_refs_of(&each.entry))
+        .flat_map(|each| each.settings.api_refs())
         .collect()
 }
 
 /// One problem for each reference whose source the config does not have.
-///
-/// # Errors
-///
-/// [`InternalError`] when an entry has no id, which the config schema requires.
-pub fn unknown_source_problems(config: &LoadedAppConfig) -> Result<Vec<CliProblem>, InternalError> {
+#[must_use]
+pub fn unknown_source_problems(config: &LoadedAppConfig) -> Vec<CliProblem> {
     let known: Vec<&str> = config.sources.keys().map(String::as_str).collect();
     let listed = if known.is_empty() {
         "none".to_owned()
@@ -139,20 +117,9 @@ pub fn unknown_source_problems(config: &LoadedAppConfig) -> Result<Vec<CliProble
     let mut problems = Vec::new();
 
     for each in &config.entries {
-        let id = match &each.entry {
-            JsonValue::Object(entry) => entry.get("id"),
-            _ => None,
-        };
-        let entry_id = match id {
-            Some(JsonValue::String(id)) => id.as_str(),
-            _ => {
-                return Err(InternalError::new(
-                    "a target entry without an id passed the schema",
-                ));
-            }
-        };
+        let entry_id = &each.settings.id;
 
-        for reference in api_refs_of(&each.entry).into_iter().map(parse_api_ref) {
+        for reference in each.settings.api_refs().into_iter().map(parse_api_ref) {
             let Some(source) = reference.source else {
                 continue;
             };
@@ -170,29 +137,25 @@ pub fn unknown_source_problems(config: &LoadedAppConfig) -> Result<Vec<CliProble
         }
     }
 
-    Ok(problems)
+    problems
 }
 
-/// The sources the entries and `extra_refs` need, or the problems of an unknown source.
+/// The sources the entries and `extra_refs` need, in config order.
 ///
 /// # Errors
 ///
-/// As [`unknown_source_problems`].
+/// [`Problems`] for a reference whose source the config does not have.
 pub fn used_sources(
     config: &LoadedAppConfig,
-    extra_refs: &[String],
-) -> Result<UsedSources, InternalError> {
-    let problems = unknown_source_problems(config)?;
-
-    if !problems.is_empty() {
-        return Ok(UsedSources::Refused(problems));
-    }
+    extra_refs: &[&str],
+) -> Result<Vec<String>, Problems> {
+    Problems::refuse_any(unknown_source_problems(config))?;
 
     let mut refs = entry_api_refs(config);
 
-    refs.extend(extra_refs.iter().map(String::as_str));
+    refs.extend(extra_refs);
 
-    Ok(UsedSources::Used(sources_holding_refs(config, &refs)))
+    Ok(sources_holding_refs(config, &refs))
 }
 
 /// The sources a reference names, and those that may hold an api named alone, in config order.

@@ -3,8 +3,8 @@
 use camino::Utf8Path;
 use indexmap::IndexMap;
 use seampact_authoring::ApiLayer;
-use seampact_cli_config::{directory_of, relative_path};
 use seampact_load::LoadOutput;
+use seampact_paths::node_path;
 
 /// The comment an editor reads to pick a file's schema; `compile` never reads it.
 const MODELINE_PREFIX: &str = "# yaml-language-server:";
@@ -44,7 +44,7 @@ pub(crate) fn modeline_of(
     schema_directory: &Utf8Path,
     kind: AuthoringFile,
 ) -> String {
-    let directory = relative_path(&directory_of(file), schema_directory);
+    let directory = node_path::relative(&node_path::dirname(file), schema_directory);
     let schema = format!("{kind}.schema.json");
 
     if directory.as_str().is_empty() {

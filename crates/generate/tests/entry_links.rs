@@ -2,11 +2,10 @@
 
 mod support;
 
-use indexmap::IndexMap;
 use seampact_gen_probe::{PROBE_CLIENT, PROBE_PROVIDER, PROBE_SERVER};
 use seampact_generate::{
-    EntryOrderOutcome, links_of, order_entries, unconsumed_kind_problems,
-    unknown_link_entry_problems, unprovided_kind_problems,
+    links_of, order_entries, unconsumed_kind_problems, unknown_link_entry_problems,
+    unprovided_kind_problems,
 };
 use support::{TestResult, planned_entry, reference_ir, settings};
 
@@ -29,14 +28,10 @@ fn a_provider_comes_before_the_entries_that_link_it() -> TestResult<()> {
     let client = settings(r#"{"id":"client","use":"probe-client","link":{"client":"api"}}"#)?;
     let api = settings(r#"{"id":"api","use":"probe-provider"}"#)?;
 
-    match order_entries(&[&client, &api]) {
-        EntryOrderOutcome::Ordered(ordered) => {
-            let ids: Vec<&str> = ordered.iter().map(|each| each.id.as_str()).collect();
+    let ordered = order_entries(&[&client, &api]).expect("a link order");
+    let ids: Vec<&str> = ordered.iter().map(|each| each.id.as_str()).collect();
 
-            assert_eq!(ids, ["api", "client"]);
-        }
-        EntryOrderOutcome::Refused(problems) => panic!("refused: {problems:?}"),
-    }
+    assert_eq!(ids, ["api", "client"]);
 
     Ok(())
 }
@@ -46,9 +41,9 @@ fn a_link_cycle_is_refused_with_its_path() -> TestResult<()> {
     let first = settings(r#"{"id":"a","use":"probe-client","link":{"client":"b"}}"#)?;
     let second = settings(r#"{"id":"b","use":"probe-client","link":{"client":"a"}}"#)?;
 
-    let EntryOrderOutcome::Refused(problems) = order_entries(&[&first, &second]) else {
-        panic!("ordered a cycle");
-    };
+    let problems = order_entries(&[&first, &second])
+        .expect_err("a cycle has no order")
+        .into_vec();
 
     assert_eq!(problems.len(), 1);
     assert_eq!(
@@ -92,10 +87,7 @@ fn a_kind_the_provider_does_not_provide_and_the_consumer_does_not_consume_are_na
         &PROBE_CLIENT,
         Some(&ir),
     )?;
-    let planned: IndexMap<String, _> = [server, provider, client]
-        .into_iter()
-        .map(|each| (each.entry.settings.id.clone(), each))
-        .collect();
+    let planned = [server, provider, client];
 
     let unprovided = unprovided_kind_problems(&planned);
     let unconsumed = unconsumed_kind_problems(&planned);

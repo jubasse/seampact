@@ -10,11 +10,11 @@ use seampact_cli_config::CliIo;
 use seampact_cli_config::unlocated_problem;
 use seampact_cli_config::{
     CliProblem, LoadedAppConfig, ReadAppConfigOutcome, ResolvedSource, read_app_config,
-    resolved_path,
 };
 use seampact_generate::source_entry_file;
 use seampact_generate::source_reader;
 use seampact_generate::{bundle_problem, no_workspace_problem, print_source_diagnostics};
+use seampact_paths::node_path;
 
 use crate::config_location::ConfigLocation;
 use crate::{CliError, EXIT_SUCCESS, refuse};
@@ -231,11 +231,15 @@ fn named_source(
 
 fn resolved_output(cwd: &Utf8Path, output: &BundleOutput) -> BundleOutput {
     match output {
-        BundleOutput::Directory(path) => BundleOutput::Directory(resolved_path(cwd, path.as_str())),
-        BundleOutput::NpmPackage(path) => {
-            BundleOutput::NpmPackage(resolved_path(cwd, path.as_str()))
+        BundleOutput::Directory(path) => {
+            BundleOutput::Directory(node_path::resolve(cwd, path.as_str()))
         }
-        BundleOutput::Tarball(path) => BundleOutput::Tarball(resolved_path(cwd, path.as_str())),
+        BundleOutput::NpmPackage(path) => {
+            BundleOutput::NpmPackage(node_path::resolve(cwd, path.as_str()))
+        }
+        BundleOutput::Tarball(path) => {
+            BundleOutput::Tarball(node_path::resolve(cwd, path.as_str()))
+        }
     }
 }
 

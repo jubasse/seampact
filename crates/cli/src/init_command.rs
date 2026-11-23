@@ -7,13 +7,12 @@ use std::io::ErrorKind;
 use camino::{Utf8Path, Utf8PathBuf};
 use seampact_bundle_fetch::{LocalSourcePolicy, local_source_policy, local_source_refusal_reason};
 use seampact_cli_config::CliIo;
-use seampact_cli_config::{
-    CliProblem, RootDiscovery, find_root_config, is_path_taken, resolved_path,
-};
+use seampact_cli_config::{CliProblem, RootDiscovery, find_root_config, is_path_taken};
 use seampact_cli_config::{located_problem, unlocated_problem};
 use seampact_editor_schemas::DEFAULT_EDITOR_SCHEMAS_DIRECTORY;
 use seampact_generate::run_environment;
 use seampact_paths::RelativeOutputPath;
+use seampact_paths::node_path;
 
 use crate::compile_command::{CompileOutputs, EditorSchemasMode, compile_command};
 use crate::config_location::{APP_CONFIG_FILE_NAME, ConfigLocation, config_location, display_path};
@@ -149,9 +148,9 @@ fn init_new_project(
     }
 
     let schema_directory = match editor_schemas {
-        EditorSchemasPolicy::None => resolved_path(io.cwd(), INSTALLED_AUTHORING_SCHEMAS),
+        EditorSchemasPolicy::None => node_path::resolve(io.cwd(), INSTALLED_AUTHORING_SCHEMAS),
         EditorSchemasPolicy::Ignore | EditorSchemasPolicy::Commit => {
-            resolved_path(&source_directory, DEFAULT_EDITOR_SCHEMAS_DIRECTORY)
+            node_path::resolve(&source_directory, DEFAULT_EDITOR_SCHEMAS_DIRECTORY)
         }
     };
     let contract = starter_contract(content);
@@ -191,7 +190,7 @@ fn starter_path(base: &Utf8Path, relative: &str) -> Result<Utf8PathBuf, CliError
     let relative = RelativeOutputPath::try_new(relative)
         .map_err(|error| CliError::io(base, &std::io::Error::other(error)))?;
 
-    Ok(resolved_path(base, relative.as_str()))
+    Ok(node_path::resolve(base, relative.as_str()))
 }
 
 fn write_starter(io: &mut dyn CliIo, starter: &StarterWrite) -> Result<i32, CliError> {

@@ -1,10 +1,10 @@
 //! The `checks` of an app config read into their typed levels.
 
 use seampact_diagnostics::InternalError;
+use seampact_json::JsonValue;
 use serde::Deserialize;
 
 use crate::check_level::{CheckLevel, MatrixCheckLevel};
-use crate::read_app_config::LoadedAppConfig;
 use crate::read_root_config::LoadedRootConfig;
 
 /// The members of `spec/src/config/checks-config.ts#AppChecks`; each absent when not written.
@@ -21,24 +21,24 @@ pub struct AppChecksSettings {
     pub matrix: Option<MatrixCheckLevel>,
 }
 
-impl LoadedAppConfig {
-    /// The app's `checks`; every level absent when the app writes none.
+impl AppChecksSettings {
+    /// The settings of a `checks` value the config schema passed; every level absent for none.
     ///
     /// # Errors
     ///
-    /// [`InternalError`] when the `checks` that passed the config schema do not read.
-    pub fn checks(&self) -> Result<AppChecksSettings, InternalError> {
-        let Some(checks) = &self.checks else {
-            return Ok(AppChecksSettings::default());
+    /// [`InternalError`] when the value does not read as `checks`.
+    pub fn from_value(checks: Option<&JsonValue>) -> Result<Self, InternalError> {
+        let Some(checks) = checks else {
+            return Ok(Self::default());
         };
-        let value = serde_json::to_value(checks)
-            .map_err(|error| InternalError::new(format!("the checks do not serialise: {error}")))?;
 
-        serde_json::from_value(value).map_err(|error| {
-            InternalError::new(format!(
-                "checks that passed the schema do not read: {error}"
-            ))
-        })
+        serde_json::to_value(checks)
+            .and_then(serde_json::from_value)
+            .map_err(|error| {
+                InternalError::new(format!(
+                    "checks that passed the schema do not read: {error}"
+                ))
+            })
     }
 }
 
@@ -49,13 +49,6 @@ impl LoadedRootConfig {
     ///
     /// [`InternalError`] when the `checks` that passed the config schema do not read.
     pub fn checks_settings(&self) -> Result<AppChecksSettings, InternalError> {
-        let value = serde_json::to_value(&self.checks)
-            .map_err(|error| InternalError::new(format!("the checks do not serialise: {error}")))?;
-
-        serde_json::from_value(value).map_err(|error| {
-            InternalError::new(format!(
-                "checks that passed the schema do not read: {error}"
-            ))
-        })
+        AppChecksSettings::from_value(Some(&self.checks))
     }
 }

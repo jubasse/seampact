@@ -6,33 +6,34 @@ use seampact_diagnostics::InternalError;
 use seampact_json::{JsonValue, items_of, object_of, text_of};
 use seampact_paths::nfc_case_folded;
 
-use crate::api_refs::{api_refs_of, parse_api_ref};
-use crate::artefact_switches::is_framework_route_check_off;
+use crate::api_refs::parse_api_ref;
+use crate::app_checks_settings::AppChecksSettings;
+use crate::artefact_switch::ArtefactSwitch;
+use crate::artefact_switches::is_framework_route_check_switched_off;
 use crate::config_file::{ParseConfigOutcome, parse_config_file};
 use crate::config_kind::ConfigKind;
 use crate::config_names::{DEFAULT_OUT_DIR, ROOT_CONFIG_MARKER_KEY};
 use crate::config_position::ParsedConfig;
 use crate::config_schema::{ConfigSchema, ValidateConfigOutcome, validate_config};
 use crate::config_waits::{find_config_waits, wait_problems};
+use crate::diff_settings::DiffSettings;
 use crate::find_root_config::{RootDiscovery, find_root_config};
 use crate::key_path::KeyPathSegment;
 use crate::maven_source::unpinned_maven_problems;
-use crate::node_path::{directory_of, resolved_path};
+use crate::open_api_settings::OpenApiSettings;
 use crate::path_containment::{is_inside_or_equal, is_strictly_inside};
 use crate::read_root_config::LoadedRootConfig;
 use crate::resolved_source::{ResolvedSource, resolved_sources};
+use crate::target_entry_settings::{
+    ConfiguredTargetEntry, FrameworkDocsSwitch, TargetEntrySettings,
+};
+use crate::warnings_settings::WarningsSettings;
 use crate::{CliConfigError, CliProblem};
-
-/// One target entry with its output root: `<outDir>/<out>`, absolute.
-#[derive(Debug, Clone, PartialEq)]
-pub struct AppConfigEntry {
-    /// The entry as the config writes it.
-    pub entry: JsonValue,
-    /// The absolute output directory.
-    pub root: Utf8PathBuf,
-}
+use seampact_paths::node_path;
 
 /// An app config read and checked, with its file.
+///
+/// Every typed setting is read once, at load; planning reads the typed members, never `written`.
 #[derive(Debug, Clone, PartialEq)]
 pub struct LoadedAppConfig {
     /// The absolute path of the config file.
@@ -43,18 +44,20 @@ pub struct LoadedAppConfig {
     pub allow_local: Option<bool>,
     /// The app's own sources and, for an app its root lists, the root's.
     pub sources: IndexMap<String, ResolvedSource>,
-    /// The target entries, in order.
-    pub entries: Vec<AppConfigEntry>,
-    /// The app's `openapi` as it writes it; absent when the app does not write the key.
-    pub openapi: Option<JsonValue>,
-    /// The app's `checks` as it writes them; absent when the app does not write the key.
-    pub checks: Option<JsonValue>,
-    /// The app's `diff` settings as it writes them; absent when the app does not write the key.
-    pub diff: Option<JsonValue>,
-    /// The app's `warnings` as it writes them; absent when the app does not write the key.
-    pub warnings: Option<JsonValue>,
+    /// The target entries with their output roots, in order.
+    pub entries: Vec<ConfiguredTargetEntry>,
+    /// The app's `openapi`; absent when the app does not write the key.
+    pub openapi: Option<OpenApiSettings>,
+    /// The app's `checks`; every level absent when the app writes none.
+    pub checks: AppChecksSettings,
+    /// The app's `diff` settings; absent when the app does not write the key.
+    pub diff: Option<DiffSettings>,
+    /// The app's `warnings`; nothing ignored when the app writes none.
+    pub warnings: WarningsSettings,
     /// The root config folded in, for an app its root lists.
     pub root_file: Option<Utf8PathBuf>,
+    /// The app config as its file writes it, for the oracle's answer; no planning reads it.
+    pub written: JsonValue,
 }
 
 /// The config read, or the problems that stop it.
@@ -69,7 +72,6 @@ pub enum ReadAppConfigOutcome {
 // The app config as its own file writes it, before its root is folded in.
 struct AppConfigAlone {
     parsed: ParsedConfig,
-    config: JsonValue,
     loaded: LoadedAppConfig,
 }
 
@@ -171,23 +173,22 @@ fn resolve_app_config(
     let object = object_of(Some(&config)).ok_or_else(|| {
         InternalError::new("an app config that is not a mapping passed the schema")
     })?;
-    let directory = directory_of(file);
-    let out_dir = resolved_path(
+    let directory = node_path::dirname(file);
+    let out_dir = node_path::resolve(
         &directory,
         text_of(object.get("outDir")).unwrap_or(DEFAULT_OUT_DIR),
     );
-    let targets = items_of(object.get("targets"));
-    let entries = targets
+    let entries = items_of(object.get("targets"))
         .iter()
-        .map(|entry| entry_with_root(entry, &out_dir))
+        .map(|entry| configured_entry(entry, &out_dir))
         .collect::<Result<Vec<_>, _>>()?;
     let mut problems = unpinned_maven_problems(&parsed, object.get("sources"))?;
 
-    problems.extend(duplicate_id_problems(&parsed, targets)?);
+    problems.extend(duplicate_id_problems(&parsed, &entries)?);
     problems.extend(outside_out_dir_problems(&parsed, &out_dir, &entries)?);
     problems.extend(overlapping_out_problems(&parsed, &entries)?);
-    problems.extend(switched_off_allow_list_problems(&parsed, targets)?);
-    problems.extend(framework_docs_conflict_problems(&parsed, targets)?);
+    problems.extend(switched_off_allow_list_problems(&parsed, &entries)?);
+    problems.extend(framework_docs_conflict_problems(&parsed, &entries)?);
 
     if !problems.is_empty() {
         return Ok(ReadAloneOutcome::Refused(problems));
@@ -203,37 +204,35 @@ fn resolve_app_config(
         allow_local,
         sources: resolved_sources(&directory, object.get("sources"))?,
         entries,
-        openapi: object.get("openapi").cloned(),
-        checks: object.get("checks").cloned(),
-        diff: object.get("diff").cloned(),
-        warnings: object.get("warnings").cloned(),
+        openapi: object
+            .get("openapi")
+            .map(|openapi| OpenApiSettings::from_value(openapi, &directory))
+            .transpose()?,
+        checks: AppChecksSettings::from_value(object.get("checks"))?,
+        diff: object
+            .get("diff")
+            .map(DiffSettings::from_value)
+            .transpose()?,
+        warnings: WarningsSettings::from_value(object.get("warnings"))?,
         root_file: None,
+        written: config,
     };
 
     Ok(ReadAloneOutcome::Read(Box::new(AppConfigAlone {
         parsed,
-        config,
         loaded,
     })))
 }
 
-fn entry_with_root(entry: &JsonValue, out_dir: &Utf8Path) -> Result<AppConfigEntry, InternalError> {
-    let object = object_of(Some(entry)).ok_or_else(|| {
-        InternalError::new("a target entry that is not a mapping passed the schema")
-    })?;
-    let directory_name = text_of(object.get("out"))
-        .or_else(|| text_of(object.get("id")))
-        .ok_or_else(|| InternalError::new("a target entry without an id passed the schema"))?;
+fn configured_entry(
+    entry: &JsonValue,
+    out_dir: &Utf8Path,
+) -> Result<ConfiguredTargetEntry, InternalError> {
+    let settings = TargetEntrySettings::from_json(entry)?;
+    let directory_name = settings.out.as_deref().unwrap_or(&settings.id);
+    let root = node_path::resolve(out_dir, directory_name);
 
-    Ok(AppConfigEntry {
-        entry: entry.clone(),
-        root: resolved_path(out_dir, directory_name),
-    })
-}
-
-fn entry_id(entry: &JsonValue) -> Result<&str, InternalError> {
-    text_of(object_of(Some(entry)).and_then(|object| object.get("id")))
-        .ok_or_else(|| InternalError::new("a target entry without an id passed the schema"))
+    Ok(ConfiguredTargetEntry { settings, root })
 }
 
 fn entry_path(index: usize, key: &str) -> [KeyPathSegment; 3] {
@@ -244,18 +243,14 @@ fn entry_path(index: usize, key: &str) -> [KeyPathSegment; 3] {
     ]
 }
 
-fn foldable_artefacts(entry: &JsonValue) -> Option<&JsonValue> {
-    object_of(Some(entry)).and_then(|object| object.get("artefacts"))
-}
-
 fn duplicate_id_problems(
     parsed: &ParsedConfig,
-    targets: &[JsonValue],
+    entries: &[ConfiguredTargetEntry],
 ) -> Result<Vec<CliProblem>, CliConfigError> {
-    let ids = targets
+    let ids: Vec<&str> = entries
         .iter()
-        .map(entry_id)
-        .collect::<Result<Vec<_>, _>>()?;
+        .map(|each| each.settings.id.as_str())
+        .collect();
     let mut problems = Vec::new();
 
     for (index, id) in ids.iter().enumerate() {
@@ -276,15 +271,16 @@ fn duplicate_id_problems(
 
 fn switched_off_allow_list_problems(
     parsed: &ParsedConfig,
-    targets: &[JsonValue],
+    entries: &[ConfiguredTargetEntry],
 ) -> Result<Vec<CliProblem>, CliConfigError> {
     let mut problems = Vec::new();
 
-    for (index, entry) in targets.iter().enumerate() {
-        let has_routes =
-            object_of(Some(entry)).is_some_and(|object| object.contains_key("frameworkRoutes"));
+    for (index, each) in entries.iter().enumerate() {
+        let entry = &each.settings;
 
-        if !has_routes || !is_framework_route_check_off(foldable_artefacts(entry)) {
+        if entry.framework_routes.is_none()
+            || !is_framework_route_check_switched_off(entry.artefacts.as_ref())
+        {
             continue;
         }
 
@@ -292,7 +288,7 @@ fn switched_off_allow_list_problems(
             "config.key.conflict",
             format!(
                 "The entry '{}' allow-lists framework routes in 'frameworkRoutes' but switches their check off with '{}: false'.",
-                entry_id(entry)?,
+                entry.id,
                 switch_off_key(entry)
             ),
             "Keep one: remove 'frameworkRoutes' to leave the check off, or remove the switch to check the routes against the allow-list.",
@@ -303,11 +299,13 @@ fn switched_off_allow_list_problems(
     Ok(problems)
 }
 
-fn switch_off_key(entry: &JsonValue) -> &'static str {
-    let boot_check =
-        object_of(foldable_artefacts(entry)).and_then(|object| object.get("bootCheck"));
+fn switch_off_key(entry: &TargetEntrySettings) -> &'static str {
+    let boot_check = entry
+        .artefacts
+        .as_ref()
+        .and_then(|switches| switches.0.get("bootCheck"));
 
-    if boot_check == Some(&JsonValue::Bool(false)) {
+    if boot_check == Some(&ArtefactSwitch::Flag(false)) {
         return "artefacts.bootCheck";
     }
 
@@ -316,17 +314,18 @@ fn switch_off_key(entry: &JsonValue) -> &'static str {
 
 fn framework_docs_conflict_problems(
     parsed: &ParsedConfig,
-    targets: &[JsonValue],
+    entries: &[ConfiguredTargetEntry],
 ) -> Result<Vec<CliProblem>, CliConfigError> {
     let mut problems = Vec::new();
 
-    for (index, entry) in targets.iter().enumerate() {
-        let docs_off =
-            text_of(object_of(Some(entry)).and_then(|object| object.get("frameworkDocs")))
-                == Some("off");
-        let native_docs = object_of(foldable_artefacts(entry))
-            .and_then(|object| object.get("nativeDocs"))
-            == Some(&JsonValue::Bool(true));
+    for (index, each) in entries.iter().enumerate() {
+        let entry = &each.settings;
+        let docs_off = entry.framework_docs == Some(FrameworkDocsSwitch::Off);
+        let native_docs = entry
+            .artefacts
+            .as_ref()
+            .and_then(|switches| switches.0.get("nativeDocs"))
+            == Some(&ArtefactSwitch::Flag(true));
 
         if !docs_off || !native_docs {
             continue;
@@ -336,7 +335,7 @@ fn framework_docs_conflict_problems(
             "config.key.conflict",
             format!(
                 "The entry '{}' sets 'frameworkDocs: off' and 'artefacts.nativeDocs: true': one switches the framework's document off, the other completes it.",
-                entry_id(entry)?
+                entry.id
             ),
             "Keep one: remove 'frameworkDocs: off' to complete the framework's document, or switch 'artefacts.nativeDocs' off.",
             parsed.where_of(&entry_path(index, "frameworkDocs"))?,
@@ -349,7 +348,7 @@ fn framework_docs_conflict_problems(
 fn outside_out_dir_problems(
     parsed: &ParsedConfig,
     out_dir: &Utf8Path,
-    entries: &[AppConfigEntry],
+    entries: &[ConfiguredTargetEntry],
 ) -> Result<Vec<CliProblem>, CliConfigError> {
     let mut problems = Vec::new();
 
@@ -362,7 +361,7 @@ fn outside_out_dir_problems(
             "config.out.outside",
             format!(
                 "The output directory of '{}' is not inside `outDir` ({out_dir}).",
-                entry_id(&each.entry)?
+                each.settings.id
             ),
             "Give `out` a relative path that stays inside `outDir`.",
             parsed.where_of(&entry_path(index, "out"))?,
@@ -374,7 +373,7 @@ fn outside_out_dir_problems(
 
 fn overlapping_out_problems(
     parsed: &ParsedConfig,
-    entries: &[AppConfigEntry],
+    entries: &[ConfiguredTargetEntry],
 ) -> Result<Vec<CliProblem>, CliConfigError> {
     let mut problems = Vec::new();
 
@@ -384,7 +383,7 @@ fn overlapping_out_problems(
                 KeyPathSegment::key("targets"),
                 KeyPathSegment::position(index),
             ];
-            let (first, second) = (entry_id(&each.entry)?, entry_id(&other.entry)?);
+            let (first, second) = (&each.settings.id, &other.settings.id);
 
             if is_nested_or_same(&each.root, &other.root) {
                 problems.push(CliProblem::at(
@@ -447,17 +446,12 @@ fn fold_root_config(
         return Ok(ReadAppConfigOutcome::Refused(problems));
     }
 
-    let app_allow_local =
-        match object_of(Some(&app.config)).and_then(|object| object.get("allowLocal")) {
-            Some(JsonValue::Bool(flag)) => Some(*flag),
-            _ => None,
-        };
     let mut sources = root.sources.clone();
 
     sources.extend(app.loaded.sources.clone());
 
     Ok(ReadAppConfigOutcome::Read(Box::new(LoadedAppConfig {
-        allow_local: app_allow_local.or(root.allow_local),
+        allow_local: app.loaded.allow_local.or(root.allow_local),
         sources,
         root_file: Some(root.file.clone()),
         ..app.loaded
@@ -473,17 +467,21 @@ fn unlisted_app_outcome(
         .keys()
         .filter(|name| !app.loaded.sources.contains_key(*name))
         .collect();
-    let targets = items_of(object_of(Some(&app.config)).and_then(|object| object.get("targets")));
     let mut problems = Vec::new();
 
-    for (index, entry) in targets.iter().enumerate() {
+    for (index, each) in app.loaded.entries.iter().enumerate() {
         let names_root_source = |reference: &&str| {
             parse_api_ref(reference)
                 .source
                 .is_some_and(|source| root_only_sources.iter().any(|name| name.as_str() == source))
         };
 
-        for reference in api_refs_of(entry).into_iter().filter(names_root_source) {
+        for reference in each
+            .settings
+            .api_refs()
+            .into_iter()
+            .filter(names_root_source)
+        {
             let path = [
                 KeyPathSegment::key("targets"),
                 KeyPathSegment::position(index),
@@ -494,7 +492,7 @@ fn unlisted_app_outcome(
                 format!(
                     "The api '{reference}' names a source of the root config {}, whose `apps` does not list this app ({}), so the app stands alone.",
                     root.display_name,
-                    directory_of(&app.loaded.file)
+                    node_path::dirname(&app.loaded.file)
                 ),
                 "Add the app's directory to the root config's `apps`, or define the source in this app config.",
                 app.parsed.where_of(&path)?,

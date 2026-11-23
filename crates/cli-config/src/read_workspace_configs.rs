@@ -3,12 +3,12 @@
 use camino::Utf8Path;
 
 use crate::config_names::APP_CONFIG_FILE_NAME;
-use crate::node_path::{directory_of, joined_path};
 use crate::read_app_config::{LoadedAppConfig, ReadAppConfigOutcome, read_listed_app_config};
 use crate::read_root_config::{
     LoadedRootConfig, ReadRootConfigOutcome, WorkspaceApp, read_root_config,
 };
 use crate::{CliConfigError, CliProblem};
+use seampact_paths::node_path;
 
 /// An app a root lists, with its config read and the root folded in.
 #[derive(Debug, Clone, PartialEq)]
@@ -54,13 +54,13 @@ pub fn read_workspace_configs(
         }
         ReadRootConfigOutcome::Read(root) => root,
     };
-    let root_directory = directory_of(Utf8Path::new(display_name));
+    let root_directory = node_path::dirname(Utf8Path::new(display_name));
     let mut apps = Vec::with_capacity(root.apps.len());
     let mut problems = Vec::new();
 
     for app in &root.apps {
-        let app_display_name = joined_path(
-            &joined_path(&root_directory, Utf8Path::new(&app.name)),
+        let app_display_name = node_path::join(
+            &node_path::join(&root_directory, Utf8Path::new(&app.name)),
             Utf8Path::new(APP_CONFIG_FILE_NAME),
         );
 

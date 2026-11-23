@@ -1,100 +1,33 @@
-//! The documents an app config plans: the names of the apis its `openapi` key documents.
+//! The documents an app config plans: those its `openapi` lists, else those of the apis its server
+//! entries serve.
 
 use camino::{Utf8Path, Utf8PathBuf};
 use indexmap::IndexMap;
-use seampact_diagnostics::InternalError;
-use seampact_js::js_key_order;
-use seampact_json::{JsonObject, JsonValue, object_of, text_of};
-use seampact_target::TargetRole;
-use serde::Deserialize;
-use serde::de::IgnoredAny;
+use seampact_json::JsonValue;
 
-use crate::api_refs::{api_refs_of, parse_api_ref};
-use crate::node_path::{directory_of, joined_path, resolved_path};
+use crate::api_refs::parse_api_ref;
+use crate::open_api_settings::{ApiPlacements, DocumentPlacement, OpenApiSettings, empty_options};
 use crate::operations_filter::OperationsFilter;
 use crate::path_containment::is_inside_or_equal;
+use crate::problems::Problems;
 use crate::read_app_config::LoadedAppConfig;
-use crate::read_root_config::document_options_of;
-use crate::read_workspace_configs::LoadedWorkspace;
-use crate::{CliConfigError, CliProblem, located_problem};
+use crate::target_entry_settings::TargetEntrySettings;
+use crate::{CliProblem, located_problem};
+use seampact_paths::node_path;
 
 /// The default directory of an app's documents, beside its config file.
 const DEFAULT_DOCUMENT_DIRECTORY: &str = "openapi";
 
 const DOCUMENT_EXTENSION: &str = ".yaml";
 
-/// The text of `openapi: none`, the app writing no document.
-const NO_OPENAPI_DOCUMENTS: &str = "none";
-
-/// The apis an app's `openapi` documents, in the order the TypeScript reads object keys; empty
-/// for `openapi: none`.
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
-pub struct OpenApiSettings {
-    /// The api names the `openapi` mapping writes.
-    pub apis: Vec<String>,
-}
-
-// The key as the config writes it: `none`, or a mapping from api names to their documents.
-#[derive(Deserialize)]
-#[serde(untagged)]
-enum WrittenOpenApi {
-    Switch(String),
-    Documents(IndexMap<String, IgnoredAny>),
-}
-
-impl OpenApiSettings {
-    /// The settings of an `openapi` value the config schema passed.
-    ///
-    /// # Errors
-    ///
-    /// [`InternalError`] when the value is neither `none` nor a mapping.
-    pub fn from_value(value: &JsonValue) -> Result<Self, InternalError> {
-        let written: WrittenOpenApi = serde_json::to_value(value)
-            .and_then(serde_json::from_value)
-            .map_err(|error| {
-                InternalError::new(format!(
-                    "an openapi value outside the schema's passed it: {error}"
-                ))
-            })?;
-
-        match written {
-            WrittenOpenApi::Switch(text) if text == NO_OPENAPI_DOCUMENTS => Ok(Self::default()),
-            WrittenOpenApi::Switch(text) => Err(InternalError::new(format!(
-                "an openapi text '{text}' passed the schema"
-            ))),
-            WrittenOpenApi::Documents(documents) => Ok(Self {
-                apis: js_key_order(documents.keys().map(|name| (name, ())))
-                    .map(|(name, ())| name.clone())
-                    .collect(),
-            }),
-        }
-    }
-}
-
-impl LoadedAppConfig {
-    /// The app's `openapi` settings; `None` when the app does not write the key.
-    ///
-    /// # Errors
-    ///
-    /// [`InternalError`] as [`OpenApiSettings::from_value`].
-    pub fn openapi_settings(&self) -> Result<Option<OpenApiSettings>, InternalError> {
-        self.openapi
-            .as_ref()
-            .map(OpenApiSettings::from_value)
-            .transpose()
-    }
-}
-
 /// The api names the app's `openapi` maps to documents; none when it is absent or `none`.
-///
-/// # Errors
-///
-/// [`InternalError`] as [`OpenApiSettings::from_value`].
-pub fn open_api_api_names(config: &LoadedAppConfig) -> Result<Vec<String>, InternalError> {
-    Ok(config
-        .openapi_settings()?
-        .map(|settings| settings.apis)
-        .unwrap_or_default())
+#[must_use]
+pub fn open_api_api_names(config: &LoadedAppConfig) -> Vec<&str> {
+    config
+        .openapi
+        .iter()
+        .flat_map(|settings| settings.apis.keys().map(String::as_str))
+        .collect()
 }
 
 /// A compiled api the app sees, with the ids of the documents it declares.
@@ -126,82 +59,31 @@ pub struct PlannedAppDocument {
     pub served_operations: Option<Vec<OperationsFilter>>,
 }
 
-/// The documents an app writes, or the problems that refuse the plan.
-#[derive(Debug, Clone, PartialEq)]
-pub enum AppDocumentPlan {
-    /// The documents, in order.
-    Planned(Vec<PlannedAppDocument>),
-    /// The problems.
-    Refused(Vec<CliProblem>),
-}
-
-/// What one app gives a merged document.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct MergedContribution {
-    /// The app's name in the root's `apps`.
-    pub app: String,
-    /// The api as the entry or the `openapi` key names it, `<api>` or `<source>/<api>`.
-    pub api: String,
-    /// The server entry that contributes it.
-    pub entry: Option<String>,
-    /// The document id.
-    pub document: Option<String>,
-    /// The entry's `operations`.
-    pub operations: Option<OperationsFilter>,
-}
-
-/// One merged document of a root with what its apps contribute.
-#[derive(Debug, Clone, PartialEq)]
-pub struct PlannedMergedDocument {
-    /// The document's name.
-    pub name: String,
-    /// The absolute file.
-    pub file: Utf8PathBuf,
-    /// The emitter options as the root writes them.
-    pub options: JsonValue,
-    /// The path prefix of each app, as the root writes it.
-    pub prefix: JsonValue,
-    /// What each app contributes, in order.
-    pub contributions: Vec<MergedContribution>,
-}
-
-/// The merged documents of a root, or the problems that refuse the plan.
-#[derive(Debug, Clone, PartialEq)]
-pub enum MergedDocumentPlan {
-    /// The documents, in order.
-    Planned(Vec<PlannedMergedDocument>),
-    /// The problems.
-    Refused(Vec<CliProblem>),
-}
-
 /// The default directory of an app's documents, beside its config file.
 #[must_use]
 pub fn default_document_directory(config: &LoadedAppConfig) -> Utf8PathBuf {
-    joined_path(
-        &directory_of(&config.file),
+    node_path::join(
+        &node_path::dirname(&config.file),
         Utf8Path::new(DEFAULT_DOCUMENT_DIRECTORY),
     )
 }
 
 /// The documents an app writes: those its `openapi` lists, none for `none`, and without the key
-/// every document of every api its server targets generate from, at `openapi/<api>.yaml` or
-/// `openapi/<api>.<document>.yaml`. `entry_roles` holds each entry's role by entry id.
+/// every document of every api its `server_entries` generate from, at `openapi/<api>.yaml` or
+/// `openapi/<api>.<document>.yaml`.
 ///
 /// # Errors
 ///
-/// [`CliConfigError::Internal`] when an entry has no role, or the config holds a shape its schema
-/// refuses.
+/// [`Problems`] when an api is unknown or ambiguous, a placement does not fit what the api
+/// declares, a document lies inside an entry's output or two documents share a file.
 pub fn plan_app_documents(
     config: &LoadedAppConfig,
-    entry_roles: &IndexMap<String, TargetRole>,
+    server_entries: &[&TargetEntrySettings],
     api_documents: &[ApiDocuments],
-) -> Result<AppDocumentPlan, CliConfigError> {
-    let planned = match &config.openapi {
-        None => default_documents(config, entry_roles, api_documents)?,
-        Some(openapi) => listed_documents(config, openapi, api_documents)?,
-    };
-    let AppDocumentPlan::Planned(documents) = planned else {
-        return Ok(planned);
+) -> Result<Vec<PlannedAppDocument>, Problems> {
+    let documents = match &config.openapi {
+        None => default_documents(config, server_entries, api_documents)?,
+        Some(openapi) => listed_documents(openapi, api_documents)?,
     };
     let names: Vec<NamedFile<'_>> = documents
         .iter()
@@ -210,79 +92,18 @@ pub fn plan_app_documents(
             name: name_of(each),
         })
         .collect();
-    let mut problems = document_inside_output_problems(config, &documents)?;
+    let mut problems = document_inside_output_problems(config, &documents);
 
     problems.extend(path_conflict_problems(&names));
+    Problems::refuse_any(problems)?;
 
-    Ok(if problems.is_empty() {
-        AppDocumentPlan::Planned(documents)
-    } else {
-        AppDocumentPlan::Refused(problems)
-    })
-}
-
-/// Each merged document of the root with what each app it covers contributes: a server entry's
-/// apis, else an OpenAPI-only app's listed documents; an app with no server target and some
-/// target contributes nothing. `roles_by_app` holds each app's entry roles, by the app's name.
-///
-/// # Errors
-///
-/// [`CliConfigError::Internal`] when a merged document names an app the workspace lacks, or an
-/// app with entries has no roles.
-pub fn plan_merged_documents(
-    workspace: &LoadedWorkspace,
-    roles_by_app: &IndexMap<String, IndexMap<String, TargetRole>>,
-) -> Result<MergedDocumentPlan, CliConfigError> {
-    let mut documents = Vec::with_capacity(workspace.root.openapi.len());
-
-    for merged in &workspace.root.openapi {
-        let mut contributions = Vec::new();
-
-        for app_name in &merged.apps {
-            let app = workspace
-                .apps
-                .iter()
-                .find(|each| &each.app.name == app_name)
-                .ok_or_else(|| {
-                    InternalError::new(format!("the workspace has no app {app_name}"))
-                })?;
-
-            contributions.extend(app_contributions(
-                app_name,
-                &app.config,
-                roles_by_app.get(app_name),
-            )?);
-        }
-
-        documents.push(PlannedMergedDocument {
-            name: merged.name.clone(),
-            file: merged.file.clone(),
-            options: merged.options.clone(),
-            prefix: merged.prefix.clone(),
-            contributions,
-        });
-    }
-
-    let names: Vec<NamedFile<'_>> = documents
-        .iter()
-        .map(|each| NamedFile {
-            file: each.file.as_str(),
-            name: each.name.clone(),
-        })
-        .collect();
-    let problems = path_conflict_problems(&names);
-
-    Ok(if problems.is_empty() {
-        MergedDocumentPlan::Planned(documents)
-    } else {
-        MergedDocumentPlan::Refused(problems)
-    })
+    Ok(documents)
 }
 
 /// A document's file and the name its problems give it.
-struct NamedFile<'document> {
-    file: &'document str,
-    name: String,
+pub(crate) struct NamedFile<'document> {
+    pub(crate) file: &'document str,
+    pub(crate) name: String,
 }
 
 /// An api served by one or more entries, and the operations they restrict it to.
@@ -299,37 +120,17 @@ fn name_of(document: &PlannedAppDocument) -> String {
     }
 }
 
-fn role_of(
-    entry_roles: &IndexMap<String, TargetRole>,
-    entry_id: &str,
-) -> Result<TargetRole, InternalError> {
-    entry_roles.get(entry_id).copied().ok_or_else(|| {
-        InternalError::new(format!("no resolved target role for the entry {entry_id}"))
-    })
-}
-
-fn empty_options() -> JsonValue {
-    JsonValue::Object(JsonObject::new())
-}
-
 fn default_documents(
     config: &LoadedAppConfig,
-    entry_roles: &IndexMap<String, TargetRole>,
+    server_entries: &[&TargetEntrySettings],
     api_documents: &[ApiDocuments],
-) -> Result<AppDocumentPlan, CliConfigError> {
+) -> Result<Vec<PlannedAppDocument>, Problems> {
     let directory = default_document_directory(config);
     let mut served: IndexMap<(&str, &str), ServedApi<'_>> = IndexMap::new();
     let mut problems = Vec::new();
-    let settings = config.target_entries()?;
 
-    for (raw, configured) in config.entries.iter().zip(&settings) {
-        let entry = &configured.settings;
-
-        if role_of(entry_roles, &entry.id)? != TargetRole::Server {
-            continue;
-        }
-
-        for text in api_refs_of(&raw.entry) {
+    for entry in server_entries {
+        for text in entry.api_refs() {
             let where_ = format!("entry '{}'", entry.id);
 
             match find_api(api_documents, text, where_) {
@@ -339,16 +140,12 @@ fn default_documents(
         }
     }
 
-    if !problems.is_empty() {
-        return Ok(AppDocumentPlan::Refused(problems));
-    }
+    Problems::refuse_any(problems)?;
 
-    let documents = served
+    Ok(served
         .into_values()
         .flat_map(|each| default_documents_of_api(&directory, &each))
-        .collect();
-
-    Ok(AppDocumentPlan::Planned(documents))
+        .collect())
 }
 
 fn default_documents_of_api(
@@ -360,7 +157,7 @@ fn default_documents_of_api(
         source: api.source.clone(),
         api: api.api.clone(),
         document: document.cloned(),
-        file: joined_path(directory, Utf8Path::new(&file_name)),
+        file: node_path::join(directory, Utf8Path::new(&file_name)),
         options: empty_options(),
         served_operations: served.operations.clone(),
     };
@@ -415,22 +212,13 @@ fn add_served_api<'documents>(
 }
 
 fn listed_documents(
-    config: &LoadedAppConfig,
-    openapi: &JsonValue,
+    openapi: &OpenApiSettings,
     api_documents: &[ApiDocuments],
-) -> Result<AppDocumentPlan, CliConfigError> {
-    if text_of(Some(openapi)) == Some(NO_OPENAPI_DOCUMENTS) {
-        return Ok(AppDocumentPlan::Planned(Vec::new()));
-    }
-
-    let object = object_of(Some(openapi)).ok_or_else(|| {
-        InternalError::new("an `openapi` that passed the schema is not a mapping")
-    })?;
-    let directory = directory_of(&config.file);
+) -> Result<Vec<PlannedAppDocument>, Problems> {
     let mut documents = Vec::new();
     let mut problems = Vec::new();
 
-    for (api_name, placements) in js_key_order(object.iter()) {
+    for (api_name, placements) in &openapi.apis {
         let found = match find_api(api_documents, api_name, format!("openapi.{api_name}")) {
             Ok(api) => api,
             Err(problem) => {
@@ -440,17 +228,15 @@ fn listed_documents(
             }
         };
 
-        match api_placements(&directory, found, placements)? {
-            AppDocumentPlan::Planned(planned) => documents.extend(planned),
-            AppDocumentPlan::Refused(refused) => problems.extend(refused),
+        match api_placements(found, placements) {
+            Ok(planned) => documents.extend(planned),
+            Err(refused) => problems.extend(refused),
         }
     }
 
-    Ok(if problems.is_empty() {
-        AppDocumentPlan::Planned(documents)
-    } else {
-        AppDocumentPlan::Refused(problems)
-    })
+    Problems::refuse_any(problems)?;
+
+    Ok(documents)
 }
 
 fn find_api<'documents>(
@@ -494,69 +280,59 @@ fn find_api<'documents>(
     })
 }
 
-/// A placement is one when it is a path or an object with a `path`; else it maps document ids.
-fn is_one_placement(placements: &JsonValue) -> bool {
-    matches!(placements, JsonValue::String(_))
-        || text_of(object_of(Some(placements)).and_then(|object| object.get("path"))).is_some()
-}
-
-fn placed(
-    directory: &Utf8Path,
-    placement: &JsonValue,
-) -> Result<(Utf8PathBuf, JsonValue), InternalError> {
-    if let JsonValue::String(path) = placement {
-        return Ok((resolved_path(directory, path), empty_options()));
+fn planned_document(
+    api: &ApiDocuments,
+    document: Option<String>,
+    placement: &DocumentPlacement,
+) -> PlannedAppDocument {
+    PlannedAppDocument {
+        source: api.source.clone(),
+        api: api.api.clone(),
+        document,
+        file: placement.file.clone(),
+        options: placement.options.clone(),
+        served_operations: None,
     }
-
-    let object = object_of(Some(placement));
-    let path = text_of(object.and_then(|object| object.get("path"))).ok_or_else(|| {
-        InternalError::new("a document placement that passed the schema has no path")
-    })?;
-    let options = object.map_or_else(empty_options, document_options_of);
-
-    Ok((resolved_path(directory, path), options))
 }
 
 fn api_placements(
-    directory: &Utf8Path,
     api: &ApiDocuments,
-    placements: &JsonValue,
-) -> Result<AppDocumentPlan, InternalError> {
+    placements: &ApiPlacements,
+) -> Result<Vec<PlannedAppDocument>, Problems> {
     let where_ = format!("openapi.{}", api.api);
     let declared = api.documents.join(", ");
 
-    if is_one_placement(placements) {
-        if api.documents.len() > 1 {
-            let first = api.documents.first().map_or("", String::as_str);
+    let by_document = match placements {
+        ApiPlacements::One(placement) => {
+            if api.documents.len() > 1 {
+                let first = api.documents.first().map_or("", String::as_str);
 
-            return Ok(refused(located_problem(
-                "config.openapi.document-needed",
-                format!(
-                    "The api '{0}' declares the documents {declared}, and 'openapi.{0}' gives one path.",
-                    api.api
-                ),
-                &format!(
-                    "Map each document to its path: '{0}: {{ {first}: openapi/{0}.{first}.yaml }}'.",
-                    api.api
-                ),
-                where_,
-            )));
+                return Err(located_problem(
+                    "config.openapi.document-needed",
+                    format!(
+                        "The api '{0}' declares the documents {declared}, and 'openapi.{0}' gives one path.",
+                        api.api
+                    ),
+                    &format!(
+                        "Map each document to its path: '{0}: {{ {first}: openapi/{0}.{first}.yaml }}'.",
+                        api.api
+                    ),
+                    where_,
+                )
+                .into());
+            }
+
+            return Ok(vec![planned_document(
+                api,
+                api.documents.first().cloned(),
+                placement,
+            )]);
         }
-
-        let (file, options) = placed(directory, placements)?;
-
-        return Ok(AppDocumentPlan::Planned(vec![PlannedAppDocument {
-            source: api.source.clone(),
-            api: api.api.clone(),
-            document: api.documents.first().cloned(),
-            file,
-            options,
-            served_operations: None,
-        }]));
-    }
+        ApiPlacements::ByDocument(by_document) => by_document,
+    };
 
     if api.documents.is_empty() {
-        return Ok(refused(located_problem(
+        return Err(located_problem(
             "config.openapi.no-documents",
             format!(
                 "The api '{0}' declares no `documents`, and 'openapi.{0}' maps document ids.",
@@ -564,17 +340,14 @@ fn api_placements(
             ),
             "Give the path of the api's one document instead of a mapping.",
             where_,
-        )));
+        )
+        .into());
     }
 
-    let object = object_of(Some(placements)).ok_or_else(|| {
-        InternalError::new("a document placement that passed the schema is not a mapping")
-    })?;
-    let ordered: Vec<(&String, &JsonValue)> = js_key_order(object.iter()).collect();
-    let unknown: Vec<CliProblem> = ordered
-        .iter()
-        .filter(|(document, _)| !api.documents.contains(document))
-        .map(|(document, _)| {
+    let unknown: Vec<CliProblem> = by_document
+        .keys()
+        .filter(|document| !api.documents.contains(document))
+        .map(|document| {
             located_problem(
                 "config.openapi.unknown-document",
                 format!(
@@ -587,41 +360,22 @@ fn api_placements(
         })
         .collect();
 
-    if !unknown.is_empty() {
-        return Ok(AppDocumentPlan::Refused(unknown));
-    }
+    Problems::refuse_any(unknown)?;
 
-    let mut documents = Vec::with_capacity(ordered.len());
-
-    for (document, placement) in ordered {
-        let (file, options) = placed(directory, placement)?;
-
-        documents.push(PlannedAppDocument {
-            source: api.source.clone(),
-            api: api.api.clone(),
-            document: Some(document.clone()),
-            file,
-            options,
-            served_operations: None,
-        });
-    }
-
-    Ok(AppDocumentPlan::Planned(documents))
-}
-
-fn refused(problem: CliProblem) -> AppDocumentPlan {
-    AppDocumentPlan::Refused(vec![problem])
+    Ok(by_document
+        .iter()
+        .map(|(document, placement)| planned_document(api, Some(document.clone()), placement))
+        .collect())
 }
 
 fn document_inside_output_problems(
     config: &LoadedAppConfig,
     documents: &[PlannedAppDocument],
-) -> Result<Vec<CliProblem>, InternalError> {
-    let entries = config.target_entries()?;
+) -> Vec<CliProblem> {
     let mut problems = Vec::new();
 
     for document in documents {
-        for configured in &entries {
+        for configured in &config.entries {
             if !is_inside_or_equal(&configured.root, &document.file) {
                 continue;
             }
@@ -638,10 +392,10 @@ fn document_inside_output_problems(
         }
     }
 
-    Ok(problems)
+    problems
 }
 
-fn path_conflict_problems(documents: &[NamedFile<'_>]) -> Vec<CliProblem> {
+pub(crate) fn path_conflict_problems(documents: &[NamedFile<'_>]) -> Vec<CliProblem> {
     documents
         .iter()
         .enumerate()
@@ -662,76 +416,4 @@ fn path_conflict_problems(documents: &[NamedFile<'_>]) -> Vec<CliProblem> {
             ))
         })
         .collect()
-}
-
-fn app_contributions(
-    app_name: &str,
-    config: &LoadedAppConfig,
-    entry_roles: Option<&IndexMap<String, TargetRole>>,
-) -> Result<Vec<MergedContribution>, InternalError> {
-    if !config.entries.is_empty() {
-        let roles = entry_roles
-            .ok_or_else(|| InternalError::new(format!("no entry roles for the app {app_name}")))?;
-        let mut contributions = Vec::new();
-
-        for (raw, configured) in config.entries.iter().zip(config.target_entries()?) {
-            let entry = configured.settings;
-
-            if role_of(roles, &entry.id)? != TargetRole::Server {
-                continue;
-            }
-
-            contributions.extend(api_refs_of(&raw.entry).into_iter().map(|api| {
-                MergedContribution {
-                    app: app_name.to_owned(),
-                    api: api.to_owned(),
-                    entry: Some(entry.id.clone()),
-                    document: entry.document.clone(),
-                    operations: entry.operations.clone(),
-                }
-            }));
-        }
-
-        return Ok(contributions);
-    }
-
-    let Some(openapi) = &config.openapi else {
-        return Ok(Vec::new());
-    };
-
-    if text_of(Some(openapi)) == Some(NO_OPENAPI_DOCUMENTS) {
-        return Ok(Vec::new());
-    }
-
-    let object = object_of(Some(openapi)).ok_or_else(|| {
-        InternalError::new("an `openapi` that passed the schema is not a mapping")
-    })?;
-    let mut contributions = Vec::new();
-
-    for (api, placements) in js_key_order(object.iter()) {
-        let contribution = |document: Option<String>| MergedContribution {
-            app: app_name.to_owned(),
-            api: api.clone(),
-            entry: None,
-            document,
-            operations: None,
-        };
-
-        if is_one_placement(placements) {
-            contributions.push(contribution(None));
-
-            continue;
-        }
-
-        let documents = object_of(Some(placements)).ok_or_else(|| {
-            InternalError::new("a document placement that passed the schema is not a mapping")
-        })?;
-
-        contributions.extend(
-            js_key_order(documents.keys().map(|document| (document, ())))
-                .map(|(document, ())| contribution(Some(document.clone()))),
-        );
-    }
-
-    Ok(contributions)
 }

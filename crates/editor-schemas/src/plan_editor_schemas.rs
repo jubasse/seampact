@@ -5,8 +5,9 @@ use std::fs;
 use std::io::ErrorKind;
 
 use camino::{Utf8Path, Utf8PathBuf};
-use seampact_cli_config::{CliProblem, is_strictly_inside, is_symbolic_link, resolved_path};
+use seampact_cli_config::{CliProblem, is_strictly_inside, is_symbolic_link};
 use seampact_load::{LoadOptions, LoadReader, load_workspace};
+use seampact_paths::node_path;
 
 use crate::EditorSchemasError;
 use crate::editor_names::{EditorDeclaration, editor_names};
@@ -61,8 +62,8 @@ pub fn plan_editor_schemas(
         .as_ref()
         .and_then(|config| config.editor_schemas.as_deref())
         .unwrap_or(DEFAULT_EDITOR_SCHEMAS_DIRECTORY);
-    let directory = resolved_path(source.directory, configured);
-    let root = resolved_path(source.directory, ".");
+    let directory = node_path::resolve(source.directory, configured);
+    let root = node_path::resolve(source.directory, ".");
 
     if Utf8Path::new(configured).is_absolute() || !is_strictly_inside(&root, &directory) {
         return Ok(refused(

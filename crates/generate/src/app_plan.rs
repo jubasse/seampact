@@ -2,34 +2,29 @@
 //! compiled and filtered, its documents planned; nothing is generated yet.
 
 use camino::Utf8PathBuf;
-use indexmap::IndexMap;
 use seampact_cli_config::{
-    AppConfigEntry, ArtefactSelection, CliIo, CliProblem, ConfiguredTargetEntry, LoadedAppConfig,
-    Step, check_app_compatibility, default_document_directory, entry_where, located_problem,
-    open_api_api_names, print_warnings, select_artefacts,
+    CliIo, CliProblem, ConfiguredTargetEntry, EntryTarget, LoadedAppConfig, Problems,
+    TargetEntrySettings, check_app_compatibility, default_document_directory, entry_where,
+    located_problem, open_api_api_names, print_warnings, select_artefacts,
 };
-use seampact_diagnostics::InternalError;
-use seampact_target::{ArtefactSet, CompatibilityMatrix, Generator, Registry, TargetRole};
+use seampact_target::{CompatibilityMatrix, Registry};
 
-use crate::GenerateError;
 use crate::PlanInputs;
 use crate::api_refs::{
-    EntryApisOutcome, add_qualify_fix, entry_api_refs, resolve_entry_apis, sources_holding_refs,
+    add_qualify_fix, entry_api_refs, resolve_entry_apis, sources_holding_refs,
     unknown_source_problems,
 };
 use crate::compile_sources::{CompiledApi, compile_sources};
 use crate::entry_links::{
-    EntryOrderOutcome, order_entries, pairing_problems, unconsumed_kind_problems,
-    unknown_link_entry_problems, unprovided_kind_problems,
+    order_entries, pairing_problems, unconsumed_kind_problems, unknown_link_entry_problems,
+    unprovided_kind_problems,
 };
-use crate::filter_operations::{FilterOutcome, OperationSelection, filter_operations};
+use crate::filter_operations::{OperationSelection, filter_operations};
 use crate::framework_docs::framework_docs_problems;
 use crate::framework_route_check::unread_framework_route_key_problems;
 use crate::planned_document::{PlannedDocument, plan_documents};
-use crate::planned_entry::{PlannedApi, PlannedEntry, planned_entry};
-
-/// The generator each entry's `use` names, by entry id.
-pub(crate) type Targets = IndexMap<String, &'static dyn Generator>;
+use crate::planned_entry::{PlannedApi, PlannedEntry};
+use crate::stop::Stop;
 
 /// What one app generates, planned and checked in memory.
 #[derive(Debug, Clone)]
@@ -38,16 +33,12 @@ pub struct AppPlan<'run> {
     pub config: &'run LoadedAppConfig,
     /// The entries, each after the providers it links.
     pub entries: Vec<PlannedEntry>,
-    /// The artefacts each entry switches on, by entry id.
-    pub artefacts: IndexMap<String, ArtefactSet>,
     /// The documents the app writes.
     pub documents: Vec<PlannedDocument>,
     /// Where documents go that `openapi` gives no file.
     pub default_document_directory: Utf8PathBuf,
     /// Every api the app read.
     pub compiled: Vec<CompiledApi>,
-    /// The role of each entry's target, by entry id.
-    pub roles: IndexMap<String, TargetRole>,
 }
 
 /// Plans one app: its targets, links, artefacts, compatibility, apis, operations and documents,
@@ -55,150 +46,98 @@ pub struct AppPlan<'run> {
 ///
 /// # Errors
 ///
-/// [`GenerateError`] when a source cannot be read, a step is not ported yet, or for a bug.
+/// [`Stop::Refused`] with the first group of problems, [`Stop::Failed`] when a source cannot be
+/// read, a step is not ported yet, or for a bug.
 pub fn plan_app<'run>(
     config: &'run LoadedAppConfig,
     io: &mut dyn CliIo,
     inputs: &PlanInputs<'_>,
     registry: &Registry,
     matrix: &CompatibilityMatrix,
-) -> Result<Step<AppPlan<'run>>, GenerateError> {
-    let entries = config.target_entries()?;
-    let settings: Vec<_> = entries.iter().map(|each| &each.settings).collect();
-    let unknown_links = unknown_link_entry_problems(&settings);
+) -> Result<AppPlan<'run>, Stop> {
+    let settings: Vec<&TargetEntrySettings> =
+        config.entries.iter().map(|each| &each.settings).collect();
 
-    if !unknown_links.is_empty() {
-        return Ok(Step::Refused(unknown_links));
-    }
+    Problems::refuse_any(unknown_link_entry_problems(&settings))?;
 
-    let order = match order_entries(&settings) {
-        EntryOrderOutcome::Refused(problems) => return Ok(Step::Refused(problems)),
-        EntryOrderOutcome::Ordered(ordered) => ordered
-            .iter()
-            .map(|entry| entry.id.clone())
-            .collect::<Vec<_>>(),
-    };
-    let targets = match resolve_targets(&entries, registry) {
-        Step::Refused(problems) => return Ok(Step::Refused(problems)),
-        Step::Done(targets) => targets,
-    };
-    let artefacts = select_entry_artefacts(&entries, &targets)?;
-    let compatibility = check_app_compatibility(config, &targets, matrix)?;
+    let link_order: Vec<&str> = order_entries(&settings)?
+        .into_iter()
+        .map(|entry| entry.id.as_str())
+        .collect();
+    let targets = resolve_targets(&config.entries, registry)?;
+    let (mut planned, mut config_problems) = select_entry_artefacts(&targets);
+    let compatibility =
+        check_app_compatibility(&targets, config.checks.matrix.unwrap_or_default(), matrix)?;
 
     print_warnings(io, &compatibility.warnings);
-
-    let (selected, mut config_problems) = match artefacts {
-        Step::Done(selected) => (Some(selected), Vec::new()),
-        Step::Refused(problems) => (None, problems),
-    };
-
     config_problems.extend(compatibility.problems);
+    Problems::refuse_any(config_problems)?;
+    Problems::refuse_any(unknown_source_problems(config))?;
 
-    let Some(selected) = selected.filter(|_| config_problems.is_empty()) else {
-        return Ok(Step::Refused(config_problems));
-    };
+    let mut refs = entry_api_refs(config);
 
-    let unknown_sources = unknown_source_problems(config)?;
+    refs.extend(open_api_api_names(config));
 
-    if !unknown_sources.is_empty() {
-        return Ok(Step::Refused(unknown_sources));
-    }
-
-    let mut ref_names: Vec<String> = entry_api_refs(config)
-        .into_iter()
-        .map(str::to_owned)
-        .collect();
-
-    ref_names.extend(open_api_api_names(config)?);
-
-    let refs: Vec<&str> = ref_names.iter().map(String::as_str).collect();
     let source_names = sources_holding_refs(config, &refs);
     let compiled = compile_sources(config, &source_names, inputs.local_bundles, io)?;
 
     if compiled.failed {
-        return Ok(Step::Refused(add_qualify_fix(compiled.problems, &refs)));
+        return Err(Problems::new(add_qualify_fix(compiled.problems, &refs)).into());
     }
 
-    let mut planned = match plan_each_entry(config, &entries, &targets, &compiled.apis)? {
-        Step::Refused(problems) => return Ok(Step::Refused(problems)),
-        Step::Done(planned) => planned,
-    };
+    plan_each_entry(&mut planned, &compiled.apis)?;
+
     let mut link_problems = unprovided_kind_problems(&planned);
 
     link_problems.extend(unconsumed_kind_problems(&planned));
     link_problems.extend(pairing_problems(&planned));
+    Problems::refuse_any(link_problems)?;
 
-    if !link_problems.is_empty() {
-        return Ok(Step::Refused(link_problems));
-    }
+    let documents = plan_documents(config, &planned, &compiled.apis)?;
 
-    let roles: IndexMap<String, TargetRole> = targets
-        .iter()
-        .map(|(entry_id, target)| (entry_id.clone(), target.metadata().role))
-        .collect();
-    let documents = match plan_documents(config, &roles, &compiled.apis)? {
-        Step::Refused(problems) => return Ok(Step::Refused(problems)),
-        Step::Done(documents) => documents,
-    };
-    let ordered: Result<Vec<PlannedEntry>, InternalError> = order
-        .iter()
-        .map(|entry_id| planned_entry(&mut planned, entry_id))
-        .collect();
+    planned.sort_by_key(|entry| link_order.iter().position(|id| *id == entry.settings.id));
 
-    Ok(Step::Done(AppPlan {
+    Ok(AppPlan {
         config,
-        entries: ordered?,
-        artefacts: selected,
+        entries: planned,
         documents,
         default_document_directory: default_document_directory(config),
         compiled: compiled.apis,
-        roles,
-    }))
+    })
 }
 
-fn select_entry_artefacts(
-    entries: &[ConfiguredTargetEntry],
-    targets: &Targets,
-) -> Result<Step<IndexMap<String, ArtefactSet>>, GenerateError> {
-    let mut selected = IndexMap::new();
+/// Each entry with the artefacts its switches select, in config order, and the problems of the
+/// entries whose switches the target refuses.
+fn select_entry_artefacts(targets: &[EntryTarget<'_>]) -> (Vec<PlannedEntry>, Vec<CliProblem>) {
+    let mut planned = Vec::with_capacity(targets.len());
     let mut problems = Vec::new();
 
-    for entry in entries {
-        let settings = &entry.settings;
-        let target = targets
-            .get(&settings.id)
-            .ok_or_else(|| missing_target(&settings.id))?;
+    for each in targets {
+        match select_artefacts(&each.entry.settings, each.target) {
+            Ok(artefacts) => {
+                let entry = PlannedEntry::resolved(each.entry, each.target, artefacts);
 
-        match select_artefacts(settings, *target)? {
-            ArtefactSelection::Refused(refused) => problems.extend(refused),
-            ArtefactSelection::Selected(artefacts) => {
-                selected.insert(settings.id.clone(), artefacts);
+                planned.push(entry);
             }
+            Err(refused) => problems.extend(refused),
         }
     }
 
-    if problems.is_empty() {
-        Ok(Step::Done(selected))
-    } else {
-        Ok(Step::Refused(problems))
-    }
+    (planned, problems)
 }
 
-fn missing_target(entry_id: &str) -> InternalError {
-    InternalError::new(format!("no resolved target for the entry {entry_id}"))
-}
-
-fn resolve_targets(entries: &[ConfiguredTargetEntry], registry: &Registry) -> Step<Targets> {
-    let mut targets = Targets::new();
+fn resolve_targets<'config>(
+    entries: &'config [ConfiguredTargetEntry],
+    registry: &Registry,
+) -> Result<Vec<EntryTarget<'config>>, Problems> {
+    let mut targets = Vec::with_capacity(entries.len());
     let mut problems = Vec::new();
 
     for entry in entries {
         let settings = &entry.settings;
 
         match registry.lookup(&settings.use_name) {
-            Ok(target) => {
-                targets.insert(settings.id.clone(), target);
-            }
+            Ok(target) => targets.push(EntryTarget { entry, target }),
             Err(problem) => problems.push(located_problem(
                 problem.code.as_str(),
                 problem.message,
@@ -208,63 +147,36 @@ fn resolve_targets(entries: &[ConfiguredTargetEntry], registry: &Registry) -> St
         }
     }
 
-    if problems.is_empty() {
-        Step::Done(targets)
-    } else {
-        Step::Refused(problems)
-    }
+    Problems::refuse_any(problems)?;
+
+    Ok(targets)
 }
 
-fn plan_each_entry(
-    config: &LoadedAppConfig,
-    entries: &[ConfiguredTargetEntry],
-    targets: &Targets,
-    compiled: &[CompiledApi],
-) -> Result<Step<IndexMap<String, PlannedEntry>>, GenerateError> {
-    let mut planned = IndexMap::new();
+fn plan_each_entry(planned: &mut [PlannedEntry], compiled: &[CompiledApi]) -> Result<(), Problems> {
     let mut problems = Vec::new();
 
-    for (written, entry) in config.entries.iter().zip(entries) {
-        let settings = &entry.settings;
-        let target = *targets
-            .get(&settings.id)
-            .ok_or_else(|| missing_target(&settings.id))?;
+    for entry in planned {
+        problems.extend(unread_framework_route_key_problems(
+            &entry.settings,
+            entry.target,
+        ));
+        problems.extend(framework_docs_problems(&entry.settings, entry.target));
 
-        problems.extend(unread_framework_route_key_problems(settings, target));
-        problems.extend(framework_docs_problems(settings, target));
-
-        match plan_entry_apis(entry, written, compiled) {
-            Step::Refused(refused) => problems.extend(refused),
-            Step::Done(apis) => {
-                planned.insert(
-                    settings.id.clone(),
-                    PlannedEntry {
-                        entry: entry.clone(),
-                        target,
-                        apis,
-                    },
-                );
-            }
+        match plan_entry_apis(entry, compiled) {
+            Ok(apis) => entry.apis = apis,
+            Err(refused) => problems.extend(refused),
         }
     }
 
-    if problems.is_empty() {
-        Ok(Step::Done(planned))
-    } else {
-        Ok(Step::Refused(problems))
-    }
+    Problems::refuse_any(problems)
 }
 
 fn plan_entry_apis(
-    entry: &ConfiguredTargetEntry,
-    written: &AppConfigEntry,
+    entry: &PlannedEntry,
     compiled: &[CompiledApi],
-) -> Step<Vec<PlannedApi>> {
+) -> Result<Vec<PlannedApi>, Problems> {
     let settings = &entry.settings;
-    let resolved = match resolve_entry_apis(&settings.id, &written.entry, compiled) {
-        EntryApisOutcome::Refused(problems) => return Step::Refused(problems),
-        EntryApisOutcome::Resolved(resolved) => resolved,
-    };
+    let resolved = resolve_entry_apis(settings, compiled)?;
     let selection = OperationSelection {
         document: settings.document.as_deref(),
         operations: settings.operations.as_ref(),
@@ -274,7 +186,7 @@ fn plan_entry_apis(
 
     for each in resolved {
         match filter_operations(&each.ir, &selection) {
-            FilterOutcome::Refused(refused) => {
+            Err(refused) => {
                 let location = entry_where(&settings.id, Some(&each.api));
 
                 problems.extend(refused.into_iter().map(|problem| CliProblem {
@@ -282,10 +194,10 @@ fn plan_entry_apis(
                     ..problem
                 }));
             }
-            FilterOutcome::Filtered(ir) => apis.push(PlannedApi {
+            Ok(ir) => apis.push(PlannedApi {
                 api: each.api.clone(),
                 source: each.source.clone(),
-                ir: *ir,
+                ir,
                 root: if settings.apis.is_none() {
                     entry.root.clone()
                 } else {
@@ -296,9 +208,7 @@ fn plan_entry_apis(
         }
     }
 
-    if problems.is_empty() {
-        Step::Done(apis)
-    } else {
-        Step::Refused(problems)
-    }
+    Problems::refuse_any(problems)?;
+
+    Ok(apis)
 }
