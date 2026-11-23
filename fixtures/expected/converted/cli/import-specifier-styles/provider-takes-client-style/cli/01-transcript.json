@@ -1,0 +1,24 @@
+{
+  "exit": 0,
+  "stdout": "entry 'shared', api 'tasks': 1 written, 0 unchanged, 0 removed (<root>/__generated__/shared).\nentry 'client', api 'tasks': 1 written, 0 unchanged, 0 removed (<root>/__generated__/client).\n",
+  "stderr": "",
+  "written": {
+    "__generated__/client/.seampact-manifest.json": {
+      "sha256": "b57213b731fcc284824b333facc9313a4990fa48c3568843cf29987e07baf979",
+      "text": "{\n  \"owner\": \"client\",\n  \"files\": [\n    {\n      \"path\": \"request.json\",\n      \"sha256\": \"a054e65babf3ee4c91011905b7024ecb8cf597bb9762690309ff9a412ea19890\"\n    }\n  ]\n}\n"
+    },
+    "__generated__/client/request.json": {
+      "sha256": "a054e65babf3ee4c91011905b7024ecb8cf597bb9762690309ff9a412ea19890",
+      "text": "{\n  \"api\": \"tasks\",\n  \"operations\": [\"getTask\", \"health\", \"listTasks\", \"purge\"],\n  \"links\": {\n    \"client\": {\n      \"descriptor\": {\n        \"kind\": \"client\",\n        \"style\": \"fetch\",\n        \"errorStyle\": \"result\",\n        \"exports\": {\n          \"createClient\": {\n            \"module\": \"client\",\n            \"export\": \"createClient\"\n          },\n          \"Client\": {\n            \"module\": \"client\",\n            \"export\": \"Client\"\n          },\n          \"ContractError\": {\n            \"module\": \"client\",\n            \"export\": \"ContractError\"\n          },\n          \"CallOptions\": {\n            \"module\": \"client\",\n            \"export\": \"CallOptions\"\n          }\n        },\n        \"operations\": {}\n      },\n      \"location\": {\n        \"kind\": \"relative\",\n        \"path\": \"../shared\"\n      }\n    },\n    \"types\": {\n      \"descriptor\": {\n        \"kind\": \"types\",\n        \"style\": \"typescript\",\n        \"schemas\": {},\n        \"operations\": {}\n      },\n      \"location\": {\n        \"kind\": \"relative\",\n        \"path\": \"../shared\"\n      }\n    }\n  },\n  \"artefacts\": [\"mutations\", \"queries\"],\n  \"frameworkRoutes\": {\n    \"status\": \"on\",\n    \"allowed\": [],\n    \"scope\": \"contract\"\n  },\n  \"hookCheck\": \"error\",\n  \"mount\": \"\",\n  \"importSpecifiers\": \"extensionless\",\n  \"installedRuntimes\": {}\n}\n"
+    },
+    "__generated__/shared/.seampact-manifest.json": {
+      "sha256": "a4fa7d4bfbe3809ecb500b5a5d2df7d5eceb564dcc02ce0f488eec7a7c159d5d",
+      "text": "{\n  \"owner\": \"shared\",\n  \"files\": [\n    {\n      \"path\": \"request.json\",\n      \"sha256\": \"9d4a6ab4ae97b9d144beb77c78cbf47f4f21e6f4706c4b84896653fbfba8596a\"\n    }\n  ]\n}\n"
+    },
+    "__generated__/shared/request.json": {
+      "sha256": "9d4a6ab4ae97b9d144beb77c78cbf47f4f21e6f4706c4b84896653fbfba8596a",
+      "text": "{\n  \"api\": \"tasks\",\n  \"operations\": [\"getTask\", \"health\", \"listTasks\", \"purge\"],\n  \"links\": {},\n  \"artefacts\": [],\n  \"frameworkRoutes\": {\n    \"status\": \"on\",\n    \"allowed\": [],\n    \"scope\": \"contract\"\n  },\n  \"hookCheck\": \"error\",\n  \"mount\": \"\",\n  \"importSpecifiers\": \"extensionless\",\n  \"installedRuntimes\": {}\n}\n"
+    }
+  },
+  "removed": []
+}

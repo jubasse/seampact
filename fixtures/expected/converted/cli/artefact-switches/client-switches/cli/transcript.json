@@ -1,7 +1,24 @@
 {
-  "exit": 1,
-  "stdout": "",
-  "stderr": "ir.kind.unsupported: entry 'client', api 'tasks': The declaration kind 'httpOperation' is not supported by this reader. The IR has httpOperation; probe-client 1.0.0 expects none. (IR member '/kinds/0') Fix: Update probe-client to a release that supports 'httpOperation', or remove its use from the contract. Docs: https://jubasse.github.io/seampact/troubleshooting/generate/\napi.yaml:47: ir.kind.unsupported: entry 'client', api 'tasks': The declaration kind 'httpOperation' of operation 'getTask' is not supported by this reader. The IR has httpOperation; probe-client 1.0.0 expects none. (IR member '/operations/0/kind') Fix: Update probe-client to a release that supports 'httpOperation', or remove its use from the contract. Docs: https://jubasse.github.io/seampact/troubleshooting/generate/\napi.yaml:38: ir.kind.unsupported: entry 'client', api 'tasks': The declaration kind 'httpOperation' of operation 'health' is not supported by this reader. The IR has httpOperation; probe-client 1.0.0 expects none. (IR member '/operations/1/kind') Fix: Update probe-client to a release that supports 'httpOperation', or remove its use from the contract. Docs: https://jubasse.github.io/seampact/troubleshooting/generate/\napi.yaml:46: ir.kind.unsupported: entry 'client', api 'tasks': The declaration kind 'httpOperation' of operation 'listTasks' is not supported by this reader. The IR has httpOperation; probe-client 1.0.0 expects none. (IR member '/operations/2/kind') Fix: Update probe-client to a release that supports 'httpOperation', or remove its use from the contract. Docs: https://jubasse.github.io/seampact/troubleshooting/generate/\napi.yaml:52: ir.kind.unsupported: entry 'client', api 'tasks': The declaration kind 'httpOperation' of operation 'purge' is not supported by this reader. The IR has httpOperation; probe-client 1.0.0 expects none. (IR member '/operations/3/kind') Fix: Update probe-client to a release that supports 'httpOperation', or remove its use from the contract. Docs: https://jubasse.github.io/seampact/troubleshooting/generate/\n",
-  "written": {},
+  "exit": 0,
+  "stdout": "entry 'shared', api 'tasks': 1 written, 0 unchanged, 0 removed (<root>/__generated__/shared).\nentry 'client', api 'tasks': 1 written, 0 unchanged, 0 removed (<root>/__generated__/client).\n",
+  "stderr": "",
+  "written": {
+    "__generated__/client/.seampact-manifest.json": {
+      "sha256": "01112e4541c67d8270cef1fca6a19b91b1b24d09cf2d46db5868a71cc3c08c77",
+      "text": "{\n  \"owner\": \"client\",\n  \"files\": [\n    {\n      \"path\": \"request.json\",\n      \"sha256\": \"71e5547ddd3112bc235894133f802967c2bb37b4977ac6b60fc4283554a3d92e\"\n    }\n  ]\n}\n"
+    },
+    "__generated__/client/request.json": {
+      "sha256": "71e5547ddd3112bc235894133f802967c2bb37b4977ac6b60fc4283554a3d92e",
+      "text": "{\n  \"api\": \"tasks\",\n  \"operations\": [\"getTask\", \"health\", \"listTasks\", \"purge\"],\n  \"links\": {\n    \"client\": {\n      \"descriptor\": {\n        \"kind\": \"client\",\n        \"style\": \"fetch\",\n        \"errorStyle\": \"result\",\n        \"exports\": {\n          \"createClient\": {\n            \"module\": \"client\",\n            \"export\": \"createClient\"\n          },\n          \"Client\": {\n            \"module\": \"client\",\n            \"export\": \"Client\"\n          },\n          \"ContractError\": {\n            \"module\": \"client\",\n            \"export\": \"ContractError\"\n          },\n          \"CallOptions\": {\n            \"module\": \"client\",\n            \"export\": \"CallOptions\"\n          }\n        },\n        \"operations\": {}\n      },\n      \"location\": {\n        \"kind\": \"relative\",\n        \"path\": \"../shared\"\n      }\n    },\n    \"types\": {\n      \"descriptor\": {\n        \"kind\": \"types\",\n        \"style\": \"typescript\",\n        \"schemas\": {},\n        \"operations\": {}\n      },\n      \"location\": {\n        \"kind\": \"relative\",\n        \"path\": \"../shared\"\n      }\n    }\n  },\n  \"artefacts\": [\"queries\"],\n  \"frameworkRoutes\": {\n    \"status\": \"on\",\n    \"allowed\": [],\n    \"scope\": \"contract\"\n  },\n  \"hookCheck\": \"error\",\n  \"mount\": \"\",\n  \"importSpecifiers\": \"extensionless\",\n  \"installedRuntimes\": {}\n}\n"
+    },
+    "__generated__/shared/.seampact-manifest.json": {
+      "sha256": "a4fa7d4bfbe3809ecb500b5a5d2df7d5eceb564dcc02ce0f488eec7a7c159d5d",
+      "text": "{\n  \"owner\": \"shared\",\n  \"files\": [\n    {\n      \"path\": \"request.json\",\n      \"sha256\": \"9d4a6ab4ae97b9d144beb77c78cbf47f4f21e6f4706c4b84896653fbfba8596a\"\n    }\n  ]\n}\n"
+    },
+    "__generated__/shared/request.json": {
+      "sha256": "9d4a6ab4ae97b9d144beb77c78cbf47f4f21e6f4706c4b84896653fbfba8596a",
+      "text": "{\n  \"api\": \"tasks\",\n  \"operations\": [\"getTask\", \"health\", \"listTasks\", \"purge\"],\n  \"links\": {},\n  \"artefacts\": [],\n  \"frameworkRoutes\": {\n    \"status\": \"on\",\n    \"allowed\": [],\n    \"scope\": \"contract\"\n  },\n  \"hookCheck\": \"error\",\n  \"mount\": \"\",\n  \"importSpecifiers\": \"extensionless\",\n  \"installedRuntimes\": {}\n}\n"
+    }
+  },
   "removed": []
 }

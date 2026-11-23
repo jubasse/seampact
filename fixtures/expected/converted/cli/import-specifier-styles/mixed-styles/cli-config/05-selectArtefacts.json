@@ -19,7 +19,9 @@
             1
           ],
           "irRevision": 6,
-          "kinds": [],
+          "kinds": [
+            "httpOperation"
+          ],
           "features": []
         },
         "role": "client",

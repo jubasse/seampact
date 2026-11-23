@@ -76,6 +76,9 @@
               "link": {
                 "client": "shared",
                 "types": "shared"
+              },
+              "options": {
+                "unsupportedKind": true
               }
             },
             "root": "<root>/__generated__/client"

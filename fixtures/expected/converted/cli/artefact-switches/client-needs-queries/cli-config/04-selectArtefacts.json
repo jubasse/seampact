@@ -1,0 +1,75 @@
+{
+  "function": "selectArtefacts",
+  "args": [
+    {
+      "id": "client",
+      "use": "probe-client",
+      "api": "tasks",
+      "link": {
+        "client": "shared",
+        "types": "shared"
+      },
+      "artefacts": {
+        "queries": false
+      }
+    },
+    {
+      "metadata": {
+        "packageName": "probe-client",
+        "packageVersion": "1.0.0",
+        "irSupport": {
+          "irVersions": [
+            1
+          ],
+          "irRevision": 6,
+          "kinds": [
+            "httpOperation"
+          ],
+          "features": []
+        },
+        "role": "client",
+        "artefacts": [
+          {
+            "id": "queries",
+            "defaultOn": true
+          },
+          {
+            "id": "mutations",
+            "defaultOn": true,
+            "needs": [
+              "queries"
+            ]
+          }
+        ],
+        "consumes": {
+          "client": {
+            "styles": [
+              "fetch"
+            ]
+          },
+          "types": {
+            "styles": [
+              "typescript"
+            ],
+            "optional": {
+              "ownLibrary": "probe-types"
+            }
+          }
+        },
+        "provides": {},
+        "importSpecifiers": "extensionless"
+      }
+    }
+  ],
+  "result": {
+    "status": "refused",
+    "problems": [
+      {
+        "code": "config.artefacts.needed",
+        "message": "The artefact 'mutations' of the target 'probe-client' needs 'queries', which the entry leaves off.",
+        "fix": "Switch 'queries' on, or switch 'mutations' off too.",
+        "where": "entry 'client'"
+      }
+    ]
+  }
+}

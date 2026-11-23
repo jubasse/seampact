@@ -8,6 +8,9 @@
       "link": {
         "client": "shared",
         "types": "shared"
+      },
+      "options": {
+        "unsupportedKind": true
       }
     },
     {
@@ -19,7 +22,9 @@
             1
           ],
           "irRevision": 6,
-          "kinds": [],
+          "kinds": [
+            "httpOperation"
+          ],
           "features": []
         },
         "role": "client",

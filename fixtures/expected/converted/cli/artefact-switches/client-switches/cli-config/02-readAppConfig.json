@@ -19,11 +19,67 @@
       "entries": [
         {
           "entry": {
+            "id": "shared",
+            "use": "probe-provider",
+            "api": "tasks",
+            "options": {
+              "echo": true,
+              "descriptors": {
+                "validators": {
+                  "kind": "validators",
+                  "style": "standard-schema",
+                  "schemas": {},
+                  "operations": {}
+                },
+                "types": {
+                  "kind": "types",
+                  "style": "typescript",
+                  "schemas": {},
+                  "operations": {}
+                },
+                "client": {
+                  "kind": "client",
+                  "style": "fetch",
+                  "errorStyle": "result",
+                  "exports": {
+                    "createClient": {
+                      "module": "client",
+                      "export": "createClient"
+                    },
+                    "Client": {
+                      "module": "client",
+                      "export": "Client"
+                    },
+                    "ContractError": {
+                      "module": "client",
+                      "export": "ContractError"
+                    },
+                    "CallOptions": {
+                      "module": "client",
+                      "export": "CallOptions"
+                    }
+                  },
+                  "operations": {}
+                }
+              }
+            }
+          },
+          "root": "<root>/__generated__/shared"
+        },
+        {
+          "entry": {
             "id": "client",
             "use": "probe-client",
             "api": "tasks",
+            "link": {
+              "client": "shared",
+              "types": "shared"
+            },
             "artefacts": {
               "mutations": false
+            },
+            "options": {
+              "echo": true
             }
           },
           "root": "<root>/__generated__/client"

@@ -1,7 +1,13 @@
 {
-  "function": "planAppDocuments",
+  "function": "readAppConfig",
   "args": [
-    {
+    "<root>/seampact.config.yaml",
+    "seampact.config.yaml",
+    null
+  ],
+  "result": {
+    "status": "read",
+    "config": {
       "file": "<root>/seampact.config.yaml",
       "outDir": "<root>/__generated__",
       "sources": {
@@ -15,31 +21,11 @@
           "entry": {
             "id": "client",
             "use": "probe-client",
-            "api": "tasks",
-            "artefacts": {
-              "mutations": false
-            }
+            "api": "tasks"
           },
           "root": "<root>/__generated__/client"
         }
       ]
-    },
-    {
-      "client": "client"
-    },
-    [
-      {
-        "source": "a",
-        "api": "tasks",
-        "documents": [
-          "full",
-          "public"
-        ]
-      }
-    ]
-  ],
-  "result": {
-    "status": "planned",
-    "documents": []
+    }
   }
 }
