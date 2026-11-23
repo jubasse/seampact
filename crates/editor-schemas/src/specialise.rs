@@ -1,8 +1,10 @@
 //! The published authoring schemas with the workspace's names listed at each name position.
 
+use camino::{Utf8Path, Utf8PathBuf};
 use seampact_authoring::AUTHORING_SCHEMA_FILES;
 use seampact_diagnostics::InternalError;
 use seampact_json::{JsonObject, JsonValue, indented_json};
+use seampact_paths::RelativeOutputPath;
 
 use crate::EditorSchemasError;
 use crate::editor_names::EditorNames;
@@ -21,6 +23,24 @@ pub struct EditorSchemaFile {
     pub file_name: String,
     /// The file text, two-space indented with a final newline.
     pub text: String,
+}
+
+impl EditorSchemaFile {
+    /// The file's path below `directory`, once its name is checked as a relative path.
+    ///
+    /// # Errors
+    ///
+    /// [`EditorSchemasError::Io`] naming `directory` when the file name leaves it.
+    pub fn path_in(&self, directory: &Utf8Path) -> Result<Utf8PathBuf, EditorSchemasError> {
+        let relative = RelativeOutputPath::try_new(self.file_name.as_str()).map_err(|error| {
+            EditorSchemasError::Io {
+                path: directory.to_string(),
+                message: error.to_string(),
+            }
+        })?;
+
+        Ok(directory.join(relative.as_path()))
+    }
 }
 
 /// The published authoring schemas, each name position listing the names `names` holds, one file

@@ -7,6 +7,7 @@ use std::io::Read as _;
 use camino::{Utf8Path, Utf8PathBuf};
 use flate2::read::GzDecoder;
 use seampact_diagnostics::quote_text;
+use seampact_paths::{UnsafePathReason, untrusted_entry_problem};
 use tempfile::{Builder, TempDir};
 
 use crate::contents::BundleEntry;
@@ -492,41 +493,20 @@ fn directory_path_problem(path: &str) -> Option<String> {
     entry_path_problem(path).or_else(|| bundle_path_problem(path))
 }
 
-fn has_drive_prefix(path: &str) -> bool {
-    let mut characters = path.chars();
-
-    characters
-        .next()
-        .is_some_and(|letter| letter.is_ascii_alphabetic())
-        && characters.next() == Some(':')
-}
-
 /// The unsafe paths, named before the portable rule so the refusal says what makes them unsafe.
 fn entry_path_problem(path: &str) -> Option<String> {
-    if path.is_empty() {
-        return Some("has an empty path".to_owned());
-    }
+    let reason = untrusted_entry_problem(path)?;
 
-    if path.contains('\0') {
-        return Some("holds a NUL character".to_owned());
-    }
-
-    if path.contains('\\') {
-        return Some("holds a backslash".to_owned());
-    }
-
-    if path.starts_with('/') || has_drive_prefix(path) {
-        return Some("is an absolute path".to_owned());
-    }
-
-    if path
-        .split('/')
-        .any(|segment| matches!(segment, "" | "." | ".."))
-    {
-        return Some("has an empty, '.' or '..' segment".to_owned());
-    }
-
-    None
+    Some(
+        match reason {
+            UnsafePathReason::Empty => "has an empty path",
+            UnsafePathReason::Nul => "holds a NUL character",
+            UnsafePathReason::Backslash => "holds a backslash",
+            UnsafePathReason::AbsolutePrefix => "is an absolute path",
+            UnsafePathReason::EmptyOrDotSegment => "has an empty, '.' or '..' segment",
+        }
+        .to_owned(),
+    )
 }
 
 fn header_problem(header: &[u8]) -> Option<String> {

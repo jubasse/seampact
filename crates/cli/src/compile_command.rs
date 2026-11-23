@@ -21,6 +21,7 @@ use seampact_generate::source_entry_file;
 use seampact_generate::source_reader;
 use seampact_generate::{CompiledApi, compile_sources};
 use seampact_generate::{UsedSources, add_qualify_fix, entry_api_refs, used_sources};
+use seampact_paths::RelativeOutputPath;
 
 use crate::config_location::ConfigLocation;
 use crate::{CliError, EXIT_SUCCESS, refuse};
@@ -154,7 +155,9 @@ fn write_ir_files(
     fs::create_dir_all(directory).map_err(|error| CliError::io(directory, &error))?;
 
     for each in apis {
-        let file = directory.join(format!("{}{IR_FILE_SUFFIX}", each.api));
+        let name = RelativeOutputPath::try_new(format!("{}{IR_FILE_SUFFIX}", each.api))
+            .map_err(|error| CliError::io(directory, &std::io::Error::other(error)))?;
+        let file = directory.join(name.as_path());
 
         fs::write(&file, finalize_serialize_ir(&each.ir)?)
             .map_err(|error| CliError::io(&file, &error))?;

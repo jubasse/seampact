@@ -6,6 +6,7 @@ use std::io::Write as _;
 use camino::{Utf8Path, Utf8PathBuf};
 use seampact_compiler::PipelineResult;
 use seampact_json::{JsonObject, JsonValue, indented_json};
+use seampact_paths::{ParseOutputPathError, RelativeOutputPath};
 
 use crate::contents::bundle_entries;
 use crate::tarball_write::bundle_tarball;
@@ -56,6 +57,13 @@ pub enum BundleWriteResult {
     },
 }
 
+fn unsafe_entry_error(target: &Utf8Path, error: &ParseOutputPathError) -> BundleError {
+    BundleError::Io {
+        path: target.to_string(),
+        message: error.to_string(),
+    }
+}
+
 fn io_error(path: &Utf8Path, error: &std::io::Error) -> BundleError {
     BundleError::Io {
         path: path.to_string(),
@@ -100,7 +108,10 @@ pub fn write_bundle(options: &BundleWriteOptions<'_>) -> Result<BundleWriteResul
         }
         BundleOutput::Directory(target) | BundleOutput::NpmPackage(target) => {
             for entry in bundle_entries(&contents) {
-                write_new_file(&target.join(&entry.path), &entry.bytes)?;
+                let relative = RelativeOutputPath::try_new(entry.path.as_str())
+                    .map_err(|error| unsafe_entry_error(target, &error))?;
+
+                write_new_file(&target.join(relative.as_path()), &entry.bytes)?;
             }
 
             if matches!(options.output, BundleOutput::NpmPackage(_)) {
