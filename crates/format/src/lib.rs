@@ -110,8 +110,7 @@ mod tests {
 
     #[test]
     fn reads_jsx_in_typescript_after_plain_typescript() {
-        let formatted =
-            format_source("export const a = <div/>\n", SourceKind::TypeScript).unwrap();
+        let formatted = format_source("export const a = <div/>\n", SourceKind::TypeScript).unwrap();
 
         assert_eq!(formatted, "export const a = <div />;\n");
     }

@@ -1,0 +1,19 @@
+[package]
+name = "seampact-generators"
+description = "The registry of every first-party generator of the binary."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+seampact-target.workspace = true
+
+[dev-dependencies]
+seampact-gen-probe.workspace = true
+seampact-ir.workspace = true
+seampact-json.workspace = true
+
+[lints]
+workspace = true

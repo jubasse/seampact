@@ -101,9 +101,7 @@ pub fn refuse_undeclared_artefacts(
         .filter(|id| !declared_ids.contains(id))
         .map(|id| Refusal {
             code: "artefact.unknown".to_owned(),
-            message: format!(
-                "The artefact '{id}' is not one this target declares ({listed})."
-            ),
+            message: format!("The artefact '{id}' is not one this target declares ({listed})."),
             fix: "Remove it from the target's `artefacts` entry, or use one of the declared ids."
                 .to_owned(),
             operation: None,

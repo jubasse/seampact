@@ -108,7 +108,10 @@ impl std::fmt::Debug for Registry {
             .map(|generator| generator.metadata().id.as_str())
             .collect();
 
-        formatter.debug_struct("Registry").field("generators", &ids).finish()
+        formatter
+            .debug_struct("Registry")
+            .field("generators", &ids)
+            .finish()
     }
 }
 
@@ -159,7 +162,10 @@ fn lookup_problem(use_name: &str) -> TargetLookupProblem {
         };
     }
 
-    if let Some(target) = FIRST_PARTY_TARGETS.iter().find(|target| target.id.as_str() == use_name) {
+    if let Some(target) = FIRST_PARTY_TARGETS
+        .iter()
+        .find(|target| target.id.as_str() == use_name)
+    {
         return TargetLookupProblem {
             code: TargetLookupCode::NotBuilt,
             message: format!(
@@ -176,7 +182,10 @@ fn lookup_problem(use_name: &str) -> TargetLookupProblem {
     {
         return TargetLookupProblem {
             code: TargetLookupCode::Renamed,
-            message: format!("'{use_name}' is the 1.x name of the target '{}'.", target.id),
+            message: format!(
+                "'{use_name}' is the 1.x name of the target '{}'.",
+                target.id
+            ),
             fix: format!("Write `use: {}`.", target.id),
         };
     }
@@ -218,7 +227,10 @@ mod tests {
             let derived = target.legacy_names.iter().any(|name| {
                 let unscoped = name.rsplit(['/', ':']).next().unwrap_or(name);
 
-                unscoped.trim_start_matches("codegen-").trim_start_matches("seampact-") == id
+                unscoped
+                    .trim_start_matches("codegen-")
+                    .trim_start_matches("seampact-")
+                    == id
             });
 
             assert!(derived, "short id {id} of {:?}", target.legacy_names);

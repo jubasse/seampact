@@ -99,7 +99,10 @@ pub struct ClientDescriptor {
 /// The public exports of a generated client.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-#[expect(non_snake_case, reason = "the members are the exported names the descriptor writes")]
+#[expect(
+    non_snake_case,
+    reason = "the members are the exported names the descriptor writes"
+)]
 pub struct ClientExports {
     /// The client factory.
     pub createClient: ExportRef,

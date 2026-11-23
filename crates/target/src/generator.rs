@@ -251,7 +251,11 @@ pub trait TargetDefinition: Sync {
     /// # Errors
     ///
     /// The refusals of forms the provider cannot describe.
-    fn describe(&self, _ir: &ContractIr, _options: &Self::Options) -> Result<DescriptorSet, Refused> {
+    fn describe(
+        &self,
+        _ir: &ContractIr,
+        _options: &Self::Options,
+    ) -> Result<DescriptorSet, Refused> {
         Ok(DescriptorSet::default())
     }
 }
@@ -307,7 +311,9 @@ impl<Definition: TargetDefinition> Generator for Definition {
             needs: request.needs,
             links: request.links,
             artefacts: request.artefacts,
-            framework_routes: request.framework_routes.unwrap_or(&DEFAULT_FRAMEWORK_ROUTES),
+            framework_routes: request
+                .framework_routes
+                .unwrap_or(&DEFAULT_FRAMEWORK_ROUTES),
             hook_check: request.hook_check.unwrap_or_default(),
             mount: request.mount.unwrap_or(NO_MOUNT),
             import_specifiers: request

@@ -30,7 +30,9 @@ pub enum CompatibilityError {
         message: String,
     },
     /// No record of the asked role names the package.
-    #[error("compatibility: '{package}' is not a {role} target of the matrix; recorded: {recorded}.")]
+    #[error(
+        "compatibility: '{package}' is not a {role} target of the matrix; recorded: {recorded}."
+    )]
     NotRecorded {
         /// `server` or `client`.
         role: &'static str,
@@ -267,12 +269,13 @@ impl CompatibilityMatrix {
                 file: "matrix.json",
                 message: error.to_string(),
             })?;
-        let python: PythonTargetsFile = serde_json::from_str(PYTHON_TARGETS_JSON).map_err(
-            |error| CompatibilityError::Malformed {
-                file: "python-targets.json",
-                message: error.to_string(),
-            },
-        )?;
+        let python: PythonTargetsFile =
+            serde_json::from_str(PYTHON_TARGETS_JSON).map_err(|error| {
+                CompatibilityError::Malformed {
+                    file: "python-targets.json",
+                    message: error.to_string(),
+                }
+            })?;
 
         matrix.python_targets = python.python_targets;
 
@@ -377,7 +380,12 @@ impl CompatibilityMatrix {
 /// The tested majors of a target's framework.
 #[must_use]
 pub fn supported_majors_of(target: &TargetCompatibility) -> Vec<u32> {
-    target.framework.tested.iter().map(|tested| tested.major).collect()
+    target
+        .framework
+        .tested
+        .iter()
+        .map(|tested| tested.major)
+        .collect()
 }
 
 fn target_in<'matrix>(
@@ -389,7 +397,10 @@ fn target_in<'matrix>(
         .iter()
         .find(|target| target.package == package)
         .ok_or_else(|| {
-            let recorded: Vec<&str> = targets.iter().map(|target| target.package.as_str()).collect();
+            let recorded: Vec<&str> = targets
+                .iter()
+                .map(|target| target.package.as_str())
+                .collect();
 
             CompatibilityError::NotRecorded {
                 role,
@@ -401,7 +412,11 @@ fn target_in<'matrix>(
 
 fn check_styles(target: &TargetCompatibility) -> Result<(), CompatibilityError> {
     let checks = [
-        (&target.validator_styles, LinkKind::Validators, "validatorStyles"),
+        (
+            &target.validator_styles,
+            LinkKind::Validators,
+            "validatorStyles",
+        ),
         (&target.client_styles, LinkKind::Client, "clientStyles"),
     ];
 
@@ -426,7 +441,12 @@ fn check_php_floor(target: &NativeTargetCompatibility) -> Result<(), Compatibili
     let Some(floor) = &target.framework.floor else {
         return Ok(());
     };
-    let tested: Vec<u32> = target.framework.tested.iter().map(|tested| tested.major).collect();
+    let tested: Vec<u32> = target
+        .framework
+        .tested
+        .iter()
+        .map(|tested| tested.major)
+        .collect();
     let floor_major = floor
         .split_once('.')
         .filter(|(major, minor)| is_digits(major) && is_digits(minor))
@@ -459,7 +479,11 @@ mod tests {
     fn the_compiled_in_data_parses() {
         let matrix = CompatibilityMatrix::parse().unwrap();
 
-        assert_eq!(matrix.python_targets.len(), 3, "the Python targets are read beside the matrix");
+        assert_eq!(
+            matrix.python_targets.len(),
+            3,
+            "the Python targets are read beside the matrix"
+        );
         assert_eq!(
             matrix.first_party_packages_of_style(LinkStyle::Fetch),
             ["@seampact/codegen-fetch", "@seampact/codegen-axios"]
@@ -471,6 +495,9 @@ mod tests {
         let matrix = CompatibilityMatrix::parse().unwrap();
         let refused = matrix.server_target("@seampact/codegen-none").unwrap_err();
 
-        assert!(refused.to_string().contains("@seampact/codegen-hono"), "{refused}");
+        assert!(
+            refused.to_string().contains("@seampact/codegen-hono"),
+            "{refused}"
+        );
     }
 }

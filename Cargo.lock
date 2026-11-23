@@ -1956,6 +1956,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "seampact-gen-probe"
+version = "2.0.0"
+dependencies = [
+ "seampact-ir",
+ "seampact-json",
+ "seampact-target",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "seampact-generators"
+version = "2.0.0"
+dependencies = [
+ "seampact-gen-probe",
+ "seampact-ir",
+ "seampact-json",
+ "seampact-target",
+]
+
+[[package]]
 name = "seampact-ir"
 version = "2.0.0"
 dependencies = [
@@ -2251,8 +2272,12 @@ dependencies = [
 name = "seampact-target"
 version = "2.0.0"
 dependencies = [
+ "indexmap",
  "seampact-ir",
  "seampact-json",
+ "serde",
+ "serde_json",
+ "thiserror",
 ]
 
 [[package]]

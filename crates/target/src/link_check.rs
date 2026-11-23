@@ -31,7 +31,9 @@ fn refuse_unmet_link(kind: LinkKind, need: &ResolvedLinkNeed, links: &LinkSet) -
 
         return Some(link_refusal(
             "link.missing",
-            format!("This target consumes a '{kind_name}' link in style {accepted}, and none is given."),
+            format!(
+                "This target consumes a '{kind_name}' link in style {accepted}, and none is given."
+            ),
             format!("Link {providers} in the target's `link` entry."),
         ));
     };
@@ -99,7 +101,8 @@ mod tests {
 
     #[test]
     fn lists_providers_as_prose() {
-        let names = |list: &[&str]| -> Vec<String> { list.iter().map(|name| (*name).to_owned()).collect() };
+        let names =
+            |list: &[&str]| -> Vec<String> { list.iter().map(|name| (*name).to_owned()).collect() };
 
         assert_eq!(provider_list(&names(&[])), "");
         assert_eq!(provider_list(&names(&["a"])), "`a`");

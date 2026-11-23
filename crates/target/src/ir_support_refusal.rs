@@ -1,6 +1,8 @@
 //! The IR support check of a target, worded with the target to update.
 
-use seampact_ir::{ContractIr, IrSupportCode, IrSupportMismatch, IrSupportValue, check_contract_ir_support};
+use seampact_ir::{
+    ContractIr, IrSupportCode, IrSupportMismatch, IrSupportValue, check_contract_ir_support,
+};
 
 use crate::{Refusal, TargetMetadata};
 

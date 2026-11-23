@@ -50,11 +50,9 @@ pub fn import_specifier(
             export_ref.module,
             ImportSpecifierStyle::Js.module_suffix()
         ),
-        LinkLocation::Relative { path } => relative_module_specifier(
-            from_file,
-            &posix_join(&[path, &export_ref.module]),
-            style,
-        ),
+        LinkLocation::Relative { path } => {
+            relative_module_specifier(from_file, &posix_join(&[path, &export_ref.module]), style)
+        }
     }
 }
 
@@ -141,10 +139,30 @@ mod tests {
     #[test]
     fn a_relative_specifier_climbs_from_the_importing_file() {
         let cases = [
-            ("routes/users.ts", "validators/users", ImportSpecifierStyle::Js, "../validators/users.js"),
-            ("index.ts", "validators/users", ImportSpecifierStyle::Js, "./validators/users.js"),
-            ("a/b/c.ts", "a/b/d", ImportSpecifierStyle::Extensionless, "./d"),
-            ("a/b/c.ts", "x", ImportSpecifierStyle::Extensionless, "../../x"),
+            (
+                "routes/users.ts",
+                "validators/users",
+                ImportSpecifierStyle::Js,
+                "../validators/users.js",
+            ),
+            (
+                "index.ts",
+                "validators/users",
+                ImportSpecifierStyle::Js,
+                "./validators/users.js",
+            ),
+            (
+                "a/b/c.ts",
+                "a/b/d",
+                ImportSpecifierStyle::Extensionless,
+                "./d",
+            ),
+            (
+                "a/b/c.ts",
+                "x",
+                ImportSpecifierStyle::Extensionless,
+                "../../x",
+            ),
         ];
 
         for (from_file, to_module, style, expected) in cases {
@@ -181,11 +199,21 @@ mod tests {
         };
 
         assert_eq!(
-            import_specifier(&relative, &export_ref, "client.ts", ImportSpecifierStyle::Extensionless),
+            import_specifier(
+                &relative,
+                &export_ref,
+                "client.ts",
+                ImportSpecifierStyle::Extensionless
+            ),
             "../types/schemas/user"
         );
         assert_eq!(
-            import_specifier(&module, &export_ref, "client.ts", ImportSpecifierStyle::Extensionless),
+            import_specifier(
+                &module,
+                &export_ref,
+                "client.ts",
+                ImportSpecifierStyle::Extensionless
+            ),
             "@app/types/schemas/user.js"
         );
     }

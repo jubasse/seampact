@@ -34,7 +34,11 @@ pub fn warn_left_to_handler(
 ) -> GenerateWarning {
     let where_text = match &location.operation {
         None => format!("at {}", location.member),
-        Some(operation) => format!("in operation '{}' at {}", operation.as_str(), location.member),
+        Some(operation) => format!(
+            "in operation '{}' at {}",
+            operation.as_str(),
+            location.member
+        ),
     };
 
     GenerateWarning {

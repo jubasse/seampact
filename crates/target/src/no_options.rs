@@ -36,13 +36,18 @@ pub fn parse_no_options(raw: Option<&JsonValue>) -> Result<NoOptions, Vec<Refusa
         return Ok(NoOptions);
     }
 
-    Err(object.keys().map(|key| refuse_unknown_option(key)).collect())
+    Err(object
+        .keys()
+        .map(|key| refuse_unknown_option(key))
+        .collect())
 }
 
 fn refuse_unknown_option(key: &str) -> Refusal {
     Refusal {
         code: "options.unknown".to_owned(),
-        message: format!("The option '{key}' is not one this target knows; it takes no option yet."),
+        message: format!(
+            "The option '{key}' is not one this target knows; it takes no option yet."
+        ),
         fix: format!("Remove '{key}' from the target's `options`."),
         operation: None,
         member: Some(format!("/{}", escape_pointer(key))),
