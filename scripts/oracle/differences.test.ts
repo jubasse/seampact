@@ -51,6 +51,20 @@ describe("differences.yaml", () => {
     ).toBeGreaterThan(0);
   });
 
+  test("a generated entry needs a literal path, from and to", () => {
+    const generated = { fixtures: ["reference"], output: "generated", path: "client/index.ts" };
+    const hunk = { from: "a, >", to: "a>" };
+    const problemsOf = (overrides: object) =>
+      differencesProblems(document(entry({ applies: generated, change: "value", ...overrides })));
+
+    expect(problemsOf(hunk)).toEqual([]);
+    expect(problemsOf({ ...hunk, to: undefined })).not.toEqual([]);
+    expect(problemsOf({ ...hunk, from: undefined })).not.toEqual([]);
+
+    for (const path of ["client/*.ts", "client/**", "client/[a].ts", "client/{a,b}.ts", "a?.ts"])
+      expect(problemsOf({ ...hunk, applies: { ...generated, path } })).not.toEqual([]);
+  });
+
   test("it refuses a bad id, an unknown member, an unknown output and a missing pointer", () => {
     expect(differencesProblems(document(entry({ id: "Big_Integers" }))).length).toBeGreaterThan(0);
     expect(differencesProblems(document(entry({ because: "x" }))).length).toBeGreaterThan(0);

@@ -29,6 +29,17 @@ export const RECORDED_FUNCTIONS: readonly RecordedFunction[] = [
   },
   { unit: "cli-config", file: "core/cli/src/config/read-run-config.ts", name: "readRunConfig" },
   {
+    unit: "cli-config",
+    file: "core/cli/src/config/artefact-switches.ts",
+    name: "selectArtefacts",
+  },
+  { unit: "cli-config", file: "core/cli/src/config/document-plan.ts", name: "planAppDocuments" },
+  {
+    unit: "cli-config",
+    file: "core/cli/src/config/document-plan.ts",
+    name: "planMergedDocuments",
+  },
+  {
     unit: "editor-schemas",
     file: "core/cli/src/editor-schemas/editor-names.ts",
     name: "editorDeclarations",
@@ -79,11 +90,13 @@ let session: Session | undefined;
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
 
-/** A Map is written as an object in insertion order; any other value as `JSON.stringify` writes it. */
+/** A Map is written as an object and a Set as an array, in insertion order; any other value as `JSON.stringify` writes it. */
 function jsonCopy(value: unknown): unknown {
-  const text = JSON.stringify(value, (_key, member: unknown) =>
-    member instanceof Map ? Object.fromEntries(member) : member,
-  );
+  const text = JSON.stringify(value, (_key, member: unknown) => {
+    if (member instanceof Map) return Object.fromEntries(member);
+
+    return member instanceof Set ? [...member] : member;
+  });
 
   return text === undefined ? undefined : JSON.parse(text);
 }

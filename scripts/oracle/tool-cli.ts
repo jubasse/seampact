@@ -9,24 +9,37 @@ import {
   snapshotTree,
   writtenBetween,
 } from "./call-recording.ts";
+import {
+  type CliStep,
+  type CommandStep,
+  applyTreeStep,
+  cliStepsProblems,
+  isCommandStep,
+  stepCwd,
+} from "./cli-steps.ts";
 import { type ExpectedFiles, jsonText } from "./expected-text.ts";
 import { buildGitSource, GIT_SOURCE_DIRECTORY, GIT_SOURCE_REPOSITORY } from "./git-source.ts";
+import { linkProbeGenerators } from "./probe-generators.ts";
 import type { OracleTools } from "./tool-modules.ts";
 
 // A CLI case: the command runs on a fresh copy of `tree/` (and the bare repository of `git-source/`), and the case
 // keeps its transcript (`cli/transcript.json`) and the calls it made to the config readers, the editor schemas and
-// the bundle fetch (`<unit>/<NN>-<function>.json`).
+// the bundle fetch (`<unit>/<NN>-<function>.json`). A case of the `steps` form runs several commands and tree edits
+// on one root and keeps one transcript per command (`cli/<NN>-transcript.json`).
 
 // `init` writes the config and the contract its own run then reads: replaying a read on the tree before the command
 // cannot match.
 const CONFIG_WRITING_COMMAND = "init";
 const CONFIG_AND_CONTRACT_UNITS: readonly RecordedUnit[] = ["cli-config", "bundle-fetch"];
 
-export interface CliSpec {
-  argv: string[];
-  cwd?: string;
-  env?: { SEAMPACT_CACHE_DIR?: string; SEAMPACT_ALLOW_LOCAL?: string };
+interface CliEnvironment {
+  SEAMPACT_CACHE_DIR?: string;
+  SEAMPACT_ALLOW_LOCAL?: string;
 }
+
+export type CliSpec =
+  | { argv: string[]; cwd?: string; env?: CliEnvironment }
+  | { steps: CliStep[]; env?: CliEnvironment };
 
 export const ROOT_TOKEN = "<root>";
 export const FIXED_TODAY = "2026-01-01";
@@ -37,13 +50,20 @@ const ENVIRONMENT_NAMES = ["SEAMPACT_CACHE_DIR", "SEAMPACT_ALLOW_LOCAL"] as cons
 export function cliSpecProblems(spec: unknown): string[] {
   if (typeof spec !== "object" || spec === null) return ["cli.json is an object"];
 
+  const { argv, cwd, env, steps, ...rest } = spec as Record<string, unknown>;
   const problems: string[] = [];
-  const { argv, cwd, env, ...rest } = spec as Record<string, unknown>;
 
-  if (!Array.isArray(argv) || !argv.every((item) => typeof item === "string"))
-    problems.push("argv is an array of strings");
+  if (steps !== undefined) {
+    if (argv !== undefined || cwd !== undefined)
+      problems.push("steps goes without argv and cwd (each step holds its own)");
 
-  if (cwd !== undefined && typeof cwd !== "string") problems.push("cwd is a string");
+    problems.push(...cliStepsProblems(steps));
+  } else {
+    if (!Array.isArray(argv) || !argv.every((item) => typeof item === "string"))
+      problems.push("argv is an array of strings");
+
+    if (cwd !== undefined && typeof cwd !== "string") problems.push("cwd is a string");
+  }
 
   for (const name of Object.keys(rest)) problems.push(`'${name}' is not a cli.json member`);
 
@@ -116,15 +136,21 @@ function withCanonicalIrs(tools: OracleTools, result: unknown): unknown {
   return { ...result, compiled: { ...result.compiled, apis } };
 }
 
+interface StepCall {
+  call: RecordedCall;
+  /** The position among the `argv` steps; set for a case of the `steps` form. */
+  step?: number;
+}
+
 function recordedFiles(
   tools: OracleTools,
-  calls: readonly RecordedCall[],
+  calls: readonly StepCall[],
   root: string,
 ): ExpectedFiles {
   const files: ExpectedFiles = new Map();
   const counts = new Map<RecordedUnit, number>();
 
-  for (const call of calls) {
+  for (const { call, step } of calls) {
     if (call.threw !== undefined)
       throw new Error(`cli case: the recorded call ${call.function} threw: ${call.threw}`);
 
@@ -135,6 +161,7 @@ function recordedFiles(
       args: call.args,
       result: withCanonicalIrs(tools, call.result),
       ...(Object.keys(written).length === 0 ? {} : { written }),
+      ...(step === undefined ? {} : { step }),
     };
 
     counts.set(call.unit, position);
@@ -167,22 +194,32 @@ export async function cliFiles(
   }
 }
 
-async function runCase(tools: OracleTools, root: string, spec: CliSpec): Promise<ExpectedFiles> {
-  const skip = [GIT_SOURCE_REPOSITORY];
+interface CommandRun {
+  transcript: object;
+  calls: RecordedCall[];
+}
+
+async function runCommand(
+  tools: OracleTools,
+  root: string,
+  step: CommandStep,
+  env: CliEnvironment | undefined,
+  skip: readonly string[],
+): Promise<CommandRun> {
   const stdout: string[] = [];
   const stderr: string[] = [];
   const environment = {
-    SEAMPACT_CACHE_DIR: resolve(root, spec.env?.SEAMPACT_CACHE_DIR ?? DEFAULT_CACHE_DIRECTORY),
-    SEAMPACT_ALLOW_LOCAL: spec.env?.SEAMPACT_ALLOW_LOCAL,
+    SEAMPACT_CACHE_DIR: resolve(root, env?.SEAMPACT_CACHE_DIR ?? DEFAULT_CACHE_DIRECTORY),
+    SEAMPACT_ALLOW_LOCAL: env?.SEAMPACT_ALLOW_LOCAL,
   };
   const before = snapshotTree(root, skip);
   const io = {
-    cwd: resolve(root, spec.cwd ?? "."),
+    cwd: stepCwd(root, step),
     stdout: (text: string) => stdout.push(text),
     stderr: (text: string) => stderr.push(text),
     today: () => FIXED_TODAY,
   };
-  const argv = spec.argv.map((argument) => argument.replaceAll(ROOT_TOKEN, root));
+  const argv = step.argv.map((argument) => argument.replaceAll(ROOT_TOKEN, root));
   const { value: exit, calls } = await withEnvironment(environment, () =>
     recordCalls(root, () => tools.runCli(argv, io)),
   );
@@ -195,13 +232,44 @@ async function runCase(tools: OracleTools, root: string, spec: CliSpec): Promise
     removed: [...before.keys()].filter((path) => !after.has(path)).sort(),
   };
 
-  const replayable = calls.filter(
-    (call) =>
-      !(CONFIG_AND_CONTRACT_UNITS.includes(call.unit) && spec.argv[0] === CONFIG_WRITING_COMMAND),
-  );
+  return {
+    transcript,
+    calls: calls.filter(
+      (call) =>
+        !(CONFIG_AND_CONTRACT_UNITS.includes(call.unit) && step.argv[0] === CONFIG_WRITING_COMMAND),
+    ),
+  };
+}
 
-  return new Map([
-    ["cli/transcript.json", jsonText(transcript)],
-    ...recordedFiles(tools, replayable, root),
-  ]);
+const stepsOf = (spec: CliSpec): CliStep[] =>
+  "steps" in spec
+    ? spec.steps
+    : [{ argv: spec.argv, ...(spec.cwd === undefined ? {} : { cwd: spec.cwd }) }];
+
+async function runCase(tools: OracleTools, root: string, spec: CliSpec): Promise<ExpectedFiles> {
+  const skip = [GIT_SOURCE_REPOSITORY, ...linkProbeGenerators(tools, root)];
+  const isStepsCase = "steps" in spec;
+  const files: ExpectedFiles = new Map();
+  const calls: StepCall[] = [];
+  let commands = 0;
+
+  for (const step of stepsOf(spec)) {
+    if (!isCommandStep(step)) {
+      applyTreeStep(root, step);
+
+      continue;
+    }
+
+    commands += 1;
+
+    const run = await runCommand(tools, root, step, spec.env, skip);
+    const name = isStepsCase ? `${String(commands).padStart(2, "0")}-transcript` : "transcript";
+
+    files.set(`cli/${name}.json`, jsonText(run.transcript));
+    calls.push(...run.calls.map((call) => ({ call, ...(isStepsCase ? { step: commands } : {}) })));
+  }
+
+  for (const [path, text] of recordedFiles(tools, calls, root)) files.set(path, text);
+
+  return files;
 }

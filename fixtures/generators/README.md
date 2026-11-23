@@ -1,0 +1,1 @@
+The TypeScript twins of the three probe generators of the Rust port (`probe-server`, `probe-provider`, `probe-client`), linked into every CLI oracle case; see `scripts/oracle/README.md`, "Generate and check cases".
