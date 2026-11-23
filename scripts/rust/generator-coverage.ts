@@ -84,7 +84,7 @@ export const GENERATOR_CRATES: readonly ToolCrateSpec[] = [
     ],
   },
   {
-    crate: "plan",
+    crate: "generate",
     pairs: "cli",
     sources: [
       `${COMMANDS}drift-level.ts`,
@@ -94,7 +94,6 @@ export const GENERATOR_CRATES: readonly ToolCrateSpec[] = [
       `${COMMANDS}merged-documents.ts`,
       `${COMMANDS}write-plan.ts`,
       `${COMMANDS}write-drift.ts`,
-      `${COMMANDS}native-entries.ts`,
       `${COMMANDS}filter-operations.ts`,
       `${COMMANDS}entry-links.ts`,
       `${COMMANDS}link-set.ts`,
@@ -109,13 +108,9 @@ export const GENERATOR_CRATES: readonly ToolCrateSpec[] = [
   {
     crate: "cli",
     pairs: "cli",
+    // `runGenerate`, `runCheck` and `pluginRunOf` are ported by the seam (rows of the layer 3.2 `cli` table);
+    // `native-entries.ts` and `nativeEntryPolicy` are not ported (the design note, section 1).
     sources: [`${COMMANDS}generate-command.ts`, `${COMMANDS}check-command.ts`],
-    movedIn: [
-      `${CLI}run-cli.ts#runGenerate`,
-      `${CLI}run-cli.ts#runCheck`,
-      `${CLI}run-cli.ts#pluginRunOf`,
-      `${CLI}run-cli.ts#nativeEntryPolicy`,
-    ],
   },
 ];
 

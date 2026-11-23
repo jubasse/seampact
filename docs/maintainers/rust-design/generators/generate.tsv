@@ -35,9 +35,6 @@ brief	function	file	lines	size	pairs
 1	plannedDrift	cli/src/commands/write-drift.ts	108-125	18	0/0
 1	fileDrift	cli/src/commands/write-drift.ts	127-135	9	0/0
 1	readCommitted	cli/src/commands/write-drift.ts	137-145	9	0/0
-1	npmEntryProblems	cli/src/commands/native-entries.ts	20-26	7	0/0
-1	splitNativeEntries	cli/src/commands/native-entries.ts	29-42	14	0/0
-1	printLeftEntries	cli/src/commands/native-entries.ts	44-50	7	0/0
 1	filterOperations	cli/src/commands/filter-operations.ts	20-53	34	0/0
 1	isInDocument	cli/src/commands/filter-operations.ts	55-69	15	0/0
 1	matches	cli/src/commands/filter-operations.ts	71-73	3	0/0
@@ -47,8 +44,8 @@ brief	function	file	lines	size	pairs
 1	unknownLinkEntryProblems	cli/src/commands/entry-links.ts	36-49	14	0/0
 1	orderEntries	cli/src/commands/entry-links.ts	57-102	46	0/0
 1	unprovidedKindProblems	cli/src/commands/entry-links.ts	105-125	21	0/0
-2	unconsumedKindProblems	cli/src/commands/entry-links.ts	128-145	18	0/0
-2	pairingProblems	cli/src/commands/entry-links.ts	149-161	13	0/0
+1	unconsumedKindProblems	cli/src/commands/entry-links.ts	128-145	18	0/0
+1	pairingProblems	cli/src/commands/entry-links.ts	149-161	13	0/0
 2	apiPairProblems	cli/src/commands/entry-links.ts	163-197	35	0/0
 2	pairedApi	cli/src/commands/entry-links.ts	199-203	5	0/0
 2	addLinkByKind.validators	cli/src/commands/link-set.ts	15-21	7	0/0
