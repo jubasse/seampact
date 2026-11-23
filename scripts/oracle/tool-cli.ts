@@ -28,9 +28,13 @@ import type { OracleTools } from "./tool-modules.ts";
 // on one root and keeps one transcript per command (`cli/<NN>-transcript.json`).
 
 // `init` writes the config and the contract its own run then reads: replaying a read on the tree before the command
-// cannot match.
-const CONFIG_WRITING_COMMAND = "init";
-const CONFIG_AND_CONTRACT_UNITS: readonly RecordedUnit[] = ["cli-config", "bundle-fetch"];
+// cannot match. `generate` and `check` read the contract through the same `compileWorkspaceWithImports` and
+// `writeEditorSchemas` calls `compile` makes, which the compile cases record: their calls are not recorded again.
+const UNITS_NOT_RECORDED = new Map<string, readonly RecordedUnit[]>([
+  ["init", ["cli-config", "bundle-fetch"]],
+  ["generate", ["bundle-fetch", "editor-schemas"]],
+  ["check", ["bundle-fetch", "editor-schemas"]],
+]);
 
 interface CliEnvironment {
   SEAMPACT_CACHE_DIR?: string;
@@ -235,8 +239,7 @@ async function runCommand(
   return {
     transcript,
     calls: calls.filter(
-      (call) =>
-        !(CONFIG_AND_CONTRACT_UNITS.includes(call.unit) && step.argv[0] === CONFIG_WRITING_COMMAND),
+      (call) => !(UNITS_NOT_RECORDED.get(step.argv[0] ?? "") ?? []).includes(call.unit),
     ),
   };
 }
