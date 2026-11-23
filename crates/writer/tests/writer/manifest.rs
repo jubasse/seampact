@@ -38,8 +38,7 @@ fn a_manifest_lists_its_members_in_javascript_key_order_and_its_files_in_utf16_o
     let text = serialize_manifest(
         "openapi",
         &[entry("\u{ff5e}"), entry("\u{10000}"), with_formatter],
-    )
-    .expect("a manifest");
+    );
 
     let expected = format!(
         "{{\n  \"version\": 2,\n  \"owner\": \"openapi\",\n  \"files\": [\n    {{\n      \"path\": \"a\",\n      \"source\": \"{HASH}\",\n      \"sha256\": \"{HASH}\",\n      \"formatter\": \"biome\"\n    }},\n    {{\n      \"path\": \"\u{10000}\",\n      \"source\": \"{HASH}\",\n      \"sha256\": \"{HASH}\"\n    }},\n    {{\n      \"path\": \"\u{ff5e}\",\n      \"source\": \"{HASH}\",\n      \"sha256\": \"{HASH}\"\n    }}\n  ]\n}}\n"
@@ -64,7 +63,7 @@ fn a_written_manifest_reads_back_and_a_missing_one_is_empty() {
 
     std::fs::write(
         root.join(".seampact-manifest.json"),
-        serialize_manifest("node", &entries).expect("a manifest"),
+        serialize_manifest("node", &entries),
     )
     .expect("a written manifest");
 

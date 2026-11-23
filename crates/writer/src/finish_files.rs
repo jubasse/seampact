@@ -2,9 +2,7 @@
 
 use seampact_format::{SourceKind, format_source};
 use seampact_json::{JsonValue, indented_json, write_json_string};
-use seampact_target::{GeneratedFile, Refusal, refusal_code};
-
-use crate::{FilesOutcome, WriterError};
+use seampact_target::{GeneratedFile, Refusal, Refused, refusal_code};
 
 const PHP_OPEN_TAG_LINE: &str = "<?php\n";
 const PHP_CLOSE_TAG: &str = "?>";
@@ -66,13 +64,14 @@ pub fn generated_header(source: &HeaderSource<'_>) -> String {
 ///
 /// # Errors
 ///
-/// Never fails today; the `Result` keeps the writer's one signature.
+/// `file.header.unsafe` for a header field that would break the header line, else one refusal per
+/// file that cannot be finished.
 pub fn finish_files(
-    files: &[GeneratedFile],
+    files: Vec<GeneratedFile>,
     header: &HeaderSource<'_>,
-) -> Result<FilesOutcome, WriterError> {
+) -> Result<Vec<GeneratedFile>, Refused> {
     if let Some(refusal) = unsafe_header_refusal(header) {
-        return Ok(FilesOutcome::Refused(vec![refusal]));
+        return Err(Refused(vec![refusal]));
     }
 
     let header_line = generated_header(header);
@@ -87,10 +86,10 @@ pub fn finish_files(
     }
 
     if refusals.is_empty() {
-        return Ok(FilesOutcome::Ready(finished));
+        return Ok(finished);
     }
 
-    Ok(FilesOutcome::Refused(refusals))
+    Err(Refused(refusals))
 }
 
 /// A control character ends a comment line, and a PHP close tag ends PHP mode even inside one.
@@ -143,7 +142,7 @@ fn finishing_of(path: &str) -> Option<Finishing> {
         .map(|(_, finishing)| *finishing)
 }
 
-fn finish_file(file: &GeneratedFile, header_line: &str) -> Result<GeneratedFile, Box<Refusal>> {
+fn finish_file(file: GeneratedFile, header_line: &str) -> Result<GeneratedFile, Box<Refusal>> {
     let Some(finishing) = finishing_of(&file.path) else {
         let known: Vec<&str> = FINISHING_BY_EXTENSION
             .iter()
@@ -170,14 +169,11 @@ fn finish_file(file: &GeneratedFile, header_line: &str) -> Result<GeneratedFile,
         }
         Finishing::Json => json_rewritten(&file.contents)
             .map_err(|reason| Box::new(format_failed(&file.path, &reason)))?,
-        Finishing::Php => php_headed(file, header_line)?,
+        Finishing::Php => php_headed(&file, header_line)?,
         Finishing::LineComment(comment) => format!("{comment} {header_line}\n{}", file.contents),
     };
 
-    Ok(GeneratedFile {
-        path: file.path.clone(),
-        contents,
-    })
+    Ok(GeneratedFile { contents, ..file })
 }
 
 fn format_failed(path: &str, reason: &dyn std::fmt::Display) -> Refusal {

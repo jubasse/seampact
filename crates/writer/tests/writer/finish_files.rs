@@ -2,7 +2,7 @@
 //! writers' tests: an unknown extension, an unsafe header field and a PHP file without its tag.
 
 use seampact_target::GeneratedFile;
-use seampact_writer::{FilesOutcome, HeaderSource, finish_files};
+use seampact_writer::{HeaderSource, finish_files};
 
 use crate::support::file;
 
@@ -17,19 +17,20 @@ fn header_source() -> HeaderSource<'static> {
 }
 
 fn finished(files: &[GeneratedFile]) -> Vec<GeneratedFile> {
-    match finish_files(files, &header_source()).expect("finishing does not fail") {
-        FilesOutcome::Ready(files) => files,
-        FilesOutcome::Refused(refusals) => panic!("refused: {refusals:?}"),
+    match finish_files(files.to_vec(), &header_source()) {
+        Ok(files) => files,
+        Err(refused) => panic!("refused: {refused:?}"),
     }
 }
 
 fn refused(files: &[GeneratedFile], header: &HeaderSource<'_>) -> Vec<(String, String)> {
-    match finish_files(files, header).expect("finishing does not fail") {
-        FilesOutcome::Refused(refusals) => refusals
+    match finish_files(files.to_vec(), header) {
+        Err(refused) => refused
+            .0
             .into_iter()
             .map(|refusal| (refusal.code, refusal.message))
             .collect(),
-        FilesOutcome::Ready(files) => panic!("finished: {files:?}"),
+        Ok(files) => panic!("finished: {files:?}"),
     }
 }
 
