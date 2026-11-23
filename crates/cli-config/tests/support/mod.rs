@@ -61,3 +61,54 @@ pub fn refused(outcome: ReadAppConfigOutcome) -> Vec<CliProblem> {
 }
 
 pub const SERVER_ENTRY_HEAD: &str = "targets:\n  - id: server\n    use: x\n    api: a\n";
+
+/// A target entry as the config writes it.
+pub fn entry_of(value: serde_json::Value) -> seampact_cli_config::TargetEntrySettings {
+    let json = seampact_json::JsonValue::try_from(value).expect("a JSON value");
+
+    seampact_cli_config::TargetEntrySettings::from_json(&json).expect("a target entry")
+}
+
+/// A target that declares `artefacts` and, when given, a record of the compatibility data; it
+/// stands in for a family, which this layer has none of.
+pub fn stub_target(
+    artefacts: &'static [seampact_target::ArtefactDeclaration],
+    compatibility: Option<seampact_target::CompatibilityKey>,
+) -> &'static dyn seampact_target::Generator {
+    use seampact_gen_probe::PROBE_SERVER;
+    use seampact_target::{Generator, TargetMetadata};
+
+    let metadata = TargetMetadata {
+        artefacts,
+        compatibility,
+        boot_checks: &[],
+        ..*PROBE_SERVER.metadata()
+    };
+
+    Box::leak(Box::new(seampact_gen_probe::Probe::new(metadata)))
+}
+
+/// An artefact declaration: on or off by default, its needs, and whether it follows them.
+pub const fn artefact(
+    id: &'static str,
+    on: bool,
+    needs: &'static [&'static str],
+    leave_off_without_needs: bool,
+) -> seampact_target::ArtefactDeclaration {
+    use seampact_target::{ArtefactDeclaration, ArtefactDefault, MissingNeed};
+
+    ArtefactDeclaration {
+        id,
+        default: if on {
+            ArtefactDefault::On
+        } else {
+            ArtefactDefault::Off
+        },
+        needs,
+        missing_need: if leave_off_without_needs {
+            MissingNeed::LeaveOff
+        } else {
+            MissingNeed::Refuse
+        },
+    }
+}
