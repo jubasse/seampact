@@ -10,7 +10,7 @@ src/located_refusals.rs#location_text	packages/core/codegen-core/src/located-ref
 -	packages/core/codegen-core/src/located-refusals.ts#pointAt	merged: src/located_refusals.rs#refuse_inconsistent_ir
 src/unknown_value.rs#refuse_unknown_value	packages/core/codegen-core/src/unknown-value.ts#refuseUnknownValue
 src/not_generated_fixes.rs#troubleshooting_url	packages/core/codegen-core/src/not-generated-fixes.ts#troubleshootingUrl
-src/case_folded.rs#case_folded	packages/core/codegen-core/src/generated-paths.ts#caseFolded
+-	packages/core/codegen-core/src/generated-paths.ts#caseFolded	merged: ../paths/src/case_folded.rs#case_folded
 -	packages/core/codegen-core/src/generated-paths.ts#unsafePathReason	skip: the writer half of generated-paths, layer 3.3's seampact-writer
 -	packages/core/codegen-core/src/generated-paths.ts#checkGeneratedPaths	skip: the writer half of generated-paths, layer 3.3's seampact-writer
 -	packages/core/codegen-core/src/generated-paths.ts#directoryPrefixes	skip: the writer half of generated-paths, layer 3.3's seampact-writer
