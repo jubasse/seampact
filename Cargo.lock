@@ -2004,6 +2004,7 @@ dependencies = [
  "seampact-target",
  "seampact-writer",
  "serde_json",
+ "tempfile",
  "thiserror",
 ]
 
