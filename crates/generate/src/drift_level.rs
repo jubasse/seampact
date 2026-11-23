@@ -2,6 +2,9 @@
 
 use seampact_cli_config::CheckLevel;
 
+/// The level of a drift when the config sets none.
+pub const DEFAULT_DRIFT_CHECK_LEVEL: CheckLevel = CheckLevel::Error;
+
 /// The strictest of `levels`; `disabled` when there is none.
 #[must_use]
 pub fn strictest_level(levels: &[CheckLevel]) -> CheckLevel {
