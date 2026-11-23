@@ -20,7 +20,6 @@ use crate::diff_settings::DiffSettings;
 use crate::find_root_config::{RootDiscovery, find_root_config};
 use crate::key_path::KeyPathSegment;
 use crate::maven_source::unpinned_maven_problems;
-use crate::node_path::{directory_of, resolved_path};
 use crate::open_api_settings::OpenApiSettings;
 use crate::path_containment::{is_inside_or_equal, is_strictly_inside};
 use crate::read_root_config::LoadedRootConfig;
@@ -30,6 +29,7 @@ use crate::target_entry_settings::{
 };
 use crate::warnings_settings::WarningsSettings;
 use crate::{CliConfigError, CliProblem};
+use seampact_paths::node_path;
 
 /// An app config read and checked, with its file.
 ///
@@ -173,8 +173,8 @@ fn resolve_app_config(
     let object = object_of(Some(&config)).ok_or_else(|| {
         InternalError::new("an app config that is not a mapping passed the schema")
     })?;
-    let directory = directory_of(file);
-    let out_dir = resolved_path(
+    let directory = node_path::dirname(file);
+    let out_dir = node_path::resolve(
         &directory,
         text_of(object.get("outDir")).unwrap_or(DEFAULT_OUT_DIR),
     );
@@ -230,7 +230,7 @@ fn configured_entry(
 ) -> Result<ConfiguredTargetEntry, InternalError> {
     let settings = TargetEntrySettings::from_json(entry)?;
     let directory_name = settings.out.as_deref().unwrap_or(&settings.id);
-    let root = resolved_path(out_dir, directory_name);
+    let root = node_path::resolve(out_dir, directory_name);
 
     Ok(ConfiguredTargetEntry { settings, root })
 }
@@ -492,7 +492,7 @@ fn unlisted_app_outcome(
                 format!(
                     "The api '{reference}' names a source of the root config {}, whose `apps` does not list this app ({}), so the app stands alone.",
                     root.display_name,
-                    directory_of(&app.loaded.file)
+                    node_path::dirname(&app.loaded.file)
                 ),
                 "Add the app's directory to the root config's `apps`, or define the source in this app config.",
                 app.parsed.where_of(&path)?,

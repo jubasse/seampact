@@ -105,9 +105,9 @@ src/package_manager.rs#find_package_manager	packages/core/cli/src/config/package
 src/package_manager.rs#package_manager_in	packages/core/cli/src/config/package-manager.ts#packageManagerIn
 src/package_manager.rs#declared_package_manager	packages/core/cli/src/config/package-manager.ts#declaredPackageManager
 src/installed_version.rs#read_installed_version	packages/core/cli/src/config/installed-version.ts#readInstalledVersion
-src/installed_version.rs#find_package_json	packages/core/cli/src/config/installed-version.ts#findPackageJson
+-	packages/core/cli/src/config/installed-version.ts#findPackageJson	merged: ../paths/src/node_path.rs#node_modules_lookup
 src/installed_version.rs#missing_package_problem	packages/core/cli/src/config/installed-version.ts#missingPackageProblem
-src/installed_version.rs#ancestors_of	packages/core/cli/src/config/installed-version.ts#ancestorsOf
+-	packages/core/cli/src/config/installed-version.ts#ancestorsOf	merged: ../paths/src/node_path.rs#node_modules_lookup
 src/installed_version.rs#declared_major	packages/core/cli/src/config/installed-version.ts#declaredMajor
 -	packages/core/cli/src/config/installed-version.ts#parsedPackageJson	merged: src/package_json.rs#read_package_json
 src/compatibility_check.rs#check_entry	packages/core/cli/src/config/compatibility-check.ts#checkEntry

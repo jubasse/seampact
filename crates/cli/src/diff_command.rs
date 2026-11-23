@@ -3,14 +3,13 @@
 use indexmap::IndexMap;
 use seampact_cli_config::CliIo;
 use seampact_cli_config::unlocated_problem;
-use seampact_cli_config::{
-    ReadAppConfigOutcome, open_api_api_names, read_app_config, resolved_path,
-};
+use seampact_cli_config::{ReadAppConfigOutcome, open_api_api_names, read_app_config};
 use seampact_diff::{diff_contract_sets, format_diff_report};
 use seampact_diff_table::DiffResult;
 use seampact_generate::LocalBundles;
 use seampact_generate::compile_sources;
 use seampact_generate::{add_qualify_fix, entry_api_refs, used_sources};
+use seampact_paths::node_path;
 
 use crate::config_location::ConfigLocation;
 use crate::diff_baseline::read_baseline;
@@ -49,7 +48,7 @@ pub(crate) fn diff_command(
         ));
     }
 
-    let baseline = match read_baseline(&resolved_path(io.cwd(), against)) {
+    let baseline = match read_baseline(&node_path::resolve(io.cwd(), against)) {
         Err(Stop::Refused(problems)) => return Ok(refuse(io, problems.as_slice())),
         Err(Stop::Failed(failure)) => return Err(failure),
         Ok(baseline) => baseline,

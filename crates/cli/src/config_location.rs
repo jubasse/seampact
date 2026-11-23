@@ -1,7 +1,7 @@
 //! Where a command finds the app config and how it names it in messages.
 
 use camino::{Utf8Path, Utf8PathBuf};
-use seampact_cli_config::resolved_path;
+use seampact_paths::node_path;
 
 /// The file name of an app config, read from the working directory when `--config` is absent.
 pub(crate) const APP_CONFIG_FILE_NAME: &str = "seampact.config.yaml";
@@ -15,7 +15,7 @@ pub(crate) struct ConfigLocation {
 
 /// The app config named by `--config`, else the default file, resolved against `cwd`.
 pub(crate) fn config_location(cwd: &Utf8Path, config_option: Option<&str>) -> ConfigLocation {
-    let file = resolved_path(cwd, config_option.unwrap_or(APP_CONFIG_FILE_NAME));
+    let file = node_path::resolve(cwd, config_option.unwrap_or(APP_CONFIG_FILE_NAME));
 
     ConfigLocation {
         display_name: display_path(cwd, &file),
@@ -25,8 +25,8 @@ pub(crate) fn config_location(cwd: &Utf8Path, config_option: Option<&str>) -> Co
 
 /// `file` relative to `cwd` with `/` separators when it lies below `cwd`, else `file` as given.
 pub(crate) fn display_path(cwd: &Utf8Path, file: &Utf8Path) -> String {
-    let resolved_cwd = resolved_path(cwd, ".");
-    let resolved_file = resolved_path(&resolved_cwd, file.as_str());
+    let resolved_cwd = node_path::resolve(cwd, ".");
+    let resolved_file = node_path::resolve(&resolved_cwd, file.as_str());
 
     match resolved_file.strip_prefix(&resolved_cwd) {
         Ok(inside) if !inside.as_str().is_empty() => {

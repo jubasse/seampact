@@ -6,7 +6,6 @@ use indexmap::IndexMap;
 use seampact_json::JsonValue;
 
 use crate::api_refs::parse_api_ref;
-use crate::node_path::{directory_of, joined_path};
 use crate::open_api_settings::{ApiPlacements, DocumentPlacement, OpenApiSettings, empty_options};
 use crate::operations_filter::OperationsFilter;
 use crate::path_containment::is_inside_or_equal;
@@ -14,6 +13,7 @@ use crate::problems::Problems;
 use crate::read_app_config::LoadedAppConfig;
 use crate::target_entry_settings::TargetEntrySettings;
 use crate::{CliProblem, located_problem};
+use seampact_paths::node_path;
 
 /// The default directory of an app's documents, beside its config file.
 const DEFAULT_DOCUMENT_DIRECTORY: &str = "openapi";
@@ -62,8 +62,8 @@ pub struct PlannedAppDocument {
 /// The default directory of an app's documents, beside its config file.
 #[must_use]
 pub fn default_document_directory(config: &LoadedAppConfig) -> Utf8PathBuf {
-    joined_path(
-        &directory_of(&config.file),
+    node_path::join(
+        &node_path::dirname(&config.file),
         Utf8Path::new(DEFAULT_DOCUMENT_DIRECTORY),
     )
 }
@@ -157,7 +157,7 @@ fn default_documents_of_api(
         source: api.source.clone(),
         api: api.api.clone(),
         document: document.cloned(),
-        file: joined_path(directory, Utf8Path::new(&file_name)),
+        file: node_path::join(directory, Utf8Path::new(&file_name)),
         options: empty_options(),
         served_operations: served.operations.clone(),
     };

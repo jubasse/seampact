@@ -8,7 +8,7 @@ use seampact_js::js_key_order;
 use seampact_json::{JsonValue, object_of, text_of};
 
 use crate::bundle_source::bundle_source_of;
-use crate::node_path::resolved_path;
+use seampact_paths::node_path;
 
 /// A `path` source with its absolute workspace directory, or a bundle source read from the config.
 #[derive(Debug, Clone, PartialEq)]
@@ -39,7 +39,7 @@ fn resolved_source(
         })?;
 
         return Ok(ResolvedSource::Path {
-            directory: resolved_path(directory, path),
+            directory: node_path::resolve(directory, path),
         });
     }
 

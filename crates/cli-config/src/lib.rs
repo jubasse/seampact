@@ -28,7 +28,6 @@ mod key_path;
 mod key_problem;
 mod maven_source;
 mod merged_document_plan;
-mod node_path;
 mod open_api_settings;
 mod operations_filter;
 mod package_json;
@@ -84,7 +83,6 @@ pub use installed_version::{
 pub use merged_document_plan::{
     MergedApp, MergedContribution, MergedPlanError, PlannedMergedDocument, plan_merged_documents,
 };
-pub use node_path::{directory_of, relative_path, resolved_path};
 pub use open_api_settings::{ApiPlacements, DocumentPlacement, OpenApiSettings};
 pub use operations_filter::OperationsFilter;
 pub use package_manager::{

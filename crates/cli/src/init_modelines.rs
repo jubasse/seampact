@@ -5,8 +5,7 @@ use std::fs;
 use camino::{Utf8Path, Utf8PathBuf};
 use seampact_cli_config::CliIo;
 use seampact_cli_config::{
-    ReadAppConfigOutcome, ResolvedSource, directory_of, is_strictly_inside, read_app_config,
-    relative_path, resolved_path,
+    ReadAppConfigOutcome, ResolvedSource, is_strictly_inside, read_app_config,
 };
 use seampact_diagnostics::InternalError;
 use seampact_editor_schemas::{DEFAULT_EDITOR_SCHEMAS_DIRECTORY, write_editor_schemas};
@@ -15,6 +14,7 @@ use seampact_generate::compile_sources;
 use seampact_generate::source_entry_file;
 use seampact_generate::source_reader;
 use seampact_load::{LoadOptions, load_workspace};
+use seampact_paths::node_path;
 
 use crate::compile_command::{PlannedEditorSchemas, plan_sources_editor_schemas};
 use crate::config_location::{ConfigLocation, display_path};
@@ -50,7 +50,7 @@ pub(crate) fn init_modelines(
         ReadAppConfigOutcome::Refused(problems) => return Ok(refuse(io, &problems)),
         ReadAppConfigOutcome::Read(config) => config,
     };
-    let app_root = directory_of(&config.file);
+    let app_root = node_path::dirname(&config.file);
     let sources: Vec<(&String, &Utf8PathBuf)> = config
         .sources
         .iter()
@@ -93,7 +93,7 @@ pub(crate) fn init_modelines(
             .map(|(_, plan)| plan);
         let schema_directory = match plan {
             Some(plan) => plan.directory.clone(),
-            None => resolved_path(&app_root, INSTALLED_AUTHORING_SCHEMAS),
+            None => node_path::resolve(&app_root, INSTALLED_AUTHORING_SCHEMAS),
         };
 
         edits.extend(modeline_edits(directory, &schema_directory, io)?);
@@ -169,7 +169,7 @@ fn modeline_edits(
     let mut edits = Vec::new();
 
     for (file, kind) in &file_kinds.kinds {
-        let absolute = resolved_path(source_directory, file);
+        let absolute = node_path::resolve(source_directory, file);
         let bytes = fs::read(&absolute).map_err(|error| CliError::io(&absolute, &error))?;
         let text = String::from_utf8_lossy(&bytes).into_owned();
         let changed = with_modeline(&text, &modeline_of(&absolute, schema_directory, kind));
@@ -185,7 +185,10 @@ fn modeline_edits(
     for left_out in &file_kinds.left_out {
         io.stdout(&format!(
             "Left {} without a modeline: {}.\n",
-            display_path(io.cwd(), &resolved_path(source_directory, &left_out.file)),
+            display_path(
+                io.cwd(),
+                &node_path::resolve(source_directory, &left_out.file)
+            ),
             left_out.reason
         ));
     }
@@ -207,5 +210,5 @@ fn ignore_entry(
 }
 
 fn posix_relative(from: &Utf8Path, to: &Utf8Path) -> String {
-    relative_path(from, to).to_string()
+    node_path::relative(from, to).to_string()
 }

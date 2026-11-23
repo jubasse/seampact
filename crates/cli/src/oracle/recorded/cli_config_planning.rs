@@ -8,11 +8,11 @@ use seampact_cli_config::{
     LoadedMergedDocument, LoadedRootConfig, LoadedWorkspace, LoadedWorkspaceApp, MergedApp,
     MergedContribution, MergedPlanError, OpenApiSettings, OperationsFilter, PlannedAppDocument,
     PlannedMergedDocument, Problems, ResolvedSource, TargetEntrySettings, WarningsSettings,
-    WorkspaceApp, bundle_source_of, directory_of, plan_app_documents, plan_merged_documents,
-    select_artefacts,
+    WorkspaceApp, bundle_source_of, plan_app_documents, plan_merged_documents, select_artefacts,
 };
 use seampact_json::{JsonObject, JsonValue, items_of, object_of, text_of};
 use seampact_oracle::{ROOT_TOKEN, RecordedAnswer, RecordedToolCall, SubjectAnswer};
+use seampact_paths::node_path;
 use seampact_target::TargetRole;
 
 use super::cli_config::{answer, malformed_call, refused_json};
@@ -265,7 +265,7 @@ fn sources_of(value: Option<&JsonValue>) -> Result<IndexMap<String, ResolvedSour
 fn app_config_of(value: &JsonValue) -> Result<LoadedAppConfig, String> {
     let object = members_of(value)?;
     let file = path_member(object, "file")?;
-    let directory = directory_of(&file);
+    let directory = node_path::dirname(&file);
     let entries = items_of(object.get("entries"))
         .iter()
         .map(|each| {

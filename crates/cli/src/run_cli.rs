@@ -5,10 +5,11 @@ use std::ffi::OsString;
 
 use camino::Utf8PathBuf;
 use seampact_bundle::BundleNamedVersionOverride;
+use seampact_cli_config::CliProblem;
 use seampact_cli_config::unlocated_problem;
 use seampact_cli_config::{CliIo, print_problems};
-use seampact_cli_config::{CliProblem, resolved_path};
 use seampact_generate::LocalBundles;
+use seampact_paths::node_path;
 use seampact_target::Registry;
 use seampact_writer::HandEditPolicy;
 
@@ -423,7 +424,7 @@ fn plugin_run_of(parsed: &ParsedArgs, io: &dyn CliIo) -> Result<PluginRun, Strin
             ));
         }
 
-        local_bundles.insert(source.to_owned(), resolved_path(io.cwd(), directory));
+        local_bundles.insert(source.to_owned(), node_path::resolve(io.cwd(), directory));
     }
 
     if config_name.is_some_and(|name| {
@@ -452,7 +453,7 @@ fn plugin_run_of(parsed: &ParsedArgs, io: &dyn CliIo) -> Result<PluginRun, Strin
     let Some(config) = config else {
         return Err("`--app-directory` needs `--config <path>`, the file it reads.".to_owned());
     };
-    let location = config_location(&resolved_path(io.cwd(), app_directory), None);
+    let location = config_location(&node_path::resolve(io.cwd(), app_directory), None);
 
     if location.file.exists() {
         return Err(format!(
@@ -466,7 +467,7 @@ fn plugin_run_of(parsed: &ParsedArgs, io: &dyn CliIo) -> Result<PluginRun, Strin
             display_name: config_name.map_or(location.display_name, str::to_owned),
             file: location.file,
         },
-        text_file: Some(resolved_path(io.cwd(), config)),
+        text_file: Some(node_path::resolve(io.cwd(), config)),
         local_bundles,
     })
 }

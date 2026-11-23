@@ -13,10 +13,10 @@ use crate::config_schema::{ConfigSchema, ValidateConfigOutcome, validate_config}
 use crate::key_path::KeyPathSegment;
 use crate::key_problem::KeyProblem;
 use crate::maven_source::unpinned_maven_problems;
-use crate::node_path::{directory_of, resolved_path};
 use crate::path_containment::is_strictly_inside;
 use crate::resolved_source::{ResolvedSource, resolved_sources};
 use crate::{CliConfigError, CliProblem};
+use seampact_paths::node_path;
 
 /// The keys of an app config that a root config does not take: they concern one app.
 const APP_ONLY_KEYS: [&str; 4] = ["outDir", "targets", "diff", "warnings"];
@@ -155,7 +155,7 @@ fn resolve_root_config(
     parsed: &ParsedConfig,
     config: &JsonValue,
 ) -> Result<ReadRootConfigOutcome, CliConfigError> {
-    let directory = directory_of(file);
+    let directory = node_path::dirname(file);
     let object = object_of(Some(config)).ok_or_else(|| {
         InternalError::new("a root config that is not a mapping passed the schema")
     })?;
@@ -205,7 +205,7 @@ fn workspace_apps(
         .map(|name| {
             let name = text_of(Some(name))
                 .ok_or_else(|| InternalError::new("an app that is not text passed the schema"))?;
-            let app_directory = resolved_path(directory, name);
+            let app_directory = node_path::resolve(directory, name);
 
             Ok(WorkspaceApp {
                 name: name.to_owned(),
@@ -237,7 +237,7 @@ fn loaded_merged_document(
 
     Ok(LoadedMergedDocument {
         name: name.to_owned(),
-        file: resolved_path(directory, path),
+        file: node_path::resolve(directory, path),
         apps,
         prefix: entry_object
             .get("prefix")
@@ -383,7 +383,7 @@ fn find_listed_app<'apps>(
     item: &str,
     apps: &'apps [WorkspaceApp],
 ) -> Option<&'apps WorkspaceApp> {
-    let item_directory = resolved_path(directory, item);
+    let item_directory = node_path::resolve(directory, item);
 
     apps.iter().find(|app| app.directory == item_directory)
 }

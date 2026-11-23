@@ -8,7 +8,7 @@ use seampact_cli_config::CliIo;
 use seampact_cli_config::unlocated_problem;
 use seampact_cli_config::{
     CliProblem, LoadedAppConfig, ReadAppConfigOutcome, ResolvedSource, open_api_api_names,
-    read_app_config, resolved_path,
+    read_app_config,
 };
 use seampact_diagnostics::InternalError;
 use seampact_editor_schemas::{
@@ -22,6 +22,7 @@ use seampact_generate::source_reader;
 use seampact_generate::{CompiledApi, compile_sources};
 use seampact_generate::{add_qualify_fix, entry_api_refs, used_sources};
 use seampact_paths::RelativeOutputPath;
+use seampact_paths::node_path;
 
 use crate::config_location::ConfigLocation;
 use crate::{CliError, EXIT_SUCCESS, refuse};
@@ -114,7 +115,7 @@ pub(crate) fn compile_command(
     }
 
     if let Some(out_dir) = &outputs.ir_out_dir {
-        write_ir_files(&compiled.apis, &resolved_path(io.cwd(), out_dir), io)?;
+        write_ir_files(&compiled.apis, &node_path::resolve(io.cwd(), out_dir), io)?;
     }
 
     for (name, plan) in &planned.plans {

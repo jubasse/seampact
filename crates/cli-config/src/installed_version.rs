@@ -1,13 +1,13 @@
 //! The installed version of a framework or library package, read from its `package.json` in the
 //! `node_modules` directories from a lookup directory up, as Node's resolution searches them.
 
-use camino::{Utf8Path, Utf8PathBuf};
+use camino::Utf8Path;
 use seampact_json::{object_of, text_of};
 
-use crate::node_path::{directory_of, joined_path};
 use crate::package_json::{PackageJsonRead, read_package_json};
 use crate::package_manager::{DependencyKind, install_fix};
 use crate::{CliConfigError, CliProblem, located_problem};
+use seampact_paths::node_path;
 
 /// A package found installed.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -53,7 +53,7 @@ impl InstalledPackageRole {
 /// The code of the problem for a package that is not installed in the project.
 pub(crate) const FRAMEWORK_MISSING_CODE: &str = "config.matrix.framework-missing";
 
-const NODE_MODULES: &str = "node_modules";
+const PACKAGE_MANIFEST: &str = "package.json";
 
 const PNP_FILES: [&str; 2] = [".pnp.cjs", ".pnp.js"];
 
@@ -80,7 +80,8 @@ pub fn read_installed_version(
     role: InstalledPackageRole,
     entry_where: &str,
 ) -> Result<InstalledVersionOutcome, CliConfigError> {
-    let Some(package_json_file) = find_package_json(lookup_directory, package_name) else {
+    let Some(package_directory) = node_path::node_modules_lookup(lookup_directory, package_name)
+    else {
         return Ok(InstalledVersionOutcome::Refused(missing_package_problem(
             lookup_directory,
             package_name,
@@ -89,7 +90,7 @@ pub fn read_installed_version(
         )?));
     };
 
-    match declared_major(&package_json_file)? {
+    match declared_major(&package_directory.join(PACKAGE_MANIFEST))? {
         DeclaredMajor::Unreadable { reason } => {
             Ok(InstalledVersionOutcome::Refused(located_problem(
                 "config.matrix.version-unreadable",
@@ -111,33 +112,18 @@ pub fn read_installed_version(
     }
 }
 
-fn find_package_json(lookup_directory: &Utf8Path, package_name: &str) -> Option<Utf8PathBuf> {
-    ancestors_of(lookup_directory)
-        .into_iter()
-        .filter(|directory| directory.file_name() != Some(NODE_MODULES))
-        .map(|directory| {
-            let package_directory = joined_path(
-                &joined_path(&directory, Utf8Path::new(NODE_MODULES)),
-                Utf8Path::new(package_name),
-            );
-
-            joined_path(&package_directory, Utf8Path::new("package.json"))
-        })
-        .find(|file| file.exists())
-}
-
 fn missing_package_problem(
     lookup_directory: &Utf8Path,
     package_name: &str,
     role: InstalledPackageRole,
     entry_where: &str,
 ) -> Result<CliProblem, CliConfigError> {
-    let pnp_file = ancestors_of(lookup_directory)
-        .into_iter()
+    let pnp_file = lookup_directory
+        .ancestors()
         .flat_map(|directory| {
             PNP_FILES
                 .iter()
-                .map(move |file| joined_path(&directory, Utf8Path::new(file)))
+                .map(move |file| node_path::join(directory, Utf8Path::new(file)))
         })
         .find(|file| file.exists());
 
@@ -161,21 +147,6 @@ fn missing_package_problem(
         &install_fix(lookup_directory, package_name, DependencyKind::Runtime)?,
         entry_where.to_owned(),
     ))
-}
-
-/// The directory and each parent up to the root.
-fn ancestors_of(directory: &Utf8Path) -> Vec<Utf8PathBuf> {
-    let mut ancestors = vec![directory.to_path_buf()];
-
-    loop {
-        let parent = directory_of(ancestors.last().map_or(directory, Utf8PathBuf::as_path));
-
-        if ancestors.last() == Some(&parent) {
-            return ancestors;
-        }
-
-        ancestors.push(parent);
-    }
 }
 
 fn declared_major(package_json_file: &Utf8Path) -> Result<DeclaredMajor, CliConfigError> {

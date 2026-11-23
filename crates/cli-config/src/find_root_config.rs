@@ -6,9 +6,9 @@ use seampact_json::object_of;
 use crate::config_file::{ParseConfigOutcome, file_size, parse_config_file};
 use crate::config_kind::ConfigKind;
 use crate::config_names::{APP_CONFIG_FILE_NAME, ROOT_CONFIG_MARKER_KEY};
-use crate::node_path::{directory_of, joined_path, relative_path};
 use crate::read_root_config::{LoadedRootConfig, ReadRootConfigOutcome, read_root_config};
 use crate::{CliConfigError, CliProblem};
+use seampact_paths::node_path;
 
 const REPOSITORY_MARKER: &str = ".git";
 
@@ -40,20 +40,20 @@ pub fn find_root_config(
     app_file: &Utf8Path,
     app_display_name: &str,
 ) -> Result<RootDiscovery, CliConfigError> {
-    let app_directory = directory_of(app_file);
+    let app_directory = node_path::dirname(app_file);
     let mut nearest_unlisting: Option<RootDiscovery> = None;
 
     if app_directory.join(REPOSITORY_MARKER).exists() {
         return Ok(RootDiscovery::None);
     }
 
-    let mut directory = directory_of(&app_directory);
+    let mut directory = node_path::dirname(&app_directory);
 
     loop {
         let candidate = directory.join(APP_CONFIG_FILE_NAME);
-        let display_name = joined_path(
-            &directory_of(Utf8Path::new(app_display_name)),
-            &relative_path(&app_directory, &candidate),
+        let display_name = node_path::join(
+            &node_path::dirname(Utf8Path::new(app_display_name)),
+            &node_path::relative(&app_directory, &candidate),
         );
         let found = root_config_at(&candidate, display_name.as_str(), &app_directory)?;
 
@@ -70,11 +70,12 @@ pub fn find_root_config(
             nearest_unlisting.get_or_insert(found);
         }
 
-        if directory.join(REPOSITORY_MARKER).exists() || directory_of(&directory) == directory {
+        if directory.join(REPOSITORY_MARKER).exists() || node_path::dirname(&directory) == directory
+        {
             return Ok(nearest_unlisting.unwrap_or(RootDiscovery::None));
         }
 
-        directory = directory_of(&directory);
+        directory = node_path::dirname(&directory);
     }
 }
 

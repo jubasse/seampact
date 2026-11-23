@@ -6,8 +6,8 @@ use seampact_diagnostics::InternalError;
 use seampact_js::js_key_order;
 use seampact_json::{JsonObject, JsonValue, object_of, text_of};
 
-use crate::node_path::resolved_path;
 use crate::read_root_config::document_options_of;
+use seampact_paths::node_path;
 
 /// The text of `openapi: none`, the app writing no document.
 const NO_OPENAPI_DOCUMENTS: &str = "none";
@@ -97,7 +97,7 @@ impl DocumentPlacement {
     fn from_value(placement: &JsonValue, directory: &Utf8Path) -> Result<Self, InternalError> {
         if let JsonValue::String(path) = placement {
             return Ok(Self {
-                file: resolved_path(directory, path),
+                file: node_path::resolve(directory, path),
                 options: empty_options(),
             });
         }
@@ -108,7 +108,7 @@ impl DocumentPlacement {
         })?;
 
         Ok(Self {
-            file: resolved_path(directory, path),
+            file: node_path::resolve(directory, path),
             options: object.map_or_else(empty_options, document_options_of),
         })
     }

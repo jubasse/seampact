@@ -5,8 +5,8 @@ use camino::Utf8Path;
 use seampact_json::{object_of, text_of};
 
 use crate::CliConfigError;
-use crate::node_path::{directory_of, joined_path};
 use crate::package_json::{PackageJsonRead, read_package_json};
+use seampact_paths::node_path;
 
 /// A package manager a lockfile names.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -153,7 +153,7 @@ fn package_manager_from(directory: &Utf8Path) -> Result<PackageManager, PackageM
             return Ok(found);
         }
 
-        let parent = directory_of(&current);
+        let parent = node_path::dirname(&current);
 
         if parent == current {
             return Ok(PackageManager::Npm);
@@ -168,13 +168,13 @@ fn package_manager_in(
 ) -> Result<Option<PackageManager>, PackageManagerFailure> {
     let lockfile = LOCKFILES
         .iter()
-        .find(|(file, _)| joined_path(directory, Utf8Path::new(file)).exists());
+        .find(|(file, _)| node_path::join(directory, Utf8Path::new(file)).exists());
 
     if let Some((_, manager)) = lockfile {
         return Ok(Some(*manager));
     }
 
-    declared_package_manager(&joined_path(directory, Utf8Path::new("package.json")))
+    declared_package_manager(&node_path::join(directory, Utf8Path::new("package.json")))
 }
 
 fn declared_package_manager(
