@@ -50,7 +50,7 @@
     "@seampact/spec": "workspace:*"
   },
   "dependencies": {
-    "prettier": "3.9.10"
+    "prettier": "3.10.1"
   },
   "devDependencies": {
     "@seampact/codegen-core": "workspace:*",

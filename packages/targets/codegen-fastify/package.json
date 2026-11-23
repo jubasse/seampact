@@ -50,11 +50,11 @@
     "@seampact/spec": "workspace:*"
   },
   "dependencies": {
-    "prettier": "3.9.10"
+    "prettier": "3.10.1"
   },
   "devDependencies": {
     "@fastify/compress": "9.3.0",
-    "@fastify/swagger": "9.9.3",
+    "@fastify/swagger": "9.9.4",
     "@seampact/codegen-core": "workspace:*",
     "@seampact/spec": "workspace:*",
     "@types/node": "24.19.2",
