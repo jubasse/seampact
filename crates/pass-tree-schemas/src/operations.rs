@@ -7,8 +7,8 @@ use std::collections::HashSet;
 use indexmap::IndexMap;
 use seampact_diagnostics::InternalError;
 use seampact_ir::{
-    ArrayTypeUse, DerivationId, DerivedFrom, Direction, KnownTypeUseRef, ObjectSchema, Property,
-    Schema, TypeUse,
+    ArrayTypeUse, DerivedFrom, Direction, KnownTypeUseRef, ObjectSchema, Property, Schema, TypeUse,
+    derivation_ids,
 };
 use seampact_json::JsonValue;
 use seampact_naming::{Role, derive_name};
@@ -30,13 +30,7 @@ const BATCH_OP: &str = "batch";
 const VERSIONED_OPS: [&str; 2] = ["update", "delete"];
 /// The prefix of a body version source, `body.<property>`.
 const BODY_SOURCE_PREFIX: &str = "body.";
-/// The derivation of the version property a body version source adds.
-const CONCURRENCY_VERSION_DERIVATION: DerivationId =
-    DerivationId::from_static("concurrency.version");
 const INHERIT: &str = "inherit";
-/// The derivation of the ids property of a batch input.
-const BATCH_READ_DERIVATION: DerivationId = DerivationId::from_static("batch.read");
-
 /// A versioned write: where its version is read and the item property it is compared with.
 #[derive(Debug, Clone)]
 struct Version<'tree, 'raw> {
@@ -163,7 +157,7 @@ fn batch_ids(
             optional: false,
             origin,
             derived_from: Some(DerivedFrom {
-                derivation: BATCH_READ_DERIVATION,
+                derivation: derivation_ids::BATCH_READ,
                 from: vec![from],
             }),
         },
@@ -449,7 +443,7 @@ fn add_version_property(
         optional: false,
         origin,
         derived_from: Some(DerivedFrom {
-            derivation: CONCURRENCY_VERSION_DERIVATION,
+            derivation: derivation_ids::CONCURRENCY_VERSION,
             from,
         }),
     });

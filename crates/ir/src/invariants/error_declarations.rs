@@ -6,15 +6,12 @@ use super::json_members::{entry, js_number_of};
 use super::violation::{IrInvariantId, Violations};
 use crate::instance_walk::{IrInstanceNode, walk_ir_instance};
 use crate::{
-    IrError, IrMap, Schema, SchemaId, find_ir_sensitive_param_reaches_skipping_missing,
-    sensitive_reach_text,
+    IrError, IrMap, Schema, SchemaId, derivation_ids,
+    find_ir_sensitive_param_reaches_skipping_missing, sensitive_reach_text,
 };
 
 /// The status of the code a retry header sits on.
 const RETRY_STATUS: f64 = 429.0;
-
-/// The derivation a retry header comes from.
-const RETRY_DERIVATION: &str = "rule.bucket";
 
 /// The largest integer a retry delay may be, 2^53 - 1.
 const SAFE_MAXIMUM: f64 = 9_007_199_254_740_991.0;
@@ -203,12 +200,15 @@ pub(super) fn check_retry_header(
 
     if !is_text(
         derived_from.and_then(|derived| derived.get("derivation")),
-        RETRY_DERIVATION,
+        derivation_ids::RULE_BUCKET.as_str(),
     ) {
         out.fail(
             IrInvariantId::ErrorRetryHeader,
             &at,
-            format!("A retry header is derived from '{RETRY_DERIVATION}'."),
+            format!(
+                "A retry header is derived from '{}'.",
+                derivation_ids::RULE_BUCKET
+            ),
         );
     }
 

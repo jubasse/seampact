@@ -3,6 +3,7 @@
 use seampact_authoring::AUTHORING_SCHEMA_FILES;
 use seampact_diagnostics::InternalError;
 use seampact_json::{JsonObject, JsonValue, indented_json};
+use seampact_paths::RelativeOutputPath;
 
 use crate::EditorSchemasError;
 use crate::editor_names::EditorNames;
@@ -18,7 +19,7 @@ const SCHEMA_REFERENCE_TITLE: &str = "schema reference";
 pub struct EditorSchemaFile {
     /// `<kind>.schema.json`, the published file name, so relative `$ref`s and modelines keep
     /// working.
-    pub file_name: String,
+    pub file_name: RelativeOutputPath,
     /// The file text, two-space indented with a final newline.
     pub text: String,
 }
@@ -62,11 +63,17 @@ pub fn editor_schema_files(
     let files = AUTHORING_SCHEMA_FILES
         .iter()
         .zip(&copies)
-        .map(|(file, (_, schema))| EditorSchemaFile {
-            file_name: file.file_name.to_owned(),
-            text: indented_json(schema),
+        .map(|(file, (_, schema))| {
+            let file_name = RelativeOutputPath::try_new(file.file_name).map_err(|error| {
+                InternalError::new(format!("the authoring schema file name is unsafe: {error}"))
+            })?;
+
+            Ok(EditorSchemaFile {
+                file_name,
+                text: indented_json(schema),
+            })
         })
-        .collect();
+        .collect::<Result<Vec<_>, InternalError>>()?;
 
     Ok(files)
 }

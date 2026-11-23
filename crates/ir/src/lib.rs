@@ -10,6 +10,7 @@ mod closed_declaration;
 mod common;
 mod contract;
 mod declarations;
+pub mod derivation_ids;
 mod document;
 mod error;
 mod formats;

@@ -23,7 +23,6 @@ mod sensitive;
 mod tests;
 mod unknown_keys;
 
-pub use credentials::AUTHENTICATE;
 use seampact_diagnostics::RuleId;
 use seampact_pipeline::{DeriveWireOutput, DraftIr, HalfContext, PassError, TreeSchemaService};
 

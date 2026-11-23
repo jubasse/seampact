@@ -9,7 +9,7 @@ use seampact_ir::{
     ApiKind, ApiRole, DerivationId, ErrorCode, ErrorRole, FieldRight, IdempotencyEnforcement,
     InputPolicy, KnownAccessRef, KnownCsrfRef, KnownIdempotencyRef, KnownIdentityRef,
     KnownRequirementRef, KnownUnknownQueryRef, OperationId, Origin, OwnerKind, PagingRole,
-    Requirement, ValueSourceIn,
+    Requirement, ValueSourceIn, derivation_ids,
 };
 use seampact_pipeline::{DraftIr, DraftOperation, TreeNode, TreeNodeId};
 
@@ -60,12 +60,6 @@ const GATEWAY_ROLES: [ErrorRole; 3] = [
     ErrorRole::UpstreamTimeout,
 ];
 
-const VERSION_TOKEN_DERIVATION: DerivationId = DerivationId::from_static("identity.versionToken");
-
-const RULE_BUCKET_DERIVATION: DerivationId = DerivationId::from_static("rule.bucket");
-
-const REQUIREMENT_ERRORS_DERIVATION: DerivationId = DerivationId::from_static("requirement.errors");
-
 fn operation_origin(route: &DeriveErrorsRoute<'_>) -> Result<Origin, InternalError> {
     // tree.nodes wrote the origin of every operation; routes are matched through it.
     route.operation.origin.clone().ok_or_else(|| {
@@ -77,12 +71,12 @@ fn operation_origin(route: &DeriveErrorsRoute<'_>) -> Result<Origin, InternalErr
 }
 
 fn role_trigger(
-    derivation: &'static str,
+    derivation: DerivationId,
     role: ErrorRole,
     from: Vec<Origin>,
 ) -> DeriveErrorsRoleTrigger {
     DeriveErrorsRoleTrigger {
-        derivation: DerivationId::from_static(derivation),
+        derivation,
         role,
         from,
     }
@@ -130,7 +124,7 @@ fn access_roles(
         KnownAccessRef::Optional(_) | KnownAccessRef::Public(_) => return Ok(Vec::new()),
     };
     let mut triggers = vec![role_trigger(
-        "identity.authenticate",
+        derivation_ids::IDENTITY_AUTHENTICATE,
         ErrorRole::Unauthenticated,
         vec![origin.clone()],
     )];
@@ -139,7 +133,7 @@ fn access_roles(
         && let KnownIdentityRef::Signed(signed) = KnownIdentityRef::try_from(declared)?
     {
         triggers.push(role_trigger(
-            "signed.identity",
+            derivation_ids::SIGNED_IDENTITY,
             ErrorRole::Unauthenticated,
             vec![signed.origin.clone()],
         ));
@@ -155,7 +149,7 @@ fn write_roles(operation: &DraftOperation) -> Result<Vec<DeriveErrorsRoleTrigger
         && let KnownCsrfRef::Derived(derived) = KnownCsrfRef::try_from(csrf)?
     {
         triggers.push(role_trigger(
-            "csrf.cookieWrite",
+            derivation_ids::CSRF_COOKIE_WRITE,
             ErrorRole::CsrfInvalid,
             derived.derived_from.from.clone(),
         ));
@@ -171,13 +165,17 @@ fn write_roles(operation: &DraftOperation) -> Result<Vec<DeriveErrorsRoleTrigger
                 ErrorRole::IdempotencyKeyReused,
                 ErrorRole::IdempotencyInProgress,
             ] {
-                triggers.push(role_trigger("idempotency.write", role, from.clone()));
+                triggers.push(role_trigger(
+                    derivation_ids::IDEMPOTENCY_WRITE,
+                    role,
+                    from.clone(),
+                ));
             }
         }
 
         if derived.required {
             triggers.push(role_trigger(
-                "idempotency.write",
+                derivation_ids::IDEMPOTENCY_WRITE,
                 ErrorRole::SchemaInvalid,
                 from.clone(),
             ));
@@ -198,7 +196,7 @@ fn write_roles(operation: &DraftOperation) -> Result<Vec<DeriveErrorsRoleTrigger
 
         for role in roles {
             triggers.push(role_trigger(
-                "concurrency.version",
+                derivation_ids::CONCURRENCY_VERSION,
                 role.clone(),
                 derived.from.clone(),
             ));
@@ -217,7 +215,7 @@ fn member_roles(
 
     if !sources.unread_member_ids.is_empty() {
         triggers.push(role_trigger(
-            "member.notFound",
+            derivation_ids::MEMBER_NOT_FOUND,
             ErrorRole::NotFound,
             vec![operation_origin(route)?],
         ));
@@ -227,7 +225,7 @@ fn member_roles(
         && owner.kind == OwnerKind::Caller
     {
         triggers.push(role_trigger(
-            "owner.caller",
+            derivation_ids::OWNER_CALLER,
             ErrorRole::NotFound,
             vec![owner.origin.clone()],
         ));
@@ -237,7 +235,7 @@ fn member_roles(
 
     if !principal.is_empty() {
         triggers.push(role_trigger(
-            "principal.requires",
+            derivation_ids::PRINCIPAL_REQUIRES,
             ErrorRole::Forbidden,
             principal.iter().map(|entry| entry.origin.clone()).collect(),
         ));
@@ -247,7 +245,7 @@ fn member_roles(
 
     if !bindings.is_empty() {
         triggers.push(role_trigger(
-            "binding.mismatch",
+            derivation_ids::BINDING_MISMATCH,
             ErrorRole::Forbidden,
             bindings.iter().map(|entry| entry.origin.clone()).collect(),
         ));
@@ -284,7 +282,7 @@ fn right_roles(operation: &DraftOperation) -> Vec<DeriveErrorsRoleTrigger> {
             .collect();
 
         triggers.push(role_trigger(
-            "fieldRight.restricted",
+            derivation_ids::FIELD_RIGHT_RESTRICTED,
             ErrorRole::Forbidden,
             from,
         ));
@@ -294,7 +292,7 @@ fn right_roles(operation: &DraftOperation) -> Vec<DeriveErrorsRoleTrigger> {
         && paging.sort_keys.iter().any(|key| key.right.is_some())
     {
         triggers.push(role_trigger(
-            "sortKey.restricted",
+            derivation_ids::SORT_KEY_RESTRICTED,
             ErrorRole::SortKeyForbidden,
             vec![paging.origin.clone()],
         ));
@@ -328,7 +326,7 @@ fn wire_roles(
 
     if operation.deadline_header.is_some() {
         triggers.push(role_trigger(
-            "identity.deadline",
+            derivation_ids::IDENTITY_DEADLINE,
             ErrorRole::DeadlineExceeded,
             deadline_origins(route)?,
         ));
@@ -340,10 +338,10 @@ fn wire_roles(
         .flat_map(|params| params.header.iter())
     {
         if let Some(derived) = &param.derived_from
-            && derived.derivation.as_str() == "union.headerTag"
+            && derived.derivation == derivation_ids::UNION_HEADER_TAG
         {
             triggers.push(role_trigger(
-                "union.headerTag",
+                derivation_ids::UNION_HEADER_TAG,
                 ErrorRole::SchemaInvalid,
                 derived.from.clone(),
             ));
@@ -358,7 +356,7 @@ fn wire_roles(
     };
 
     triggers.push(role_trigger(
-        "paging.params",
+        derivation_ids::PAGING_PARAMS,
         ErrorRole::SchemaInvalid,
         vec![paging.origin.clone()],
     ));
@@ -376,7 +374,7 @@ fn wire_roles(
 
     if since {
         triggers.push(role_trigger(
-            "paging.gone",
+            derivation_ids::PAGING_GONE,
             ErrorRole::Gone,
             vec![paging.origin.clone()],
         ));
@@ -396,20 +394,24 @@ fn api_roles(
 
     if api.role == Some(ApiRole::Gateway) {
         for role in GATEWAY_ROLES {
-            triggers.push(role_trigger("api.gateway", role, vec![api.origin.clone()]));
+            triggers.push(role_trigger(
+                derivation_ids::API_GATEWAY,
+                role,
+                vec![api.origin.clone()],
+            ));
         }
     }
 
     if api.kind == ApiKind::Service {
         triggers.push(role_trigger(
-            "api.service",
+            derivation_ids::API_SERVICE,
             ErrorRole::DeadlineExceeded,
             vec![api.origin.clone()],
         ));
     }
 
     triggers.push(role_trigger(
-        "response.undeclared",
+        derivation_ids::RESPONSE_UNDECLARED,
         ErrorRole::UndeclaredStatus,
         vec![operation_origin(route)?],
     ));
@@ -467,7 +469,7 @@ fn version_token_codes(
             continue;
         };
 
-        if derived.derivation != VERSION_TOKEN_DERIVATION {
+        if derived.derivation != derivation_ids::IDENTITY_VERSION_TOKEN {
             continue;
         }
 
@@ -481,7 +483,7 @@ fn version_token_codes(
 
         if let Some(stale) = usage.and_then(|usage| usage.stale.as_ref()) {
             codes.push(DeriveErrorsCodeTrigger {
-                derivation: VERSION_TOKEN_DERIVATION,
+                derivation: derivation_ids::IDENTITY_VERSION_TOKEN,
                 code: stale.clone(),
                 from: derived.from.clone(),
             });
@@ -512,7 +514,7 @@ fn requirement_triggers(
 
                 push_declared_codes(
                     &mut triggers,
-                    &REQUIREMENT_ERRORS_DERIVATION,
+                    &derivation_ids::REQUIREMENT_ERRORS,
                     declared,
                     &from,
                 );
@@ -526,7 +528,7 @@ fn requirement_triggers(
 
                 push_declared_codes(
                     &mut triggers,
-                    &REQUIREMENT_ERRORS_DERIVATION,
+                    &derivation_ids::REQUIREMENT_ERRORS,
                     declared,
                     &from,
                 );
@@ -537,13 +539,13 @@ fn requirement_triggers(
 
                 if declared.is_empty() {
                     triggers.roles.push(DeriveErrorsRoleTrigger {
-                        derivation: RULE_BUCKET_DERIVATION,
+                        derivation: derivation_ids::RULE_BUCKET,
                         role: ErrorRole::RateLimited,
                         from: from.clone(),
                     });
                 }
 
-                push_declared_codes(&mut triggers, &RULE_BUCKET_DERIVATION, declared, &from);
+                push_declared_codes(&mut triggers, &derivation_ids::RULE_BUCKET, declared, &from);
             }
         }
     }
@@ -557,7 +559,7 @@ fn requirement_triggers(
 
         push_declared_codes(
             &mut triggers,
-            &DerivationId::from_static("scope.errors"),
+            &derivation_ids::SCOPE_ERRORS,
             declared,
             std::slice::from_ref(&scope.origin),
         );
@@ -596,7 +598,7 @@ pub(crate) fn derive_errors_triggers(
 
     if has_input(operation)? {
         roles.push(role_trigger(
-            "input.invalid",
+            derivation_ids::INPUT_INVALID,
             ErrorRole::SchemaInvalid,
             vec![operation_origin(route)?],
         ));
@@ -604,8 +606,8 @@ pub(crate) fn derive_errors_triggers(
 
     if let Some(input) = &operation.input {
         for (derivation, role) in [
-            ("body.limit", ErrorRole::PayloadTooLarge),
-            ("body.media", ErrorRole::UnsupportedMediaType),
+            (derivation_ids::BODY_LIMIT, ErrorRole::PayloadTooLarge),
+            (derivation_ids::BODY_MEDIA, ErrorRole::UnsupportedMediaType),
         ] {
             roles.push(role_trigger(derivation, role, vec![input.origin.clone()]));
         }

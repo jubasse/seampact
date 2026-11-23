@@ -29,7 +29,7 @@ pub fn write_editor_schemas(plan: &EditorSchemasPlan) -> Result<usize, EditorSch
     fs::create_dir_all(&plan.directory).map_err(|error| io_error(&plan.directory, &error))?;
 
     for file in &plan.files {
-        let target = plan.directory.join(&file.file_name);
+        let target = plan.directory.join(file.file_name.as_path());
         let temporary = Utf8PathBuf::from(format!("{target}{TEMPORARY_SUFFIX}"));
 
         fs::write(&temporary, &file.text).map_err(|error| io_error(&temporary, &error))?;

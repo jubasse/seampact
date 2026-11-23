@@ -13,6 +13,7 @@ use seampact_cli_config::{
 use seampact_cli_config::{located_problem, unlocated_problem};
 use seampact_editor_schemas::DEFAULT_EDITOR_SCHEMAS_DIRECTORY;
 use seampact_generate::run_environment;
+use seampact_paths::RelativeOutputPath;
 
 use crate::compile_command::{CompileOutputs, EditorSchemasMode, compile_command};
 use crate::config_location::{APP_CONFIG_FILE_NAME, ConfigLocation, config_location, display_path};
@@ -113,9 +114,9 @@ fn init_new_project(
     ignore_files: InitWrite,
     io: &mut dyn CliIo,
 ) -> Result<i32, CliError> {
-    let config_file = resolved_path(io.cwd(), APP_CONFIG_FILE_NAME);
-    let source_directory = resolved_path(io.cwd(), STARTER_SOURCE_DIRECTORY);
-    let contract_file = resolved_path(&source_directory, STARTER_CONTRACT_FILE);
+    let config_file = starter_path(io.cwd(), APP_CONFIG_FILE_NAME)?;
+    let source_directory = starter_path(io.cwd(), STARTER_SOURCE_DIRECTORY)?;
+    let contract_file = starter_path(&source_directory, STARTER_CONTRACT_FILE)?;
     let mut existing: Vec<Utf8PathBuf> = Vec::new();
 
     for path in [&config_file, &source_directory] {
@@ -185,6 +186,14 @@ fn init_new_project(
 
 /// Writes the config, the contract and its editor schemas; when a step fails, removes what it
 /// wrote, which did not exist before, so the folder is left as it was.
+/// `relative` below `base`, once checked as a relative path that stays inside it.
+fn starter_path(base: &Utf8Path, relative: &str) -> Result<Utf8PathBuf, CliError> {
+    let relative = RelativeOutputPath::try_new(relative)
+        .map_err(|error| CliError::io(base, &std::io::Error::other(error)))?;
+
+    Ok(resolved_path(base, relative.as_str()))
+}
+
 fn write_starter(io: &mut dyn CliIo, starter: &StarterWrite) -> Result<i32, CliError> {
     match write_starter_files(io, starter) {
         Ok(EXIT_SUCCESS) => Ok(EXIT_SUCCESS),

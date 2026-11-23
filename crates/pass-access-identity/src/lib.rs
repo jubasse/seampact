@@ -20,7 +20,6 @@ mod source;
 #[cfg(test)]
 mod tests;
 
-pub use csrf::CSRF_DERIVATION;
 use seampact_diagnostics::RuleId;
 use seampact_pipeline::{AccessIdentityOutput, DraftIr, HalfContext, PassError, TreeSchemaService};
 

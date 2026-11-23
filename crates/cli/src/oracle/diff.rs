@@ -1,6 +1,7 @@
 //! The diff cases: the codes and table, and the diff of two compiled fixtures.
 
 use indexmap::IndexMap;
+use seampact_cli_config::DiffSettings;
 use seampact_compiler::{PipelineOptions, compile_workspace};
 use seampact_diff::{DiffError, diff_contract_sets, diff_contracts, format_diff_report};
 use seampact_diff_table::{
@@ -12,8 +13,6 @@ use seampact_json::{JsonValue, canonical_document};
 use seampact_load::{FsReader, LoadOptions};
 use seampact_oracle::{DiffAnswer, DiffCase, DiffSide, Fixture, SubjectAnswer};
 use serde::{Serialize, Serializer};
-
-use crate::diff_command::diff_options;
 
 /// The diff codes and table, `{ "codes", "table" }`.
 pub(crate) fn diff_table_answer() -> SubjectAnswer<JsonValue> {
@@ -135,7 +134,9 @@ fn case_options(raw: &JsonValue) -> Result<DiffOptions, String> {
         return Err("the diff options have no `today` text".to_owned());
     };
 
-    diff_options(today.clone(), Some(raw)).map_err(|error| error.to_string())
+    DiffSettings::from_value(raw)
+        .map(|settings| settings.into_options(today.clone()))
+        .map_err(|error| error.to_string())
 }
 
 fn result_json(result: &DiffResult) -> Result<JsonValue, DiffCaseError> {

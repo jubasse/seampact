@@ -15,6 +15,7 @@ use seampact_bundle::{
     bundle_path_fold, bundle_path_problem,
 };
 use seampact_diagnostics::quote_text;
+use seampact_paths::RelativeOutputPath;
 
 use crate::git_run::{FETCH_TIMEOUT, GitFailure, GitRunner};
 use crate::{BundleSourceFailure, BundleSourceFailureCode};
@@ -90,9 +91,9 @@ pub(crate) fn write_tree(
             ));
         }
 
-        let mut path = target.to_path_buf();
-
-        path.extend(file.path.split('/'));
+        let relative = RelativeOutputPath::try_new(file.path.as_str())
+            .map_err(|error| GitFailure::Message(error.to_string()))?;
+        let path = target.join(relative.as_path());
 
         if let Some(parent) = path.parent() {
             fs::create_dir_all(parent).map_err(|error| write_failure(&error))?;

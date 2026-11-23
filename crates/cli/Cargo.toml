@@ -42,6 +42,7 @@ seampact-lint.workspace = true
 seampact-openapi.workspace = true
 seampact-writer.workspace = true
 seampact-oracle = { workspace = true, optional = true }
+seampact-paths.workspace = true
 seampact-pipeline.workspace = true
 seampact-span.workspace = true
 seampact-target.workspace = true

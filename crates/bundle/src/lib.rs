@@ -32,33 +32,25 @@ mod write;
 use seampact_diagnostics::RuleId;
 
 pub use build::{BundleBuildOptions, BundleBuildResult, BundleNamedVersionOverride, build_bundle};
-pub use contents::{BundleContents, BundleEntry, bundle_entries, bundle_manifest_bytes};
+pub use contents::{BundleContents, bundle_manifest_bytes};
 pub use error::BundleError;
 pub use failure::{BundleFailure, BundleFailureCode};
-pub use file_list::{canonical_bundle_file_list, compare_bundle_paths};
 pub use installed_package::{installed_package_directory, resolve_directory};
 pub use integrity::{
     BUNDLE_INTEGRITY_PREFIX, bundle_base64_decoded, bundle_hex, bundle_integrity, bundle_sha256_hex,
 };
-pub use label::bundle_label_problem;
-pub use limits::{
-    BUNDLE_ARCHIVE_BYTES_MAX, BUNDLE_ENTRIES_MAX, BUNDLE_EXTRACTED_BYTES_MAX,
-    BUNDLE_MANIFEST_BYTES_MAX,
-};
+pub use limits::{BUNDLE_ARCHIVE_BYTES_MAX, BUNDLE_ENTRIES_MAX, BUNDLE_EXTRACTED_BYTES_MAX};
 pub use local_packages::{LocalPackageReason, LocalPackageSource, find_local_package_sources};
-pub use manifest::{
-    BUNDLE_FORMAT_VERSION, BUNDLE_IR_DIRECTORY, BUNDLE_MANIFEST_FILE, BUNDLE_SOURCES_DIRECTORY,
-    BundleApi, BundleFile, BundleManifest, BundleNamedVersion,
-};
-pub use manifest_read::{BundleManifestRead, manifest_too_large, read_bundle_manifest};
-pub use manifest_rules::{BundleManifestProblem, bundle_manifest_rule_problems};
-pub use path::{BUNDLE_PATH_MAX_LENGTH, bundle_path_fold, bundle_path_problem};
+pub(crate) use manifest::{BUNDLE_IR_DIRECTORY, BUNDLE_SOURCES_DIRECTORY, BundleApi};
+pub use manifest::{BUNDLE_MANIFEST_FILE, BundleFile, BundleManifest, BundleNamedVersion};
+pub(crate) use manifest_read::{BundleManifestRead, manifest_too_large, read_bundle_manifest};
+pub use path::{bundle_path_fold, bundle_path_problem};
 pub use tarball_read::{
     BundleArchiveExtraction, BundleArchiveRead, ExtractedBundle, extract_bundle_tarball,
     read_bundle_tarball,
 };
 pub use tarball_write::bundle_tarball;
-pub use untrusted_json::{UntrustedJson, duplicate_key_pointer, parse_untrusted_json, utf8_text};
+pub use untrusted_json::{UntrustedJson, parse_untrusted_json};
 pub use verify::{BundleChannel, BundleVerifyResult, verify_bundle};
 pub use write::{BundleOutput, BundleWriteOptions, BundleWriteResult, write_bundle};
 

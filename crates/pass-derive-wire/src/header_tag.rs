@@ -4,14 +4,12 @@
 //! string and a target reads the values from that schema.
 
 use seampact_diagnostics::InternalError;
-use seampact_ir::{DerivationId, DerivedFrom, Schema, TypeUse, UnionTag};
+use seampact_ir::{DerivedFrom, Schema, TypeUse, UnionTag, derivation_ids};
 
 use crate::params::{
     DeriveWireDerived, DeriveWireParamPlace, derive_wire_add_param, derive_wire_string_use,
 };
 use crate::routes::{DeriveWireRoute, DeriveWireScope};
-
-const HEADER_TAG: DerivationId = DerivationId::from_static("union.headerTag");
 
 /// Writes the tag header parameter of a route whose whole input is a header-tagged union.
 ///
@@ -42,7 +40,7 @@ pub(crate) fn derive_wire_header_tag(
             r#type: derive_wire_string_use(),
             required: true,
             derived_from: DerivedFrom {
-                derivation: HEADER_TAG,
+                derivation: derivation_ids::UNION_HEADER_TAG,
                 from: vec![union.origin.clone()],
             },
             wire: None,

@@ -7,7 +7,7 @@
 
 use seampact_diagnostics::InternalError;
 use seampact_ir::{
-    DerivationId, DerivedFrom, MaturitySource, OperationMaturity, ResponseHeaderSemantic,
+    DerivedFrom, MaturitySource, OperationMaturity, ResponseHeaderSemantic, derivation_ids,
 };
 use seampact_json::JsonValue;
 use seampact_pipeline::ConventionReading;
@@ -16,8 +16,6 @@ use crate::params::{
     DERIVE_WIRE_LINK, DeriveWireDerived, derive_wire_add_success_header, derive_wire_string_use,
 };
 use crate::routes::{DeriveWireRoute, DeriveWireScope};
-
-const DEPRECATION: DerivationId = DerivationId::from_static("deprecation.headers");
 
 struct DeprecationHeader<'run> {
     name: String,
@@ -78,7 +76,7 @@ pub(crate) fn derive_wire_deprecation(
                 r#type: derive_wire_string_use(),
                 required: true,
                 derived_from: DerivedFrom {
-                    derivation: DEPRECATION,
+                    derivation: derivation_ids::DEPRECATION_HEADERS,
                     from,
                 },
                 wire: None,

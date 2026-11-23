@@ -14,8 +14,6 @@ seampact-diagnostics.workspace = true
 seampact-ir.workspace = true
 seampact-js.workspace = true
 seampact-json.workspace = true
-seampact-pass-access-identity.workspace = true
-seampact-pass-derive-wire.workspace = true
 seampact-target.workspace = true
 thiserror.workspace = true
 

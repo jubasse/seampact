@@ -15,6 +15,7 @@ mod config_position;
 mod config_schema;
 mod config_value;
 mod config_waits;
+mod diff_settings;
 mod document_plan;
 mod error;
 mod find_root_config;
@@ -48,7 +49,8 @@ pub use cli_problem::{
     unlocated_problem,
 };
 pub use compatibility_check::{CompatibilityOutcome, check_app_compatibility};
-pub use document_plan::open_api_api_names;
+pub use diff_settings::DiffSettings;
+pub use document_plan::{OpenApiSettings, open_api_api_names};
 pub use error::CliConfigError;
 pub use find_root_config::{RootDiscovery, find_root_config};
 pub use installed_version::{

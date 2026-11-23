@@ -5,8 +5,8 @@ use std::cmp::Ordering;
 use indexmap::IndexMap;
 use seampact_diagnostics::{InternalError, access_rights_quoted};
 use seampact_ir::{
-    DerivationId, DerivedFrom, Direction, FieldRestriction, FieldRight, FieldRightSubject,
-    InputPolicy, SchemaId,
+    DerivedFrom, Direction, FieldRestriction, FieldRight, FieldRightSubject, InputPolicy, SchemaId,
+    derivation_ids,
 };
 use seampact_js::cmp_utf16;
 use seampact_json::{JsonValue, canonical_json, stringify_json};
@@ -47,8 +47,6 @@ pub(crate) struct Reached<'draft> {
     pub(crate) field: AccessRightsRestrictedField<'draft>,
     pub(crate) direction: Direction,
 }
-
-const FIELD_RIGHT_DERIVATION: DerivationId = DerivationId::from_static("fieldRight.restricted");
 
 /// The `fieldRights` of a route: one entry per restricted field its input and responses reach.
 ///
@@ -244,7 +242,7 @@ pub(crate) fn same_entry(left: Option<&FieldRight>, right: Option<&FieldRight>) 
     let canonical_params = |entry: &FieldRight| entry.params.as_ref().map(canonical_json);
     let without_derivation = |entry: &FieldRight| FieldRight {
         derived_from: DerivedFrom {
-            derivation: FIELD_RIGHT_DERIVATION,
+            derivation: derivation_ids::FIELD_RIGHT_RESTRICTED,
             from: Vec::new(),
         },
         params: None,
@@ -320,7 +318,7 @@ pub(crate) fn field_right_of(
         input_policy,
         always: None,
         derived_from: DerivedFrom {
-            derivation: FIELD_RIGHT_DERIVATION,
+            derivation: derivation_ids::FIELD_RIGHT_RESTRICTED,
             from: vec![access_rights_restriction_origin(field.restriction)?.clone()],
         },
     })

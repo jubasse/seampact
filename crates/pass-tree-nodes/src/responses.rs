@@ -4,8 +4,8 @@ use seampact_diagnostics::InternalError;
 use std::collections::HashMap;
 
 use seampact_ir::{
-    DerivationId, DerivedFrom, Direction, Docs, OpShorthand, Origin, Response, ResponseHeader,
-    ResponseShape, TypeUse,
+    DerivedFrom, Direction, Docs, OpShorthand, Origin, Response, ResponseHeader, ResponseShape,
+    TypeUse, derivation_ids,
 };
 use seampact_js::js_key_order;
 use seampact_json::{JsonValue, js_integer_in_range, text_of};
@@ -34,10 +34,6 @@ const REDIRECT_STATUSES: &[i64] = &[301, 302, 303, 307, 308];
 pub(crate) const TREE_NODES_PAGING_NONE: &str = "none";
 /// The ops whose response is one item.
 const ITEM_OPS: &[OpShorthand] = &[OpShorthand::Get, OpShorthand::Create, OpShorthand::Update];
-/// The derivation of a response read from the format.
-const FORMAT_DERIVATION: DerivationId = DerivationId::from_static("response.format");
-/// The derivation of a batch read.
-const BATCH_DERIVATION: DerivationId = DerivationId::from_static("batch.read");
 /// The shapes that bypass the format: a download and a redirect.
 const BYPASSING_SHAPES: &[ResponseShape] = &[ResponseShape::Binary, ResponseShape::Redirect];
 /// The members a route writes `responses` instead of.
@@ -167,7 +163,7 @@ pub(crate) fn tree_nodes_responses(
 
             Response {
                 derived_from: Some(DerivedFrom {
-                    derivation: FORMAT_DERIVATION,
+                    derivation: derivation_ids::RESPONSE_FORMAT,
                     from: vec![format_origin.clone()],
                 }),
                 ..response
@@ -589,7 +585,7 @@ fn batch_table(
         headers: Vec::new(),
         origin: None,
         derived_from: Some(DerivedFrom {
-            derivation: BATCH_DERIVATION,
+            derivation: derivation_ids::BATCH_READ,
             from: vec![site.node.origin.clone()],
         }),
         docs: None,

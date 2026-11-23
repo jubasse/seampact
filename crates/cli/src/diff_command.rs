@@ -6,13 +6,11 @@ use seampact_cli_config::unlocated_problem;
 use seampact_cli_config::{
     ReadAppConfigOutcome, open_api_api_names, read_app_config, resolved_path,
 };
-use seampact_diagnostics::InternalError;
 use seampact_diff::{diff_contract_sets, format_diff_report};
-use seampact_diff_table::{DiffExemption, DiffGateScope, DiffOptions, DiffResult};
+use seampact_diff_table::DiffResult;
 use seampact_generate::LocalBundles;
 use seampact_generate::compile_sources;
 use seampact_generate::{UsedSources, add_qualify_fix, entry_api_refs, used_sources};
-use seampact_json::JsonValue;
 
 use crate::config_location::ConfigLocation;
 use crate::diff_baseline::read_baseline;
@@ -34,7 +32,7 @@ pub(crate) fn diff_command(
         ReadAppConfigOutcome::Refused(problems) => return Ok(refuse(io, &problems)),
         ReadAppConfigOutcome::Read(config) => config,
     };
-    let extra_refs = open_api_api_names(&config);
+    let extra_refs = open_api_api_names(&config)?;
     let used_names = match used_sources(&config, &extra_refs)? {
         UsedSources::Refused(problems) => return Ok(refuse(io, &problems)),
         UsedSources::Used(names) => names,
@@ -71,7 +69,10 @@ pub(crate) fn diff_command(
         current.insert(each.api, each.ir);
     }
 
-    let options = diff_options(io.today(), config.diff.as_ref())?;
+    let options = config
+        .diff_settings()?
+        .unwrap_or_default()
+        .into_options(io.today());
     let results = diff_contract_sets(&baseline, &current, &options)?;
     let mut failed = false;
 
@@ -85,60 +86,4 @@ pub(crate) fn diff_command(
     }
 
     Ok(if failed { EXIT_REFUSED } else { EXIT_SUCCESS })
-}
-
-/// The diff options of `today` and the `gate` and `exempt` members of the config's `diff`
-/// settings, as the config schema allows them.
-pub(crate) fn diff_options(
-    today: String,
-    settings: Option<&JsonValue>,
-) -> Result<DiffOptions, InternalError> {
-    let members = match settings {
-        Some(JsonValue::Object(members)) => Some(members),
-        Some(_) => {
-            return Err(InternalError::new(
-                "diff settings that are no mapping passed the schema",
-            ));
-        }
-        None => None,
-    };
-    let gate = match members.and_then(|members| members.get("gate")) {
-        None => None,
-        Some(JsonValue::String(text)) => Some(DiffGateScope::from_text(text).ok_or_else(|| {
-            InternalError::new(format!("a diff gate '{text}' passed the schema"))
-        })?),
-        Some(_) => {
-            return Err(InternalError::new(
-                "a diff gate that is no text passed the schema",
-            ));
-        }
-    };
-    let exempt = match members.and_then(|members| members.get("exempt")) {
-        None => None,
-        Some(JsonValue::Array(items)) => Some(
-            items
-                .iter()
-                .map(exemption_of)
-                .collect::<Result<Vec<_>, _>>()?,
-        ),
-        Some(_) => {
-            return Err(InternalError::new(
-                "diff exemptions that are no list passed the schema",
-            ));
-        }
-    };
-
-    Ok(DiffOptions {
-        today,
-        gate,
-        exempt,
-    })
-}
-
-fn exemption_of(item: &JsonValue) -> Result<DiffExemption, InternalError> {
-    match item {
-        JsonValue::String(text) => DiffExemption::from_text(text),
-        _ => None,
-    }
-    .ok_or_else(|| InternalError::new("a diff exemption outside the schema's passed it"))
 }

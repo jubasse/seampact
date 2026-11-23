@@ -13,7 +13,7 @@ use indexmap::IndexMap;
 use seampact_diagnostics::InternalError;
 use seampact_ir::{
     DerivationId, DerivedFrom, ErrorCode, ErrorRole, ErrorRoleBinding, Layer, OperationError,
-    Origin, RetryHeader, RetryUnit, Template, ValueSourceIn,
+    Origin, RetryHeader, RetryUnit, Template, ValueSourceIn, derivation_ids,
 };
 use seampact_js::cmp_utf16;
 use seampact_json::JsonValue;
@@ -32,7 +32,7 @@ use crate::bindings::{
     derive_errors_check_conditional_datum, derive_errors_params_site,
 };
 use crate::read::derive_errors_origin_of;
-use crate::relays::{DERIVE_ERRORS_RELAY_DERIVATION, DeriveErrorsRelayCode};
+use crate::relays::DeriveErrorsRelayCode;
 use crate::report::DeriveErrorsReporter;
 use crate::retry_param::derive_errors_check_retry_param;
 use crate::role_params::{DeriveErrorsRoleParams, derive_errors_read_role_params};
@@ -66,8 +66,6 @@ struct PendingError {
 
 /// The status whose response carries the retry header of a bucket rule.
 const RATE_LIMITED_STATUS: i64 = 429;
-
-const BUCKET_DERIVATION: DerivationId = DerivationId::from_static("rule.bucket");
 
 fn table_index_of(derivation: &str) -> usize {
     let index_of = |id: &str| DERIVATION_TABLE.iter().position(|row| row.id == id);
@@ -330,7 +328,7 @@ fn retry_header_of(
         param: param.to_owned(),
         unit,
         derived_from: DerivedFrom {
-            derivation: BUCKET_DERIVATION,
+            derivation: derivation_ids::RULE_BUCKET,
             from: from.to_vec(),
         },
     }))
@@ -513,7 +511,7 @@ fn collect(
             error.binding_origins.push(origin);
         }
 
-        if trigger.derivation == BUCKET_DERIVATION {
+        if trigger.derivation == derivation_ids::RULE_BUCKET {
             error
                 .bucket_from
                 .get_or_insert_with(Vec::new)
@@ -538,7 +536,7 @@ fn collect(
 
         add_from(error, &trigger.derivation, &trigger.from);
 
-        if trigger.derivation == BUCKET_DERIVATION {
+        if trigger.derivation == derivation_ids::RULE_BUCKET {
             error
                 .bucket_from
                 .get_or_insert_with(Vec::new)
@@ -551,7 +549,7 @@ fn collect(
     for relayed in sources.relay_codes.get(route.id).into_iter().flatten() {
         let error = pending_of(&mut pending, &relayed.code);
 
-        add_from(error, &DERIVE_ERRORS_RELAY_DERIVATION, &relayed.from);
+        add_from(error, &derivation_ids::RELAY_ROUTE, &relayed.from);
         error.relayed = Some(relayed.clone());
 
         for binding in relayed.roles.iter().flatten() {

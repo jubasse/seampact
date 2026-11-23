@@ -13,6 +13,7 @@ indexmap.workspace = true
 jsonschema.workspace = true
 seampact-bundle-source.workspace = true
 seampact-diagnostics.workspace = true
+seampact-diff-table.workspace = true
 seampact-js.workspace = true
 seampact-json.workspace = true
 seampact-load.workspace = true
@@ -20,6 +21,7 @@ seampact-paths.workspace = true
 seampact-span.workspace = true
 seampact-target.workspace = true
 seampact-validate.workspace = true
+serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
 

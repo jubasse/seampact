@@ -136,7 +136,7 @@ fn a_name_position_lists_the_names_with_their_sentences() -> Result<(), Box<dyn 
     let files = editor_schema_files(&names)?;
     let api = files
         .iter()
-        .find(|file| file.file_name == "api.schema.json")
+        .find(|file| file.file_name.as_str() == "api.schema.json")
         .ok_or("no api schema")?;
 
     assert!(api.text.contains("\"Declared in api.yaml line 3.\""));

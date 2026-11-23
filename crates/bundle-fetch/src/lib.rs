@@ -22,14 +22,11 @@ mod removed_on_drop;
 
 use seampact_diagnostics::RuleId;
 
-pub use cache::{
-    CACHE_DIRECTORY_VARIABLE, CachePlatform, bundle_cache_directory, bundle_cache_entry,
-    store_bundle_cache_entry,
-};
-pub use environment::{Environment, process_environment};
+pub use cache::CACHE_DIRECTORY_VARIABLE;
+pub use environment::Environment;
 pub use error::BundleFetchError;
 pub use fetch::{BundleFetchOptions, BundleFetchResult, fetch_bundle};
-pub use fetch_failure::{BundleSourceFailure, BundleSourceFailureCode, bundle_source_text};
+pub use fetch_failure::{BundleSourceFailure, BundleSourceFailureCode};
 pub use imports::{
     WorkspaceImportFailure, WorkspaceImportsOptions, WorkspaceImportsResult,
     compile_workspace_with_imports,
@@ -37,7 +34,6 @@ pub use imports::{
 pub use local_sources::{
     ALLOW_LOCAL_VARIABLE, LocalSourcePolicy, local_source_policy, local_source_refusal_reason,
 };
-pub use printable_url::{printable_url, with_printable_url};
 pub use release_get::{ReleaseGet, ReleaseGetError, ReleaseResponse, UreqReleaseGet};
 pub use url::Url;
 

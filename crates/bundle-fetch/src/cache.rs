@@ -8,6 +8,7 @@ use std::fs;
 
 use camino::{Utf8Path, Utf8PathBuf};
 use seampact_bundle::{BUNDLE_INTEGRITY_PREFIX, bundle_base64_decoded, bundle_hex};
+use seampact_paths::RelativeOutputPath;
 use tempfile::Builder;
 
 use crate::BundleFetchError;
@@ -170,7 +171,9 @@ pub fn store_bundle_cache_entry(
 fn copy_directory(from: &Utf8Path, to: &Utf8Path) -> std::io::Result<()> {
     for child in from.read_dir_utf8()? {
         let child = child?;
-        let target = to.join(child.file_name());
+        let name = RelativeOutputPath::try_new(child.file_name())
+            .map_err(|error| std::io::Error::new(std::io::ErrorKind::InvalidInput, error))?;
+        let target = to.join(name.as_path());
         let kind = child.file_type()?;
 
         if kind.is_dir() {

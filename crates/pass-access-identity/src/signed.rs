@@ -5,17 +5,14 @@
 
 use seampact_diagnostics::InternalError;
 use seampact_ir::{
-    DerivationId, DerivedFrom, KnownIdentityRef, KnownKeysPolicyRef, KnownScheme,
-    KnownSchemeKeyRef, KnownSignatureVerifyRef, TypeUse, UnknownKeys, UnknownKeysPolicy,
+    DerivedFrom, KnownIdentityRef, KnownKeysPolicyRef, KnownScheme, KnownSchemeKeyRef,
+    KnownSignatureVerifyRef, TypeUse, UnknownKeys, UnknownKeysPolicy, derivation_ids,
 };
 use seampact_pipeline::{DraftOperation, PassError, pointer_below};
 
 use crate::access::{AccessIdentityResolved, AccessIdentityRoute, AccessIdentityScope};
 use crate::params::{access_identity_is_parameter_location, access_identity_route_has_parameter};
 use crate::report::{AccessIdentityProblem, AccessIdentityRelated, AccessIdentityRule};
-
-/// The derivation of an unknown-key policy taken from the identity.
-pub(crate) const UNKNOWN_KEYS_DERIVATION: &str = "identity.unknownKeys";
 
 /// The input facts this half writes on an operation's declared input, read before any is
 /// written.
@@ -70,7 +67,7 @@ pub(crate) fn access_identity_input_facts(
             reason: Some(reason),
             origin: None,
             derived_from: Some(DerivedFrom {
-                derivation: DerivationId::new(UNKNOWN_KEYS_DERIVATION.to_owned()),
+                derivation: derivation_ids::IDENTITY_UNKNOWN_KEYS,
                 from: vec![signed.origin.clone()],
             }),
         }),

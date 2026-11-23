@@ -3,9 +3,9 @@
 use indexmap::IndexMap;
 use seampact_diagnostics::{InternalError, access_rights_quoted};
 use seampact_ir::{
-    DerivationId, DerivedFrom, FieldRestriction, FieldRightSubject, KnownRightSubjectRef,
-    KnownSchemaRef, KnownTypeUseRef, ObjectSchema, OperationScope, SortKey, ValueSource,
-    ValueSourceIn,
+    DerivedFrom, FieldRestriction, FieldRightSubject, KnownRightSubjectRef, KnownSchemaRef,
+    KnownTypeUseRef, ObjectSchema, OperationScope, SortKey, ValueSource, ValueSourceIn,
+    derivation_ids,
 };
 use seampact_json::{JsonValue, canonical_json, object_of};
 use seampact_pipeline::{DraftOperation, PassError, TreeNodeKind, json_at_pointer, pointer_below};
@@ -87,8 +87,6 @@ pub(crate) enum WrittenRight {
 }
 
 const LIST_SHAPES: &[&str] = &["page", "list"];
-
-const SORT_KEY_DERIVATION: DerivationId = DerivationId::from_static("sortKey.restricted");
 
 /// The right and subject of each sort key that names a restricted field, by the key's position.
 ///
@@ -436,7 +434,7 @@ pub(crate) fn inherited_right(
     Ok(Some(InheritedRight {
         right: checked.right.id.as_str().to_owned(),
         derived_from: DerivedFrom {
-            derivation: SORT_KEY_DERIVATION,
+            derivation: derivation_ids::SORT_KEY_RESTRICTED,
             from: vec![origin.clone()],
         },
     }))

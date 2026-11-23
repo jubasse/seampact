@@ -4,12 +4,10 @@
 //! identity's (access) win.
 
 use seampact_diagnostics::InternalError;
-use seampact_ir::{DerivationId, DerivedFrom, Reason, TypeUse, UnknownKeys, UnknownKeysPolicy};
+use seampact_ir::{DerivedFrom, Reason, TypeUse, UnknownKeys, UnknownKeysPolicy, derivation_ids};
 use seampact_json::{JsonValue, stringify_json};
 
 use crate::routes::{DeriveWireRoute, DeriveWireScope};
-
-const INPUT_UNKNOWN_KEYS: DerivationId = DerivationId::from_static("input.unknownKeys");
 
 const POLICIES: [(&str, UnknownKeysPolicy); 2] = [
     ("ignore", UnknownKeysPolicy::Ignore),
@@ -47,7 +45,7 @@ pub(crate) fn derive_wire_unknown_keys_policy(
         reason: Some(Reason::new(reason.clone())),
         origin: None,
         derived_from: Some(DerivedFrom {
-            derivation: INPUT_UNKNOWN_KEYS,
+            derivation: derivation_ids::INPUT_UNKNOWN_KEYS,
             from: vec![origin],
         }),
     }))
