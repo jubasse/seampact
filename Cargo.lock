@@ -1836,6 +1836,7 @@ dependencies = [
  "seampact-bundle-source",
  "seampact-diagnostics",
  "seampact-diff-table",
+ "seampact-gen-probe",
  "seampact-js",
  "seampact-json",
  "seampact-load",
