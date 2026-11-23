@@ -13,6 +13,7 @@ use seampact_cli_config::{
 use seampact_json::JsonValue;
 use seampact_oracle::{ROOT_TOKEN, RecordedAnswer, RecordedToolCall, SubjectAnswer};
 
+use super::cli_config_planning as planning;
 use crate::oracle::json::{array_of, coded_problem_json, push_present_texts};
 use crate::oracle::stub_answer::{StubError, failed_answer};
 
@@ -35,6 +36,9 @@ pub(super) fn cli_config_answer(
         "readRootConfig" => read_root_config_answer(call, root),
         "readWorkspaceConfigs" => read_workspace_configs_answer(call, root),
         "readRunConfig" => read_run_config_answer(call, root),
+        "selectArtefacts" => planning::select_artefacts_answer(call),
+        "planAppDocuments" => planning::plan_app_documents_answer(call, root),
+        "planMergedDocuments" => planning::plan_merged_documents_answer(call, root),
         _ => SubjectAnswer::NotPorted,
     }
 }
@@ -96,7 +100,7 @@ fn file_and_display_name(
     Some((path_argument(call, 0, root)?, text_argument(call, 1, root)?))
 }
 
-fn answer(result: JsonValue) -> SubjectAnswer<RecordedAnswer> {
+pub(super) fn answer(result: JsonValue) -> SubjectAnswer<RecordedAnswer> {
     SubjectAnswer::Ported(RecordedAnswer {
         result,
         written: IndexMap::new(),
@@ -107,7 +111,7 @@ fn read_json(member: &'static str, value: JsonValue) -> JsonValue {
     JsonValue::object([("status", JsonValue::text("read")), (member, value)])
 }
 
-fn refused_json(problems: &[CliProblem]) -> JsonValue {
+pub(super) fn refused_json(problems: &[CliProblem]) -> JsonValue {
     JsonValue::object([
         ("status", JsonValue::text("refused")),
         ("problems", array_of(problems, problem_json)),
@@ -202,7 +206,7 @@ fn read_app_config_answer(
     }
 }
 
-fn malformed_call(call: &RecordedToolCall) -> SubjectAnswer<RecordedAnswer> {
+pub(super) fn malformed_call(call: &RecordedToolCall) -> SubjectAnswer<RecordedAnswer> {
     SubjectAnswer::InternalError {
         message: format!(
             "a recorded {} call without its path arguments",

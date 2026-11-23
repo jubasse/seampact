@@ -1,7 +1,10 @@
 //! The levels of the `checks` keys: how `check` reports a drift and the matrix an untested major.
 
+use serde::Deserialize;
+
 /// `error` fails `check` (the default), `warning` reports and passes, `disabled` skips the check.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, PartialOrd, Ord, Deserialize)]
+#[serde(rename_all = "lowercase")]
 pub enum CheckLevel {
     /// The check is skipped.
     Disabled,
@@ -25,7 +28,8 @@ impl CheckLevel {
 }
 
 /// The level of `checks.matrix`: `allowUntested` silences one major, so it has no `disabled`.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, PartialOrd, Ord, Deserialize)]
+#[serde(rename_all = "lowercase")]
 pub enum MatrixCheckLevel {
     /// An untested major is reported and the run passes (the default).
     #[default]

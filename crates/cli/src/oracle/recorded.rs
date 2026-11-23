@@ -2,6 +2,7 @@
 
 mod bundle_fetch;
 mod cli_config;
+mod cli_config_planning;
 mod editor_schemas;
 
 use camino::Utf8Path;

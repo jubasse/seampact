@@ -65,61 +65,61 @@ src/read_workspace_configs.rs#read_workspace_configs	packages/core/cli/src/confi
 src/read_run_config.rs#read_run_config	packages/core/cli/src/config/read-run-config.ts#readRunConfig
 src/artefact_switches.rs#is_framework_route_check_off	packages/core/cli/src/config/artefact-switches.ts#isFrameworkRouteCheckOff
 src/artefact_switches.rs#framework_routes_switch_of	packages/core/cli/src/config/artefact-switches.ts#frameworkRoutesSwitchOf
--	packages/core/cli/src/config/document-plan.ts#planAppDocuments	pending: brief 1
--	packages/core/cli/src/config/document-plan.ts#defaultDocumentDirectory	pending: brief 1
--	packages/core/cli/src/config/document-plan.ts#defaultDocuments	pending: brief 1
--	packages/core/cli/src/config/document-plan.ts#addServedApi	pending: brief 1
--	packages/core/cli/src/config/document-plan.ts#listedDocuments	pending: brief 1
--	packages/core/cli/src/config/document-plan.ts#apiPlacements	pending: brief 1
--	packages/core/cli/src/config/document-plan.ts#isOnePlacement	pending: brief 1
--	packages/core/cli/src/config/document-plan.ts#placed	pending: brief 1
--	packages/core/cli/src/config/document-plan.ts#findApi	pending: brief 1
--	packages/core/cli/src/config/document-plan.ts#documentInsideOutputProblems	pending: brief 1
--	packages/core/cli/src/config/document-plan.ts#pathConflictProblems	pending: brief 1
--	packages/core/cli/src/config/document-plan.ts#nameOf	pending: brief 1
--	packages/core/cli/src/config/document-plan.ts#roleOf	pending: brief 1
--	packages/core/cli/src/config/document-plan.ts#planMergedDocuments	pending: brief 1
--	packages/core/cli/src/config/document-plan.ts#appContributions	pending: brief 1
--	packages/core/cli/src/config/document-plan.ts#refused	pending: brief 1
--	packages/core/cli/src/config/artefact-switches.ts#selectArtefacts	pending: brief 1
--	packages/core/cli/src/config/artefact-switches.ts#hookCheckSwitchOf	pending: brief 1
--	packages/core/cli/src/config/artefact-switches.ts#hookCheckLevelOf	pending: brief 1
--	packages/core/cli/src/config/artefact-switches.ts#isFrameworkRouteCheckStrict	pending: brief 1
--	packages/core/cli/src/config/artefact-switches.ts#booleanSwitchesOf	pending: brief 1
--	packages/core/cli/src/config/artefact-switches.ts#unknownSwitchProblems	pending: brief 1
--	packages/core/cli/src/config/artefact-switches.ts#unknownSwitchFix	pending: brief 1
--	packages/core/cli/src/config/artefact-switches.ts#dropUnwrittenWithoutNeeds	pending: brief 1
--	packages/core/cli/src/config/artefact-switches.ts#neededArtefactProblems	pending: brief 1
--	packages/core/cli/src/config/artefact-switches.ts#noArtefactProblem	pending: brief 1
--	packages/core/cli/src/config/artefact-switches.ts#quotedList	pending: brief 1
+src/document_plan.rs#plan_app_documents	packages/core/cli/src/config/document-plan.ts#planAppDocuments
+src/document_plan.rs#default_document_directory	packages/core/cli/src/config/document-plan.ts#defaultDocumentDirectory
+src/document_plan.rs#default_documents	packages/core/cli/src/config/document-plan.ts#defaultDocuments
+src/document_plan.rs#add_served_api	packages/core/cli/src/config/document-plan.ts#addServedApi
+src/document_plan.rs#listed_documents	packages/core/cli/src/config/document-plan.ts#listedDocuments
+src/document_plan.rs#api_placements	packages/core/cli/src/config/document-plan.ts#apiPlacements
+src/document_plan.rs#is_one_placement	packages/core/cli/src/config/document-plan.ts#isOnePlacement
+src/document_plan.rs#placed	packages/core/cli/src/config/document-plan.ts#placed
+src/document_plan.rs#find_api	packages/core/cli/src/config/document-plan.ts#findApi
+src/document_plan.rs#document_inside_output_problems	packages/core/cli/src/config/document-plan.ts#documentInsideOutputProblems
+src/document_plan.rs#path_conflict_problems	packages/core/cli/src/config/document-plan.ts#pathConflictProblems
+src/document_plan.rs#name_of	packages/core/cli/src/config/document-plan.ts#nameOf
+src/document_plan.rs#role_of	packages/core/cli/src/config/document-plan.ts#roleOf
+src/document_plan.rs#plan_merged_documents	packages/core/cli/src/config/document-plan.ts#planMergedDocuments
+src/document_plan.rs#app_contributions	packages/core/cli/src/config/document-plan.ts#appContributions
+src/document_plan.rs#refused	packages/core/cli/src/config/document-plan.ts#refused
+src/artefact_switches.rs#select_artefacts	packages/core/cli/src/config/artefact-switches.ts#selectArtefacts
+src/artefact_switches.rs#hook_check_switch_of	packages/core/cli/src/config/artefact-switches.ts#hookCheckSwitchOf
+src/artefact_switches.rs#hook_check_level_of	packages/core/cli/src/config/artefact-switches.ts#hookCheckLevelOf
+src/artefact_switches.rs#is_framework_route_check_strict	packages/core/cli/src/config/artefact-switches.ts#isFrameworkRouteCheckStrict
+src/artefact_switches.rs#boolean_switches_of	packages/core/cli/src/config/artefact-switches.ts#booleanSwitchesOf
+src/artefact_switches.rs#unknown_switch_problems	packages/core/cli/src/config/artefact-switches.ts#unknownSwitchProblems
+src/artefact_switches.rs#unknown_switch_fix	packages/core/cli/src/config/artefact-switches.ts#unknownSwitchFix
+src/artefact_switches.rs#drop_unwritten_without_needs	packages/core/cli/src/config/artefact-switches.ts#dropUnwrittenWithoutNeeds
+src/artefact_switches.rs#needed_artefact_problems	packages/core/cli/src/config/artefact-switches.ts#neededArtefactProblems
+src/artefact_switches.rs#no_artefact_problem	packages/core/cli/src/config/artefact-switches.ts#noArtefactProblem
+src/artefact_switches.rs#quoted_list	packages/core/cli/src/config/artefact-switches.ts#quotedList
 src/symbolic_link.rs#is_symbolic_link	packages/core/cli/src/symbolic-link.ts#isSymbolicLink
 src/symbolic_link.rs#is_path_taken	packages/core/cli/src/symbolic-link.ts#isPathTaken
-src/compatibility_check.rs#check_app_compatibility	packages/core/cli/src/config/compatibility-check.ts#checkAppCompatibility	pending: brief 1
--	packages/core/cli/src/config/compatibility-check.ts#checkCompatibility	pending: brief 1
--	packages/core/cli/src/config/compatibility-check.ts#recordedEntries	pending: brief 1
--	packages/core/cli/src/config/compatibility-check.ts#matrixRecordOf	pending: brief 1
--	packages/core/cli/src/config/compatibility-check.ts#unrecordedTargetProblems	pending: brief 1
-src/package_manager.rs#install_command	packages/core/cli/src/config/package-manager.ts#installCommand	pending: brief 1
-src/package_manager.rs#install_fix	packages/core/cli/src/config/package-manager.ts#installFix	pending: brief 1
-src/package_manager.rs#find_package_manager	packages/core/cli/src/config/package-manager.ts#findPackageManager	pending: brief 1
--	packages/core/cli/src/config/package-manager.ts#packageManagerIn	pending: brief 1
--	packages/core/cli/src/config/package-manager.ts#declaredPackageManager	pending: brief 1
-src/installed_version.rs#read_installed_version	packages/core/cli/src/config/installed-version.ts#readInstalledVersion	pending: brief 1
--	packages/core/cli/src/config/installed-version.ts#findPackageJson	pending: brief 1
--	packages/core/cli/src/config/installed-version.ts#missingPackageProblem	pending: brief 1
--	packages/core/cli/src/config/installed-version.ts#ancestorsOf	pending: brief 1
--	packages/core/cli/src/config/installed-version.ts#declaredMajor	pending: brief 1
--	packages/core/cli/src/config/installed-version.ts#parsedPackageJson	pending: brief 1
--	packages/core/cli/src/config/compatibility-check.ts#checkEntry	pending: brief 1
--	packages/core/cli/src/config/compatibility-check.ts#checkLibrary	pending: brief 1
--	packages/core/cli/src/config/compatibility-check.ts#allowUntestedItemOf	pending: brief 1
--	packages/core/cli/src/config/compatibility-check.ts#testedOnOf	pending: brief 1
--	packages/core/cli/src/config/compatibility-check.ts#reportUntestedMajor	pending: brief 1
--	packages/core/cli/src/config/compatibility-check.ts#foreignFrameworkProblems	pending: brief 1
--	packages/core/cli/src/config/compatibility-check.ts#testedMajorWarnings	pending: brief 1
--	packages/core/cli/src/config/compatibility-check.ts#librariesInUse	pending: brief 1
--	packages/core/cli/src/config/compatibility-check.ts#isSelected	pending: brief 1
--	packages/core/cli/src/config/compatibility-check.ts#ownValidatorsLibraryProblems	pending: brief 1
--	packages/core/cli/src/config/compatibility-check.ts#knownIds	pending: brief 1
--	packages/core/cli/src/config/compatibility-check.ts#testedMajorsText	pending: brief 1
--	packages/core/cli/src/config/compatibility-check.ts#frameworkIdOf	pending: brief 1
+src/compatibility_check.rs#check_app_compatibility	packages/core/cli/src/config/compatibility-check.ts#checkAppCompatibility
+src/compatibility_check.rs#check_compatibility	packages/core/cli/src/config/compatibility-check.ts#checkCompatibility
+-	packages/core/cli/src/config/compatibility-check.ts#recordedEntries	merged: src/compatibility_check.rs#check_app_compatibility
+src/compatibility_check.rs#matrix_record_of	packages/core/cli/src/config/compatibility-check.ts#matrixRecordOf
+src/compatibility_check.rs#unrecorded_target_problems	packages/core/cli/src/config/compatibility-check.ts#unrecordedTargetProblems
+src/package_manager.rs#install_command	packages/core/cli/src/config/package-manager.ts#installCommand
+src/package_manager.rs#install_fix	packages/core/cli/src/config/package-manager.ts#installFix
+src/package_manager.rs#find_package_manager	packages/core/cli/src/config/package-manager.ts#findPackageManager
+src/package_manager.rs#package_manager_in	packages/core/cli/src/config/package-manager.ts#packageManagerIn
+src/package_manager.rs#declared_package_manager	packages/core/cli/src/config/package-manager.ts#declaredPackageManager
+src/installed_version.rs#read_installed_version	packages/core/cli/src/config/installed-version.ts#readInstalledVersion
+src/installed_version.rs#find_package_json	packages/core/cli/src/config/installed-version.ts#findPackageJson
+src/installed_version.rs#missing_package_problem	packages/core/cli/src/config/installed-version.ts#missingPackageProblem
+src/installed_version.rs#ancestors_of	packages/core/cli/src/config/installed-version.ts#ancestorsOf
+src/installed_version.rs#declared_major	packages/core/cli/src/config/installed-version.ts#declaredMajor
+-	packages/core/cli/src/config/installed-version.ts#parsedPackageJson	merged: src/package_json.rs#read_package_json
+src/compatibility_check.rs#check_entry	packages/core/cli/src/config/compatibility-check.ts#checkEntry
+src/compatibility_check.rs#check_library	packages/core/cli/src/config/compatibility-check.ts#checkLibrary
+src/compatibility_check.rs#allow_untested_item_of	packages/core/cli/src/config/compatibility-check.ts#allowUntestedItemOf
+src/compatibility_check.rs#tested_on_of	packages/core/cli/src/config/compatibility-check.ts#testedOnOf
+src/compatibility_check.rs#report_untested_major	packages/core/cli/src/config/compatibility-check.ts#reportUntestedMajor
+src/compatibility_check.rs#foreign_framework_problems	packages/core/cli/src/config/compatibility-check.ts#foreignFrameworkProblems
+src/compatibility_check.rs#tested_major_warnings	packages/core/cli/src/config/compatibility-check.ts#testedMajorWarnings
+src/compatibility_check.rs#libraries_in_use	packages/core/cli/src/config/compatibility-check.ts#librariesInUse
+src/compatibility_check.rs#is_selected	packages/core/cli/src/config/compatibility-check.ts#isSelected
+src/compatibility_check.rs#own_validators_library_problems	packages/core/cli/src/config/compatibility-check.ts#ownValidatorsLibraryProblems
+src/compatibility_check.rs#known_ids	packages/core/cli/src/config/compatibility-check.ts#knownIds
+src/compatibility_check.rs#tested_majors_text	packages/core/cli/src/config/compatibility-check.ts#testedMajorsText
+src/compatibility_check.rs#framework_id_of	packages/core/cli/src/config/compatibility-check.ts#frameworkIdOf
