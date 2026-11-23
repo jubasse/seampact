@@ -1,5 +1,6 @@
-//! The CLI's config reading, ported from `packages/core/cli/src/config`: the app, root, workspace
-//! and run configs, each read or refused with [`CliProblem`]s.
+//! The CLI's config reading and planning, ported from `packages/core/cli/src/config`: the app, root,
+//! workspace and run configs, each read or refused with [`CliProblem`]s, and the documents,
+//! artefacts and compatibility checks planned from them.
 
 mod api_refs;
 mod app_checks_settings;
