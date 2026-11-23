@@ -213,7 +213,7 @@ A seam that freezes a type runs at N5 (Opus, effort high), about twice a port la
 
 - `scripts/rust/generator-coverage.ts` writes one TSV per crate in `docs/maintainers/rust-design/generators/` (`paths`, `target`, `writer`, `cli-config`, `generate`, `cli`; the columns of passes.md section 6). It reuses `toolUnitsOf` and `toolSourceFileOf` of `tools-coverage.ts`, `cutBriefs`, `coverageTable`, `pairsOf` and `CoverageProbe` of `pass-coverage.ts`, and the CLI pairs of `tools-pairs.ts`: a generate or check case is a CLI case.
 - Rerun: `node --experimental-transform-types --no-warnings --import ./scripts/ir-models/register.ts scripts/rust/generator-coverage.ts`.
-- Today no CLI case runs `generate` or `check`: every pair count is 0 and the briefs follow the source order of the script (the documents path first). Seam T's rerun recuts them from the cases; the TSV is authoritative over the tables below.
+- Seam T's rerun cut the briefs from the cases' pairs (74 CLI cases run `generate` or `check`); the TSV is authoritative over the tables below.
 - The `writer` table lists the TypeScript writer only; W1 also ports the header table of the three other writers (about 70 lines across `GeneratedHeader.php`, `header.py` and `GeneratedFiles.kt`), as new code: those files are not TypeScript and have no trace rows.
 
 | Crate | Function lines | Skeleton (Rust lines, estimate) | Briefs | Lines per brief |
@@ -222,7 +222,7 @@ A seam that freezes a type runs at N5 (Opus, effort high), about twice a port la
 | `target` | 446 (plus the matrix data) | 525 | in seam G | 446 |
 | `writer` | 488 (plus about 70 of the other writers' header tables) | 450 | 1 | about 560 |
 | `cli-config` | 878 | 840 | 1 | 878 |
-| `generate` | 1,530 | 1,170 | 2 | 991 539 |
+| `generate` | 1,530 | 1,170 | 2 | 962 568 |
 | `cli` | 53 | 30 | 1 | 53 |
 
 ## 8. Briefs
@@ -233,8 +233,8 @@ Cut rule and conventions: passes.md section 7 and cli and tools section 7 ("Brie
 |---|---|---|---|
 | W1 | `writer` | `codegen-core/src`: `file-presence`, `generated-paths` (but `unsafePathReason`, `caseFolded`), `manifest`, `writer`, `finish-files`; the extension table of section 3, with its tests hand-ported from the PHP, Python and Kotlin writers | every case that writes; the documents cases first |
 | C1 | `cli-config` | `cli/src/config`: the rest of `document-plan` and `artefact-switches`, `package-manager`, `installed-version`, `compatibility-check`; the typed generate settings of section 3 | documents cases (`planAppDocuments`), probe cases (`selectArtefacts`); hand-ported tests for the last three files |
-| RP1 | `generate` 1 | `cli/src/commands`: `drift-level`, `run-preparation`, `app-plan`, `document-emission`, `merged-documents`, `write-plan`, `write-drift`, `filter-operations`, the first part of `entry-links` (rows of brief 1) | the documents cases |
-| RP2 | `generate` 2 | the rest of `entry-links`, `link-set`, `entry-generation`, `import-specifier-styles`, `framework-route-check`, `framework-docs`, `exclusive-base-paths`, `native-docs-document`; the installed runtimes and `ResolvedLinkNeeds` of section 2 | the probe cases |
+| RP1 | `generate` 1 | `cli/src/commands`: `drift-level`, `run-preparation`, `app-plan`, `document-emission`, `filter-operations`, `entry-links`, and the rows of brief 1 of `write-plan`, `entry-generation`, `exclusive-base-paths`, `framework-docs`, `framework-route-check`, `import-specifier-styles` | the 19 cases that reach only brief 1's functions |
+| RP2 | `generate` 2 | `merged-documents`, `write-drift`, `link-set`, `native-docs-document`, and the rows of brief 2 of `write-plan`, `entry-generation`, `exclusive-base-paths`, `import-specifier-styles`; the installed runtimes and `ResolvedLinkNeeds` of section 2 | the other cases: merged documents, `check`, every generating probe |
 | L1 | `cli` | `generate-command`, `check-command`; the end of the layer below | every generate and check case |
 
 L1 also ends the layer's stubs: it deletes `crates/cli/src/not_ported.rs`, `CliError::NotPortedYet`, the `StubError` impls and `stub_answer.rs` once no crate has a `NotPortedYet`, and the `expect(dead_code)` items of `cli_problem.rs` and `lib.rs` that moved to `seampact-generate` or now have callers (`read_workspace_configs`, `read_run_config`, `api_refs`, `contract_position`); it runs the measurement of input 8 and records it in its hand-back. End check: `rg 'NotPortedYet|not_ported|not-ported|StubError|allow\(dead_code|expect\(dead_code|pending:' crates/{cli,cli-config,generate,writer}` prints nothing, and `cargo xtask oracle --tool cli` reports 0 not ported.
