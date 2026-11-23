@@ -68,7 +68,7 @@ pub(crate) fn compile_command(
         ReadAppConfigOutcome::Refused(problems) => return Ok(refuse(io, &problems)),
         ReadAppConfigOutcome::Read(config) => config,
     };
-    let extra_refs = open_api_api_names(&config);
+    let extra_refs = open_api_api_names(&config)?;
     let used_names = match used_sources(&config, &extra_refs)? {
         UsedSources::Refused(problems) => return Ok(refuse(io, &problems)),
         UsedSources::Used(names) => names,
