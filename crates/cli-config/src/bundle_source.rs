@@ -1,6 +1,6 @@
 //! The bundle source a config writes, read into the type the bundle fetch takes.
 
-use seampact_bundle::{BundleSource, written_bundle_source};
+use seampact_bundle_source::{BundleSource, written_bundle_source};
 use seampact_diagnostics::InternalError;
 use seampact_json::JsonValue;
 

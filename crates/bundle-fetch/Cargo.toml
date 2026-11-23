@@ -11,6 +11,7 @@ publish.workspace = true
 camino.workspace = true
 indexmap.workspace = true
 seampact-bundle.workspace = true
+seampact-bundle-source.workspace = true
 seampact-compiler.workspace = true
 seampact-diagnostics.workspace = true
 seampact-ir.workspace = true

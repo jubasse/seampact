@@ -7,10 +7,10 @@
 use camino::{Utf8Path, Utf8PathBuf};
 use indexmap::IndexMap;
 use seampact_bundle::{
-    BundleArchiveExtraction, BundleChannel, BundleFailure, BundleManifest, BundleSource,
-    BundleSourceForm, BundleVerifyResult, ReleaseBundleSource, extract_bundle_tarball,
-    verify_bundle,
+    BundleArchiveExtraction, BundleChannel, BundleFailure, BundleManifest, BundleVerifyResult,
+    extract_bundle_tarball, verify_bundle,
 };
+use seampact_bundle_source::{BundleSource, BundleSourceForm, ReleaseBundleSource};
 use seampact_diagnostics::{InternalError, quote_text};
 use seampact_ir::ContractIr;
 

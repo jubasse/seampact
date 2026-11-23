@@ -3,13 +3,13 @@
 use camino::{Utf8Path, Utf8PathBuf};
 use indexmap::IndexMap;
 use seampact_authoring::Locations;
-use seampact_bundle::BundleSource;
 use seampact_bundle_fetch::{
     ALLOW_LOCAL_VARIABLE, BundleFetchOptions, BundleFetchResult, BundleSourceFailure,
     CACHE_DIRECTORY_VARIABLE, Environment, LocalSourcePolicy, UreqReleaseGet,
     WorkspaceImportsOptions, WorkspaceImportsResult, compile_workspace_with_imports, fetch_bundle,
     local_source_policy, local_source_refusal_reason,
 };
+use seampact_bundle_source::BundleSource;
 use seampact_cli_config::{CliProblem, LoadedAppConfig, ResolvedSource};
 use seampact_compiler::{PipelineOptions, PipelineResult};
 use seampact_diagnostics::{Diagnostic, InternalError, Severity, print_diagnostics, quote_text};

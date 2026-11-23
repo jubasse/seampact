@@ -4,8 +4,7 @@ use camino::{Utf8Path, Utf8PathBuf};
 use indexmap::IndexMap;
 use seampact_diagnostics::InternalError;
 use seampact_json::{JsonValue, items_of, object_of, text_of};
-use seampact_target::case_folded;
-use unicode_normalization::UnicodeNormalization;
+use seampact_paths::nfc_case_folded;
 
 use crate::api_refs::{api_refs_of, parse_api_ref};
 use crate::artefact_switches::is_framework_route_check_off;
@@ -412,9 +411,7 @@ fn overlapping_out_problems(
 }
 
 fn case_folded_after_nfc(path: &Utf8Path) -> Utf8PathBuf {
-    let normalised: String = path.as_str().nfc().collect();
-
-    Utf8PathBuf::from(case_folded(&normalised))
+    Utf8PathBuf::from(nfc_case_folded(path.as_str()))
 }
 
 fn is_nested_or_same(first: &Utf8Path, second: &Utf8Path) -> bool {

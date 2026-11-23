@@ -3,7 +3,7 @@
 
 use camino::{Utf8Path, Utf8PathBuf};
 use indexmap::IndexMap;
-use seampact_bundle::{BundleSource, BundleSourceForm};
+use seampact_bundle_source::{BundleSource, BundleSourceForm};
 use seampact_cli_config::{
     CliConfigError, CliProblem, LoadedAppConfig, LoadedMergedDocument, LoadedRootConfig,
     LoadedWorkspace, ReadAppConfigOutcome, ReadRootConfigOutcome, ReadRunConfigOutcome,

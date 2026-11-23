@@ -7,9 +7,8 @@
 use std::fs;
 
 use camino::{Utf8Path, Utf8PathBuf};
-use seampact_bundle::{
-    PackageBundleSource, UntrustedJson, installed_package_directory, parse_untrusted_json,
-};
+use seampact_bundle::{UntrustedJson, installed_package_directory, parse_untrusted_json};
+use seampact_bundle_source::PackageBundleSource;
 use seampact_diagnostics::{diagnostic_inert, quote_text};
 use seampact_json::JsonValue;
 

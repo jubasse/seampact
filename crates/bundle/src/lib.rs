@@ -22,7 +22,6 @@ mod path;
 mod pin_check;
 mod recording_reader;
 mod refetch;
-mod source;
 mod tarball_read;
 mod tarball_write;
 mod untrusted_json;
@@ -54,10 +53,6 @@ pub use manifest::{
 pub use manifest_read::{BundleManifestRead, manifest_too_large, read_bundle_manifest};
 pub use manifest_rules::{BundleManifestProblem, bundle_manifest_rule_problems};
 pub use path::{BUNDLE_PATH_MAX_LENGTH, bundle_path_fold, bundle_path_problem};
-pub use source::{
-    BundleSource, BundleSourceForm, GitBundleSource, PackageBundleSource, ReleaseBundleSource,
-    written_bundle_source,
-};
 pub use tarball_read::{
     BundleArchiveExtraction, BundleArchiveRead, ExtractedBundle, extract_bundle_tarball,
     read_bundle_tarball,

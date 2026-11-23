@@ -6,12 +6,12 @@ use std::time::Duration;
 
 use camino::{Utf8Path, Utf8PathBuf};
 use indexmap::IndexMap;
-use seampact_bundle::BundleSource;
 use seampact_bundle_fetch::{
     BundleFetchOptions, BundleFetchResult, BundleSourceFailure, LocalSourcePolicy, ReleaseGet,
     ReleaseGetError, ReleaseResponse, Url, WorkspaceImportFailure, WorkspaceImportsOptions,
     WorkspaceImportsResult, compile_workspace_with_imports, fetch_bundle,
 };
+use seampact_bundle_source::BundleSource;
 use seampact_cli_config::bundle_source_of;
 use seampact_compiler::{PipelineApiResult, PipelineOptions, PipelineResult};
 use seampact_diagnostics::diagnostic_list_json;

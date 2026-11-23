@@ -1,6 +1,7 @@
 //! The failures of fetching a bundle source before the pinned-bundle check reads it.
 
-use seampact_bundle::{BundleFailure, BundleFailureCode, BundleSource, BundleSourceForm};
+use seampact_bundle::{BundleFailure, BundleFailureCode};
+use seampact_bundle_source::{BundleSource, BundleSourceForm};
 use seampact_diagnostics::{diagnostic_inert, quote_text};
 
 use crate::printable_url::printable_url;
@@ -163,7 +164,7 @@ pub fn bundle_source_text(source: &BundleSource) -> String {
 
 #[cfg(test)]
 mod tests {
-    use seampact_bundle::{GitBundleSource, PackageBundleSource, ReleaseBundleSource};
+    use seampact_bundle_source::{GitBundleSource, PackageBundleSource, ReleaseBundleSource};
     use seampact_diagnostics::diagnostic_inert;
 
     use super::*;

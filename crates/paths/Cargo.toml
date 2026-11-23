@@ -1,0 +1,17 @@
+[package]
+name = "seampact-paths"
+description = "Validated relative output paths, their case-insensitive clashes and the untrusted bundle entry rules."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+camino.workspace = true
+seampact-js.workspace = true
+thiserror.workspace = true
+unicode-normalization.workspace = true
+
+[lints]
+workspace = true
