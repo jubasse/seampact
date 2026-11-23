@@ -1,14 +1,15 @@
 //! `seampact lint`: the core lint rules over each `path` source's contract.
 
+use seampact_cli_config::CliIo;
+use seampact_cli_config::unlocated_problem;
 use seampact_cli_config::{ReadAppConfigOutcome, ResolvedSource, read_app_config};
 use seampact_diagnostics::{Diagnostic, InternalError, Severity, print_diagnostics};
+use seampact_generate::LocalBundles;
+use seampact_generate::compile_sources;
 use seampact_lint::{RunLintInput, run_lint};
 
-use crate::cli_problem::unlocated_problem;
-use crate::compile_sources::compile_sources;
 use crate::config_location::ConfigLocation;
-use crate::local_bundle::LocalBundles;
-use crate::{CliError, CliIo, EXIT_REFUSED, EXIT_SUCCESS, refuse};
+use crate::{CliError, EXIT_REFUSED, EXIT_SUCCESS, refuse};
 
 /// Lints every `path` source of the app config and answers the exit code: refused when a
 /// diagnostic is an error.

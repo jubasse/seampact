@@ -1,16 +1,12 @@
 //! The seampact CLI, ported from `packages/core/cli/src`: argument parsing, dispatch, help, the
 //! problem printer and the commands; the binary `seampact` calls [`run_cli`].
 
-#[expect(dead_code, reason = "reached only by generate and check, layer 3.3")]
-mod api_refs;
 mod args;
 mod bundle_command;
 mod check_command;
 mod cli_io;
-mod cli_problem;
 mod command;
 mod compile_command;
-mod compile_sources;
 mod config_location;
 mod diff_baseline;
 mod diff_command;
@@ -29,15 +25,12 @@ mod init_modelines;
 mod init_starter;
 mod line_end;
 mod lint_command;
-mod local_bundle;
 mod modelines;
 mod not_ported;
 #[cfg(feature = "oracle")]
 pub mod oracle;
 mod run_cli;
-mod source_reader;
 mod step;
-mod workspace_api_names;
 
 use seampact_diagnostics::RuleId;
 
@@ -45,10 +38,7 @@ pub use args::{
     OptionKind, OptionSpec, ParseArgsError, ParsedArgs, Positionals, parse_command_args,
 };
 pub(crate) use cli_io::refuse;
-pub use cli_io::{
-    CliIo, EXIT_REFUSED, EXIT_SUCCESS, EXIT_USAGE, ProcessIo, print_problems, print_warnings,
-};
-pub use cli_problem::format_problem;
+pub use cli_io::{EXIT_REFUSED, EXIT_SUCCESS, EXIT_USAGE, ProcessIo};
 pub use error::CliError;
 pub use run_cli::{run_cli, run_command};
 

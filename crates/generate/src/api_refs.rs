@@ -5,19 +5,16 @@ use std::collections::HashSet;
 use seampact_cli_config::{
     ApiRef, CliProblem, LoadedAppConfig, ResolvedSource, api_refs_of, parse_api_ref,
 };
+use seampact_cli_config::{entry_where, located_problem};
 use seampact_diagnostics::InternalError;
 use seampact_json::JsonValue;
 
-use crate::cli_problem::{entry_where, located_problem};
 use crate::compile_sources::CompiledApi;
 use crate::workspace_api_names::workspace_api_names;
 
-/// Separates the source from the api in `<source>/<api>`.
-const SOURCE_SEPARATOR: char = '/';
-
 /// The sources a command reads: all of them named, or why the config refuses.
 #[derive(Debug, Clone, PartialEq)]
-pub(crate) enum UsedSources {
+pub enum UsedSources {
     /// The names of the sources to compile, in config order.
     Used(Vec<String>),
     /// The config names a source it does not have.
@@ -26,7 +23,7 @@ pub(crate) enum UsedSources {
 
 /// The apis one target entry names, or the problems of the names that hold none or several.
 #[derive(Debug, Clone)]
-pub(crate) enum EntryApisOutcome<'compiled> {
+pub enum EntryApisOutcome<'compiled> {
     /// Each named api, in the entry's order.
     Resolved(Vec<&'compiled CompiledApi>),
     /// What is wrong with the names.
@@ -60,7 +57,8 @@ fn duplicate_api_problem(
 
 /// Each api of the entry `entry_id` found among the `compiled` ones, or why a name does not
 /// resolve to exactly one.
-pub(crate) fn resolve_entry_apis<'compiled>(
+#[must_use]
+pub fn resolve_entry_apis<'compiled>(
     entry_id: &str,
     entry: &JsonValue,
     compiled: &'compiled [CompiledApi],
@@ -117,7 +115,8 @@ pub(crate) fn resolve_entry_apis<'compiled>(
 }
 
 /// Every api reference of every target entry, in config order.
-pub(crate) fn entry_api_refs(config: &LoadedAppConfig) -> Vec<&str> {
+#[must_use]
+pub fn entry_api_refs(config: &LoadedAppConfig) -> Vec<&str> {
     config
         .entries
         .iter()
@@ -130,9 +129,7 @@ pub(crate) fn entry_api_refs(config: &LoadedAppConfig) -> Vec<&str> {
 /// # Errors
 ///
 /// [`InternalError`] when an entry has no id, which the config schema requires.
-pub(crate) fn unknown_source_problems(
-    config: &LoadedAppConfig,
-) -> Result<Vec<CliProblem>, InternalError> {
+pub fn unknown_source_problems(config: &LoadedAppConfig) -> Result<Vec<CliProblem>, InternalError> {
     let known: Vec<&str> = config.sources.keys().map(String::as_str).collect();
     let listed = if known.is_empty() {
         "none".to_owned()
@@ -181,7 +178,7 @@ pub(crate) fn unknown_source_problems(
 /// # Errors
 ///
 /// As [`unknown_source_problems`].
-pub(crate) fn used_sources(
+pub fn used_sources(
     config: &LoadedAppConfig,
     extra_refs: &[String],
 ) -> Result<UsedSources, InternalError> {
@@ -199,7 +196,7 @@ pub(crate) fn used_sources(
 }
 
 /// The sources a reference names, and those that may hold an api named alone, in config order.
-pub(crate) fn sources_holding_refs(config: &LoadedAppConfig, refs: &[&str]) -> Vec<String> {
+pub fn sources_holding_refs(config: &LoadedAppConfig, refs: &[&str]) -> Vec<String> {
     let parsed: Vec<ApiRef<'_>> = refs.iter().copied().map(parse_api_ref).collect();
     let bare_apis: HashSet<&str> = parsed
         .iter()
@@ -235,7 +232,7 @@ fn may_hold_any(source: &ResolvedSource, apis: &HashSet<&str>) -> bool {
 
 /// Tells each problem of a source read for a bare api name how to name the api and read only that
 /// source.
-pub(crate) fn add_qualify_fix(problems: Vec<CliProblem>, refs: &[&str]) -> Vec<CliProblem> {
+pub fn add_qualify_fix(problems: Vec<CliProblem>, refs: &[&str]) -> Vec<CliProblem> {
     let parsed: Vec<ApiRef<'_>> = refs.iter().copied().map(parse_api_ref).collect();
     let named: HashSet<&str> = parsed
         .iter()

@@ -1,11 +1,11 @@
-src/cli_problem.rs#format_problem	packages/core/cli/src/cli-problem.ts#formatProblem
-src/cli_problem.rs#printable_field	packages/core/cli/src/cli-problem.ts#printableField
-src/cli_io.rs#print_problems	packages/core/cli/src/cli-io.ts#printProblems
-src/cli_io.rs#print_warnings	packages/core/cli/src/cli-io.ts#printWarnings
-src/cli_problem.rs#entry_where	packages/core/cli/src/cli-problem.ts#entryWhere
+-	packages/core/cli/src/cli-problem.ts#formatProblem	merged: ../cli-config/src/cli_problem.rs#format_problem
+-	packages/core/cli/src/cli-problem.ts#printableField	merged: ../cli-config/src/cli_problem.rs#printable_field
+-	packages/core/cli/src/cli-io.ts#printProblems	merged: ../cli-config/src/cli_io.rs#print_problems
+-	packages/core/cli/src/cli-io.ts#printWarnings	merged: ../cli-config/src/cli_io.rs#print_warnings
+-	packages/core/cli/src/cli-problem.ts#entryWhere	merged: ../cli-config/src/cli_problem.rs#entry_where
 -	packages/core/cli/src/cli-problem.ts#namesPointer	merged: ../generate/src/refusal_problem.rs#names_pointer
 -	packages/core/cli/src/cli-problem.ts#inApp	merged: ../generate/src/in_app.rs#in_app
-src/cli_problem.rs#app_entry_where	packages/core/cli/src/cli-problem.ts#appEntryWhere
+-	packages/core/cli/src/cli-problem.ts#appEntryWhere	merged: ../generate/src/app_entry_where.rs#app_entry_where
 -	packages/core/cli/src/cli-problem.ts#problemFromRefusal	merged: ../generate/src/refusal_problem.rs#problem_from_refusal
 src/run_cli.rs#run_command	packages/core/cli/src/run-cli.ts#runCli
 src/run_cli.rs#run_init	packages/core/cli/src/run-cli.ts#runInit
@@ -31,32 +31,32 @@ src/run_cli.rs#listed	packages/core/cli/src/run-cli.ts#listed
 -	packages/core/cli/src/is-record.ts#isRecord	skip: the Rust readers match JsonValue::Object and YamlKind::Mapping
 src/config_location.rs#config_location	packages/core/cli/src/commands/config-location.ts#configLocation
 src/config_location.rs#display_path	packages/core/cli/src/commands/config-location.ts#displayPath
-src/workspace_api_names.rs#source_entry_file	packages/core/cli/src/commands/workspace-api-names.ts#sourceEntryFile
-src/workspace_api_names.rs#workspace_api_names	packages/core/cli/src/commands/workspace-api-names.ts#workspaceApiNames
-src/workspace_api_names.rs#single_api_name	packages/core/cli/src/commands/workspace-api-names.ts#singleApiName
-src/workspace_api_names.rs#parsed_root	packages/core/cli/src/commands/workspace-api-names.ts#parseOrUndefined
+-	packages/core/cli/src/commands/workspace-api-names.ts#sourceEntryFile	merged: ../generate/src/workspace_api_names.rs#source_entry_file
+-	packages/core/cli/src/commands/workspace-api-names.ts#workspaceApiNames	merged: ../generate/src/workspace_api_names.rs#workspace_api_names
+-	packages/core/cli/src/commands/workspace-api-names.ts#singleApiName	merged: ../generate/src/workspace_api_names.rs#single_api_name
+-	packages/core/cli/src/commands/workspace-api-names.ts#parseOrUndefined	merged: ../generate/src/workspace_api_names.rs#parsed_root
 src/lint_command.rs#lint_command	packages/core/cli/src/commands/lint-command.ts#lintCommand
 src/lint_command.rs#is_error	packages/core/cli/src/commands/lint-command.ts#isError
 src/cli_io.rs#refuse	packages/core/cli/src/commands/lint-command.ts#refuse
-src/compile_sources.rs#compile_sources	packages/core/cli/src/commands/compile-sources.ts#compileSources
-src/compile_sources.rs#take_bundle	packages/core/cli/src/commands/compile-sources.ts#takeBundle
-src/compile_sources.rs#compile_source	packages/core/cli/src/commands/compile-sources.ts#compileSource
-src/compile_sources.rs#fetch_options	packages/core/cli/src/commands/compile-sources.ts#fetchOptions
-src/compile_sources.rs#no_workspace_problem	packages/core/cli/src/commands/compile-sources.ts#noWorkspaceProblem
-src/compile_sources.rs#print_source_diagnostics	packages/core/cli/src/commands/compile-sources.ts#printSourceDiagnostics
-src/compile_sources.rs#bundle_problem	packages/core/cli/src/commands/compile-sources.ts#bundleProblem
-src/compile_sources.rs#printed_diagnostics	packages/core/cli/src/commands/compile-sources.ts#printedDiagnostics
+-	packages/core/cli/src/commands/compile-sources.ts#compileSources	merged: ../generate/src/compile_sources.rs#compile_sources
+-	packages/core/cli/src/commands/compile-sources.ts#takeBundle	merged: ../generate/src/compile_sources.rs#take_bundle
+-	packages/core/cli/src/commands/compile-sources.ts#compileSource	merged: ../generate/src/compile_sources.rs#compile_source
+-	packages/core/cli/src/commands/compile-sources.ts#fetchOptions	merged: ../generate/src/compile_sources.rs#fetch_options
+-	packages/core/cli/src/commands/compile-sources.ts#noWorkspaceProblem	merged: ../generate/src/compile_sources.rs#no_workspace_problem
+-	packages/core/cli/src/commands/compile-sources.ts#printSourceDiagnostics	merged: ../generate/src/compile_sources.rs#print_source_diagnostics
+-	packages/core/cli/src/commands/compile-sources.ts#bundleProblem	merged: ../generate/src/compile_sources.rs#bundle_problem
+-	packages/core/cli/src/commands/compile-sources.ts#printedDiagnostics	merged: ../generate/src/compile_sources.rs#printed_diagnostics
 -	packages/core/cli/src/commands/compile-sources.ts#labelledLocations	skip: the hooks diagnosticFileLabel and sourceReader serve the embedded binary of the TypeScript package, which the Rust binary does not have
 -	packages/core/cli/src/commands/api-refs.ts#parseApiRef	merged: ../cli-config/src/api_refs.rs#parse_api_ref
 -	packages/core/cli/src/commands/api-refs.ts#apiRefsOf	merged: ../cli-config/src/api_refs.rs#api_refs_of
-src/api_refs.rs#used_sources	packages/core/cli/src/commands/api-refs.ts#usedSources
-src/api_refs.rs#unknown_source_problems	packages/core/cli/src/commands/api-refs.ts#unknownSourceProblems
-src/api_refs.rs#entry_api_refs	packages/core/cli/src/commands/api-refs.ts#entryApiRefs
-src/api_refs.rs#sources_holding_refs	packages/core/cli/src/commands/api-refs.ts#sourcesHoldingRefs
-src/api_refs.rs#may_hold_any	packages/core/cli/src/commands/api-refs.ts#mayHoldAny
-src/api_refs.rs#duplicate_api_problem	packages/core/cli/src/commands/api-refs.ts#duplicateApiProblem
-src/api_refs.rs#resolve_entry_apis	packages/core/cli/src/commands/api-refs.ts#resolveEntryApis
-src/api_refs.rs#add_qualify_fix	packages/core/cli/src/commands/api-refs.ts#addQualifyFix
+-	packages/core/cli/src/commands/api-refs.ts#usedSources	merged: ../generate/src/api_refs.rs#used_sources
+-	packages/core/cli/src/commands/api-refs.ts#unknownSourceProblems	merged: ../generate/src/api_refs.rs#unknown_source_problems
+-	packages/core/cli/src/commands/api-refs.ts#entryApiRefs	merged: ../generate/src/api_refs.rs#entry_api_refs
+-	packages/core/cli/src/commands/api-refs.ts#sourcesHoldingRefs	merged: ../generate/src/api_refs.rs#sources_holding_refs
+-	packages/core/cli/src/commands/api-refs.ts#mayHoldAny	merged: ../generate/src/api_refs.rs#may_hold_any
+-	packages/core/cli/src/commands/api-refs.ts#duplicateApiProblem	merged: ../generate/src/api_refs.rs#duplicate_api_problem
+-	packages/core/cli/src/commands/api-refs.ts#resolveEntryApis	merged: ../generate/src/api_refs.rs#resolve_entry_apis
+-	packages/core/cli/src/commands/api-refs.ts#addQualifyFix	merged: ../generate/src/api_refs.rs#add_qualify_fix
 src/compile_command.rs#compile_command	packages/core/cli/src/commands/compile-command.ts#compileCommand
 src/compile_command.rs#write_ir_files	packages/core/cli/src/commands/compile-command.ts#writeIrFiles
 src/compile_command.rs#plan_sources_editor_schemas	packages/core/cli/src/commands/compile-command.ts#planSourcesEditorSchemas
@@ -134,7 +134,7 @@ src/explain_values.rs#without_provenance	packages/core/cli/src/commands/explain-
 src/explain_origin.rs#provenance	packages/core/cli/src/commands/explain-view.ts#provenance
 src/explain_origin.rs#origin_text	packages/core/cli/src/commands/explain-view.ts#originText
 src/explain_flow.rs#flow	packages/core/cli/src/commands/explain-view.ts#flow
-src/local_bundle.rs#verify_local_bundle	packages/core/cli/src/commands/local-bundle.ts#verifyLocalBundle
+-	packages/core/cli/src/commands/local-bundle.ts#verifyLocalBundle	merged: ../generate/src/local_bundle.rs#verify_local_bundle
 src/generate_command.rs#generate_command	packages/core/cli/src/commands/generate-command.ts#generateCommand	pending: brief 1
 src/check_command.rs#check_command	packages/core/cli/src/commands/check-command.ts#checkCommand	pending: brief 1
 -	packages/core/cli/src/commands/contract-position.ts#contractPosition	merged: ../generate/src/contract_position.rs#contract_position

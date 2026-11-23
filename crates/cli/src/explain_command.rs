@@ -1,19 +1,20 @@
 //! `seampact explain`: prints one operation of a compiled api as commented YAML.
 
 use indexmap::IndexMap;
+use seampact_cli_config::CliIo;
+use seampact_cli_config::unlocated_problem;
 use seampact_cli_config::{
     ApiRef, CliProblem, ReadAppConfigOutcome, parse_api_ref, read_app_config,
 };
+use seampact_generate::LocalBundles;
+use seampact_generate::sources_holding_refs;
+use seampact_generate::{CompiledApi, compile_sources};
 use seampact_js::cmp_utf16;
 use seampact_span::Location;
 
-use crate::api_refs::sources_holding_refs;
-use crate::cli_problem::unlocated_problem;
-use crate::compile_sources::{CompiledApi, compile_sources};
 use crate::config_location::ConfigLocation;
 use crate::explain_view::explain_operation_text;
-use crate::local_bundle::LocalBundles;
-use crate::{CliError, CliIo, EXIT_SUCCESS, refuse};
+use crate::{CliError, EXIT_SUCCESS, refuse};
 
 /// Separates the api from the operation id in `<api>.<operationId>`.
 const OPERATION_SEPARATOR: char = '.';

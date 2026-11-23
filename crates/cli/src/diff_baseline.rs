@@ -5,6 +5,7 @@ use std::fs;
 use camino::{Utf8Path, Utf8PathBuf};
 use indexmap::IndexMap;
 use seampact_cli_config::CliProblem;
+use seampact_cli_config::unlocated_problem;
 use seampact_diagnostics::InternalError;
 use seampact_ir::ContractIr;
 use seampact_ir_check::{IrCheckFailure, IrOpenReport, check_open_ir};
@@ -12,7 +13,6 @@ use seampact_js::cmp_utf16;
 use seampact_json::{JsonValue, stringify_json};
 
 use crate::CliError;
-use crate::cli_problem::unlocated_problem;
 use crate::compile_command::IR_FILE_SUFFIX;
 use crate::step::Step;
 

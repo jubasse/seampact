@@ -4,16 +4,16 @@ use camino::{Utf8Path, Utf8PathBuf};
 use indexmap::IndexMap;
 use seampact_bundle::{BundleVerifyResult, verify_bundle};
 use seampact_cli_config::CliProblem;
+use seampact_cli_config::located_problem;
 
-use crate::CliError;
-use crate::cli_problem::located_problem;
+use crate::GenerateError;
 
 /// The directory of each bundle a plugin fetched, by source name.
-pub(crate) type LocalBundles = IndexMap<String, Utf8PathBuf>;
+pub type LocalBundles = IndexMap<String, Utf8PathBuf>;
 
 /// What checking a local bundle answers.
 #[derive(Debug, Clone, PartialEq)]
-pub(crate) enum LocalBundleOutcome {
+pub enum LocalBundleOutcome {
     /// The bundle's check, passed or failed.
     Verified(BundleVerifyResult),
     /// The directory cannot be checked at all.
@@ -25,12 +25,12 @@ pub(crate) enum LocalBundleOutcome {
 ///
 /// # Errors
 ///
-/// [`CliError::Bundle`] when the directory cannot be read.
-pub(crate) fn verify_local_bundle(
+/// [`GenerateError::Bundle`] when the directory cannot be read.
+pub fn verify_local_bundle(
     name: &str,
     directory: &Utf8Path,
     integrity: Option<&str>,
-) -> Result<LocalBundleOutcome, CliError> {
+) -> Result<LocalBundleOutcome, GenerateError> {
     let Some(integrity) = integrity else {
         return Ok(LocalBundleOutcome::Refused(located_problem(
             "cli.bundle-directory.unpinned",

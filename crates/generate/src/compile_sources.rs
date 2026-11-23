@@ -10,6 +10,8 @@ use seampact_bundle_fetch::{
     local_source_policy, local_source_refusal_reason,
 };
 use seampact_bundle_source::BundleSource;
+use seampact_cli_config::CliIo;
+use seampact_cli_config::located_problem;
 use seampact_cli_config::{CliProblem, LoadedAppConfig, ResolvedSource};
 use seampact_compiler::{PipelineOptions, PipelineResult};
 use seampact_diagnostics::{Diagnostic, InternalError, Severity, print_diagnostics, quote_text};
@@ -19,11 +21,10 @@ use seampact_load::LoadOptions;
 use seampact_pipeline::PipelineDeclared;
 use seampact_span::{Location, SourceFiles};
 
-use crate::cli_problem::located_problem;
+use crate::GenerateError;
 use crate::local_bundle::{LocalBundleOutcome, LocalBundles, verify_local_bundle};
 use crate::source_reader::source_reader;
 use crate::workspace_api_names::{SINGLE_API_ENTRY, WORKSPACE_ENTRY, source_entry_file};
-use crate::{CliError, CliIo};
 
 /// The release channel's GET, shared by every fetch of a run.
 static RELEASE_GET: UreqReleaseGet = UreqReleaseGet;
@@ -31,32 +32,40 @@ static RELEASE_GET: UreqReleaseGet = UreqReleaseGet;
 /// What `lint` reads of an api besides its IR; absent for an api taken from a bundle, which no
 /// compiler ran on.
 #[derive(Debug, Clone)]
-pub(crate) struct LintInput {
-    pub(crate) declared: Vec<PipelineDeclared>,
-    pub(crate) spans: Locations,
+pub struct LintInput {
+    /// What the pipeline declared, which the lint rules read.
+    pub declared: Vec<PipelineDeclared>,
+    /// The spans of the declarations.
+    pub spans: Locations,
     /// The spans as file, line and column, which print and locate editor declarations.
-    pub(crate) located: IndexMap<String, Location>,
+    pub located: IndexMap<String, Location>,
 }
 
 /// One api of a source, compiled or read from a bundle.
 #[derive(Debug, Clone)]
-pub(crate) struct CompiledApi {
-    pub(crate) source: String,
-    pub(crate) api: String,
-    pub(crate) ir: ContractIr,
-    pub(crate) lint_input: Option<LintInput>,
+pub struct CompiledApi {
+    /// The source name.
+    pub source: String,
+    /// The api id.
+    pub api: String,
+    /// The IR.
+    pub ir: ContractIr,
+    /// What `lint` reads, absent for an api read from a bundle.
+    pub lint_input: Option<LintInput>,
 }
 
 /// Every api of the sources a command read, and why it may not go on.
 #[derive(Debug, Clone, Default)]
-pub(crate) struct CompiledSources {
+pub struct CompiledSources {
     /// True when a source reported an error: its diagnostics are printed and nothing may be
     /// generated.
-    pub(crate) failed: bool,
-    pub(crate) problems: Vec<CliProblem>,
-    pub(crate) apis: Vec<CompiledApi>,
+    pub failed: bool,
+    /// The problems that refuse a source.
+    pub problems: Vec<CliProblem>,
+    /// The apis compiled or read.
+    pub apis: Vec<CompiledApi>,
     /// The files each compiled source's side tables point into, by source name.
-    pub(crate) source_files: IndexMap<String, SourceFiles>,
+    pub source_files: IndexMap<String, SourceFiles>,
 }
 
 /// What every source of one run shares.
@@ -75,13 +84,13 @@ struct SourceRun<'run> {
 ///
 /// # Errors
 ///
-/// [`CliError::Io`], [`CliError::Fetch`] or [`CliError::Internal`] when a source cannot be read.
-pub(crate) fn compile_sources(
+/// [`GenerateError::Io`], [`GenerateError::Fetch`] or [`GenerateError::Internal`] when a source cannot be read.
+pub fn compile_sources(
     config: &LoadedAppConfig,
     names: &[String],
     local_bundles: &LocalBundles,
     io: &mut dyn CliIo,
-) -> Result<CompiledSources, CliError> {
+) -> Result<CompiledSources, GenerateError> {
     let environment = run_environment(io);
     let run = SourceRun {
         local_sources: local_source_policy(config.allow_local, &environment),
@@ -119,7 +128,7 @@ pub(crate) fn compile_sources(
 }
 
 /// The variable the fetch reads from the process, as the command's streams see it.
-pub(crate) fn run_environment(io: &dyn CliIo) -> Environment {
+pub fn run_environment(io: &dyn CliIo) -> Environment {
     [ALLOW_LOCAL_VARIABLE]
         .into_iter()
         .filter_map(|name| {
@@ -143,7 +152,7 @@ fn take_bundle(
     bundle: &BundleSource,
     run: &SourceRun<'_>,
     compiled: &mut CompiledSources,
-) -> Result<(), CliError> {
+) -> Result<(), GenerateError> {
     let fetched = match run.local_bundles.get(name) {
         Some(directory) => {
             match verify_local_bundle(name, directory, bundle.integrity.as_deref())? {
@@ -195,7 +204,8 @@ fn take_bundle(
 }
 
 /// A `path` source whose directory holds no contract entry file.
-pub(crate) fn no_workspace_problem(name: &str, directory: &Utf8Path) -> CliProblem {
+#[must_use]
+pub fn no_workspace_problem(name: &str, directory: &Utf8Path) -> CliProblem {
     located_problem(
         "config.source.no-workspace",
         format!(
@@ -214,7 +224,7 @@ fn compile_source(
     run: &SourceRun<'_>,
     compiled: &mut CompiledSources,
     io: &mut dyn CliIo,
-) -> Result<(), CliError> {
+) -> Result<(), GenerateError> {
     if run.local_sources == LocalSourcePolicy::Refuse {
         compiled.failed = true;
         compiled.problems.push(located_problem(
@@ -303,7 +313,8 @@ fn compile_source(
 
 /// The problem of a bundle failure at `location`; the failing file is named, quoted, when the
 /// message does not already.
-pub(crate) fn bundle_problem(failure: &BundleSourceFailure, location: &str) -> CliProblem {
+#[must_use]
+pub fn bundle_problem(failure: &BundleSourceFailure, location: &str) -> CliProblem {
     let file = match &failure.file {
         Some(file)
             if !failure.message.contains(file.as_str())
@@ -327,13 +338,13 @@ pub(crate) fn bundle_problem(failure: &BundleSourceFailure, location: &str) -> C
 ///
 /// # Errors
 ///
-/// [`CliError::Internal`] when a side table entry points outside its file.
-pub(crate) fn print_source_diagnostics(
+/// [`GenerateError::Internal`] when a side table entry points outside its file.
+pub fn print_source_diagnostics(
     io: &mut dyn CliIo,
     name: &str,
     directory: &Utf8Path,
     result: &PipelineResult,
-) -> Result<bool, CliError> {
+) -> Result<bool, GenerateError> {
     let files = &result.source_files;
     let mut printed = vec![printed_diagnostics(
         &result.diagnostics,

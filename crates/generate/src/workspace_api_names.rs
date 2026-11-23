@@ -8,14 +8,15 @@ use seampact_load::yaml::{YamlKind, YamlNode, parse_yaml};
 use seampact_span::SourceFiles;
 
 /// The workspace file of a contract directory.
-pub(crate) const WORKSPACE_ENTRY: &str = "workspace.yaml";
+pub const WORKSPACE_ENTRY: &str = "workspace.yaml";
 
 /// The api file a workspace with a single api may use instead of [`WORKSPACE_ENTRY`].
-pub(crate) const SINGLE_API_ENTRY: &str = "api.yaml";
+pub const SINGLE_API_ENTRY: &str = "api.yaml";
 
 /// The entry file a `path` source compiles from: the workspace file, else the single api file;
 /// `None` when the directory holds neither.
-pub(crate) fn source_entry_file(directory: &Utf8Path) -> Option<&'static str> {
+#[must_use]
+pub fn source_entry_file(directory: &Utf8Path) -> Option<&'static str> {
     [WORKSPACE_ENTRY, SINGLE_API_ENTRY]
         .into_iter()
         .find(|entry| directory.join(entry).exists())
@@ -23,7 +24,8 @@ pub(crate) fn source_entry_file(directory: &Utf8Path) -> Option<&'static str> {
 
 /// The api names the directory's entry file declares; `None` when it holds no entry file, the file
 /// cannot be read or parsed, or it names its apis in a form this reading does not follow.
-pub(crate) fn workspace_api_names(directory: &Utf8Path) -> Option<Vec<String>> {
+#[must_use]
+pub fn workspace_api_names(directory: &Utf8Path) -> Option<Vec<String>> {
     let entry = source_entry_file(directory)?;
     // An unreadable file leaves the answer open, as the TypeScript's read that falls back to none.
     let bytes = fs::read(directory.join(entry)).ok()?;

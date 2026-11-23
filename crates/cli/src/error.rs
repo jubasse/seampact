@@ -6,6 +6,7 @@ use seampact_cli_config::CliConfigError;
 use seampact_diagnostics::InternalError;
 use seampact_diff::DiffError;
 use seampact_editor_schemas::EditorSchemasError;
+use seampact_generate::GenerateError;
 use seampact_lint::LintError;
 
 /// What stops a command before it answers an exit code: a stub reached, a bug, or a file the
@@ -47,6 +48,18 @@ pub enum CliError {
     /// The diff stopped.
     #[error(transparent)]
     Diff(#[from] DiffError),
+}
+
+impl From<GenerateError> for CliError {
+    fn from(error: GenerateError) -> Self {
+        match error {
+            GenerateError::NotPortedYet { function } => Self::NotPortedYet { function },
+            GenerateError::Io { path, message } => Self::Io { path, message },
+            GenerateError::Internal(internal) => Self::Internal(internal),
+            GenerateError::Fetch(fetch) => Self::Fetch(fetch),
+            GenerateError::Bundle(bundle) => Self::Bundle(bundle),
+        }
+    }
 }
 
 impl CliError {

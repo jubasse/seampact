@@ -5,6 +5,7 @@ mod api_refs;
 mod artefact_switches;
 mod bundle_source;
 mod check_level;
+mod cli_io;
 mod cli_problem;
 mod compatibility_check;
 mod config_file;
@@ -41,7 +42,11 @@ use seampact_diagnostics::RuleId;
 pub use api_refs::{ApiRef, api_refs_of, parse_api_ref};
 pub use bundle_source::bundle_source_of;
 pub use check_level::{CheckLevel, MatrixCheckLevel};
-pub use cli_problem::CliProblem;
+pub use cli_io::{CliIo, print_problems, print_warnings};
+pub use cli_problem::{
+    CliProblem, PROBLEM_FIELD_LIMIT, entry_where, format_problem, located_problem,
+    unlocated_problem,
+};
 pub use compatibility_check::{CompatibilityOutcome, check_app_compatibility};
 pub use document_plan::open_api_api_names;
 pub use error::CliConfigError;

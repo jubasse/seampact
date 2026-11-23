@@ -5,13 +5,15 @@ use std::ffi::OsString;
 
 use camino::Utf8PathBuf;
 use seampact_bundle::BundleNamedVersionOverride;
+use seampact_cli_config::unlocated_problem;
+use seampact_cli_config::{CliIo, print_problems};
 use seampact_cli_config::{CliProblem, resolved_path};
+use seampact_generate::LocalBundles;
 use seampact_target::Registry;
 use seampact_writer::HandEditPolicy;
 
 use crate::bundle_command::{BundleCommandOptions, BundleOutputFlag, bundle_command};
 use crate::check_command::check_command;
-use crate::cli_problem::unlocated_problem;
 use crate::command::Command;
 use crate::compile_command::{CompileOutputs, EditorSchemasMode, compile_command};
 use crate::config_location::{ConfigLocation, config_location};
@@ -21,10 +23,9 @@ use crate::generate_command::{GenerateOptions, generate_command};
 use crate::init_command::{EditorSchemasPolicy, InitOptions, InitWrite, init_command};
 use crate::init_starter::StarterContent;
 use crate::lint_command::lint_command;
-use crate::local_bundle::LocalBundles;
 use crate::{
-    CliError, CliIo, EXIT_REFUSED, EXIT_SUCCESS, EXIT_USAGE, OptionKind, OptionSpec, ParsedArgs,
-    Positionals, parse_command_args, print_problems,
+    CliError, EXIT_REFUSED, EXIT_SUCCESS, EXIT_USAGE, OptionKind, OptionSpec, ParsedArgs,
+    Positionals, parse_command_args,
 };
 
 /// The flags of the CLI design that are not available yet; each answers with exit code 2.

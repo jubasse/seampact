@@ -1,6 +1,8 @@
 //! The error of a run of generate or check: a function not ported yet, a bug, or the system
 //! refusing a file.
 
+use seampact_bundle::BundleError;
+use seampact_bundle_fetch::BundleFetchError;
 use seampact_cli_config::CliConfigError;
 use seampact_diagnostics::InternalError;
 use seampact_writer::WriterError;
@@ -25,6 +27,12 @@ pub enum GenerateError {
     /// A bug.
     #[error(transparent)]
     Internal(#[from] InternalError),
+    /// A bundle could not be fetched or compiled with its imports.
+    #[error(transparent)]
+    Fetch(#[from] BundleFetchError),
+    /// A local bundle could not be read.
+    #[error(transparent)]
+    Bundle(#[from] BundleError),
 }
 
 impl From<WriterError> for GenerateError {

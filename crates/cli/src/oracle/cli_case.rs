@@ -5,14 +5,15 @@ use std::ffi::OsString;
 
 use camino::{Utf8Path, Utf8PathBuf};
 use indexmap::IndexMap;
+use seampact_cli_config::CliIo;
 use seampact_oracle::{
     CASE_TODAY, CliCase, CliCommand, GIT_SOURCE_REPOSITORY, ROOT_TOKEN, SubjectAnswer, Transcript,
 };
 
+use crate::CliError;
 use crate::oracle::generator_registry::oracle_registry;
 use crate::oracle::stub_answer::{StubError, failed_answer};
 use crate::run_cli::run_command_with;
-use crate::{CliError, CliIo};
 
 impl StubError for CliError {
     fn is_not_ported(&self) -> bool {

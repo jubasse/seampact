@@ -1,7 +1,7 @@
 //! Every write of a run, each checked by the writer before the first one is committed.
 
 use camino::Utf8PathBuf;
-use seampact_cli_config::{CheckLevel, Step};
+use seampact_cli_config::{CheckLevel, CliIo, Step};
 use seampact_writer::{HandEditPolicy, PlannedWrite, WritePlanOutcome};
 
 use crate::not_ported::not_ported_yet;
@@ -105,4 +105,14 @@ pub fn committable_writes(
     _writes: PlannedWrites,
 ) -> Result<Step<CommittableWrites>, GenerateError> {
     Err(not_ported_yet("committableWrites"))
+}
+
+/// Commits every write: each entry's files, then each document directory, printing what each
+/// wrote and its warnings.
+///
+/// # Errors
+///
+/// [`GenerateError::NotPortedYet`] until the function is ported.
+pub fn commit_writes(_writes: CommittableWrites, _io: &mut dyn CliIo) -> Result<(), GenerateError> {
+    Err(not_ported_yet("commitWrites"))
 }

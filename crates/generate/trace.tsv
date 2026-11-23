@@ -3,7 +3,7 @@ src/contract_position.rs#nodes_along	packages/core/cli/src/commands/contract-pos
 src/contract_position.rs#child_of	packages/core/cli/src/commands/contract-position.ts#childOf
 src/contract_position.rs#located_origin	packages/core/cli/src/commands/contract-position.ts#locatedOrigin
 src/contract_position.rs#origin_position	packages/core/cli/src/commands/contract-position.ts#originPosition
--	packages/core/cli/src/commands/run-preparation.ts#prepareRun	pending: brief 1
+src/run_preparation.rs#prepare_run	packages/core/cli/src/commands/run-preparation.ts#prepareRun	pending: brief 1
 -	packages/core/cli/src/commands/run-preparation.ts#unknownLocalBundleProblems	pending: brief 1
 -	packages/core/cli/src/commands/run-preparation.ts#prepareApps	pending: brief 1
 -	packages/core/cli/src/commands/run-preparation.ts#planEachApp	pending: brief 1
@@ -53,7 +53,7 @@ src/write_plan.rs#committable_writes	packages/core/cli/src/commands/write-plan.t
 -	packages/core/cli/src/commands/import-specifier-styles.ts#recordAsk	pending: brief 2
 -	packages/core/cli/src/commands/link-set.ts#isLinkKind	pending: brief 2
 -	packages/core/cli/src/commands/write-plan.ts#documentDirectories	pending: brief 2
--	packages/core/cli/src/commands/write-plan.ts#commitWrites	pending: brief 2
+src/write_plan.rs#commit_writes	packages/core/cli/src/commands/write-plan.ts#commitWrites	pending: brief 2
 src/write_plan.rs#plan_writes	packages/core/cli/src/commands/write-plan.ts#planWrites	pending: brief 2
 -	packages/core/cli/src/commands/entry-generation.ts#isIgnoredWarning	pending: brief 2
 -	packages/core/cli/src/commands/exclusive-base-paths.ts#sharedBasePathProblems	pending: brief 2
