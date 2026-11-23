@@ -1813,6 +1813,7 @@ dependencies = [
  "seampact-pipeline",
  "seampact-span",
  "seampact-target",
+ "seampact-writer",
  "serde",
  "serde_json",
  "tempfile",
@@ -2305,6 +2306,10 @@ dependencies = [
  "seampact-span",
  "serde_json",
 ]
+
+[[package]]
+name = "seampact-writer"
+version = "2.0.0"
 
 [[package]]
 name = "security-framework"

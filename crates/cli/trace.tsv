@@ -10,10 +10,10 @@ src/cli_problem.rs#problem_from_refusal	packages/core/cli/src/cli-problem.ts#pro
 src/run_cli.rs#run_command	packages/core/cli/src/run-cli.ts#runCli
 src/run_cli.rs#run_init	packages/core/cli/src/run-cli.ts#runInit
 src/run_cli.rs#run_compile	packages/core/cli/src/run-cli.ts#runCompile
--	packages/core/cli/src/run-cli.ts#runGenerate	skip: generate and check are layer 3.3 commands
--	packages/core/cli/src/run-cli.ts#runCheck	skip: generate and check are layer 3.3 commands
--	packages/core/cli/src/run-cli.ts#pluginRunOf	skip: layer 3.3 generate
--	packages/core/cli/src/run-cli.ts#nativeEntryPolicy	skip: layer 3.3 generate
+src/run_cli.rs#run_generate	packages/core/cli/src/run-cli.ts#runGenerate
+src/run_cli.rs#run_check	packages/core/cli/src/run-cli.ts#runCheck
+src/run_cli.rs#plugin_run_of	packages/core/cli/src/run-cli.ts#pluginRunOf
+-	packages/core/cli/src/run-cli.ts#nativeEntryPolicy	skip: no native-entry hand-over in 2.0.0, every generator is in the binary; a native use string is refused by the registry lookup (config.target.renamed)
 src/run_cli.rs#run_lint	packages/core/cli/src/run-cli.ts#runLint
 src/run_cli.rs#run_diff	packages/core/cli/src/run-cli.ts#runDiff
 src/run_cli.rs#run_explain	packages/core/cli/src/run-cli.ts#runExplain
@@ -140,3 +140,5 @@ src/contract_position.rs#child_of	packages/core/cli/src/commands/contract-positi
 src/contract_position.rs#located_origin	packages/core/cli/src/commands/contract-position.ts#locatedOrigin
 src/contract_position.rs#origin_position	packages/core/cli/src/commands/contract-position.ts#originPosition
 src/local_bundle.rs#verify_local_bundle	packages/core/cli/src/commands/local-bundle.ts#verifyLocalBundle
+src/generate_command.rs#generate_command	packages/core/cli/src/commands/generate-command.ts#generateCommand	pending: brief 1
+src/check_command.rs#check_command	packages/core/cli/src/commands/check-command.ts#checkCommand	pending: brief 1

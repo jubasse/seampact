@@ -3,20 +3,24 @@
 
 use std::ffi::OsString;
 
+use camino::Utf8PathBuf;
 use seampact_bundle::BundleNamedVersionOverride;
-use seampact_cli_config::CliProblem;
+use seampact_cli_config::{CliProblem, resolved_path};
+use seampact_writer::HandEditPolicy;
 
 use crate::bundle_command::{BundleCommandOptions, BundleOutputFlag, bundle_command};
+use crate::check_command::check_command;
 use crate::cli_problem::unlocated_problem;
 use crate::command::Command;
 use crate::compile_command::{CompileOutputs, EditorSchemasMode, compile_command};
-use crate::config_location::config_location;
+use crate::config_location::{ConfigLocation, config_location};
 use crate::diff_command::diff_command;
 use crate::explain_command::explain_command;
+use crate::generate_command::{GenerateOptions, generate_command};
 use crate::init_command::{EditorSchemasPolicy, InitOptions, InitWrite, init_command};
 use crate::init_starter::StarterContent;
 use crate::lint_command::lint_command;
-use crate::not_ported::not_ported_yet;
+use crate::local_bundle::LocalBundles;
 use crate::{
     CliError, CliIo, EXIT_REFUSED, EXIT_SUCCESS, EXIT_USAGE, OptionKind, OptionSpec, ParsedArgs,
     Positionals, parse_command_args, print_problems,
@@ -74,8 +78,8 @@ pub fn run_command(argv: &[OsString], io: &mut dyn CliIo) -> Result<i32, CliErro
     match command {
         Command::Init => run_init(rest, io),
         Command::Compile => run_compile(rest, io),
-        Command::Generate => Err(not_ported_yet("runGenerate")),
-        Command::Check => Err(not_ported_yet("runCheck")),
+        Command::Generate => run_generate(rest, io),
+        Command::Check => run_check(rest, io),
         Command::Lint => run_lint(rest, io),
         Command::Diff => run_diff(rest, io),
         Command::Explain => run_explain(rest, io),
@@ -325,14 +329,145 @@ fn run_bundle(args: &[String], io: &mut dyn CliIo) -> Result<i32, CliError> {
     bundle_command(&config_location_of(&parsed, io), &options, io)
 }
 
-fn flag_option(name: &'static str) -> OptionSpec {
+/// The options `generate` and `check` share: where the config is and the local bundles.
+const PLUGIN_RUN_OPTIONS: [OptionSpec; 4] = [
+    text_option("config"),
+    text_option("app-directory"),
+    OptionSpec {
+        name: "bundle-directory",
+        kind: OptionKind::TextList,
+    },
+    text_option("config-name"),
+];
+
+/// What `generate` and `check` run on: the app config, the file its text is read from when a
+/// host hands it over (`--app-directory`), and the bundle directories handed over per source.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct PluginRun {
+    /// The app config and its display name.
+    pub(crate) location: ConfigLocation,
+    /// The file the app config's text is read from, when it is not `location.file`.
+    pub(crate) text_file: Option<Utf8PathBuf>,
+    /// The bundle directory of each source, `--bundle-directory <source>=<dir>`.
+    pub(crate) local_bundles: LocalBundles,
+}
+
+fn run_generate(args: &[String], io: &mut dyn CliIo) -> Result<i32, CliError> {
+    let mut options = PLUGIN_RUN_OPTIONS.to_vec();
+
+    options.push(flag_option("force"));
+
+    let parsed = match parse_command_args(args, &options, Positionals::Refused) {
+        Ok(parsed) => parsed,
+        Err(error) => return Ok(usage_error(io, error.message())),
+    };
+    let run = match plugin_run_of(&parsed, io) {
+        Ok(run) => run,
+        Err(message) => return Ok(usage_error(io, &message)),
+    };
+    let on_hand_edit = if parsed.flag("force") {
+        HandEditPolicy::Overwrite
+    } else {
+        HandEditPolicy::Refuse
+    };
+
+    generate_command(&run, io, GenerateOptions { on_hand_edit })
+}
+
+fn run_check(args: &[String], io: &mut dyn CliIo) -> Result<i32, CliError> {
+    let parsed = match parse_command_args(args, &PLUGIN_RUN_OPTIONS, Positionals::Refused) {
+        Ok(parsed) => parsed,
+        Err(error) => return Ok(usage_error(io, error.message())),
+    };
+    let run = match plugin_run_of(&parsed, io) {
+        Ok(run) => run,
+        Err(message) => return Ok(usage_error(io, &message)),
+    };
+
+    check_command(&run, io)
+}
+
+/// The run `generate` or `check` reads, or the usage message refusing its flags.
+fn plugin_run_of(parsed: &ParsedArgs, io: &dyn CliIo) -> Result<PluginRun, String> {
+    let config = parsed.text("config");
+    let app_directory = parsed.text("app-directory");
+    let config_name = parsed.text("config-name");
+    let mut local_bundles = LocalBundles::new();
+
+    for pair in parsed.texts("bundle-directory") {
+        let (source, directory) = match pair.split_once('=') {
+            Some((source, directory)) if !source.is_empty() && !directory.is_empty() => {
+                (source, directory)
+            }
+            _ => {
+                return Err(format!(
+                    "`--bundle-directory` takes <source>=<dir>, not '{pair}'."
+                ));
+            }
+        };
+
+        if local_bundles.contains_key(source) {
+            return Err(format!(
+                "`--bundle-directory` hands over the source '{source}' twice; pass one directory per source."
+            ));
+        }
+
+        local_bundles.insert(source.to_owned(), resolved_path(io.cwd(), directory));
+    }
+
+    if config_name.is_some_and(|name| {
+        name.chars().all(seampact_js::is_ecmascript_white_space) || name.contains(['\r', '\n'])
+    }) {
+        return Err(
+            "`--config-name` takes a non-empty, one-line label, the name problems give the config."
+                .to_owned(),
+        );
+    }
+
+    let Some(app_directory) = app_directory else {
+        if config_name.is_some() {
+            return Err(
+                "`--config-name` names the config `--app-directory` reads; pass both.".to_owned(),
+            );
+        }
+
+        return Ok(PluginRun {
+            location: config_location(io.cwd(), config),
+            text_file: None,
+            local_bundles,
+        });
+    };
+
+    let Some(config) = config else {
+        return Err("`--app-directory` needs `--config <path>`, the file it reads.".to_owned());
+    };
+    let location = config_location(&resolved_path(io.cwd(), app_directory), None);
+
+    if location.file.exists() {
+        return Err(format!(
+            "`--app-directory` reads --config as the app config of {}, which exists; pass that file with `--config` instead.",
+            location.file
+        ));
+    }
+
+    Ok(PluginRun {
+        location: ConfigLocation {
+            display_name: config_name.map_or(location.display_name, str::to_owned),
+            file: location.file,
+        },
+        text_file: Some(resolved_path(io.cwd(), config)),
+        local_bundles,
+    })
+}
+
+const fn flag_option(name: &'static str) -> OptionSpec {
     OptionSpec {
         name,
         kind: OptionKind::Flag,
     }
 }
 
-fn text_option(name: &'static str) -> OptionSpec {
+const fn text_option(name: &'static str) -> OptionSpec {
     OptionSpec {
         name,
         kind: OptionKind::Text,

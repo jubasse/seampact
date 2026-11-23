@@ -37,6 +37,7 @@ seampact-json.workspace = true
 seampact-load.workspace = true
 seampact-lint.workspace = true
 seampact-openapi.workspace = true
+seampact-writer.workspace = true
 seampact-oracle = { workspace = true, optional = true }
 seampact-pipeline.workspace = true
 seampact-span.workspace = true

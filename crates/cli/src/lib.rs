@@ -5,6 +5,7 @@
 mod api_refs;
 mod args;
 mod bundle_command;
+mod check_command;
 mod cli_io;
 mod cli_problem;
 mod command;
@@ -26,6 +27,7 @@ mod explain_not_shown;
 mod explain_origin;
 mod explain_values;
 mod explain_view;
+mod generate_command;
 mod git_ignore;
 mod init_command;
 mod init_modelines;

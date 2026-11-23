@@ -1,0 +1,10 @@
+//! `seampact check`: regenerates the run in memory and reports drift from the files on disk.
+
+use crate::not_ported::not_ported_yet;
+use crate::run_cli::PluginRun;
+use crate::{CliError, CliIo};
+
+/// Plans the run, generates every entry and document, and compares them with the written files.
+pub(crate) fn check_command(_run: &PluginRun, _io: &mut dyn CliIo) -> Result<i32, CliError> {
+    Err(not_ported_yet("checkCommand"))
+}
