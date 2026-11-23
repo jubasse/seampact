@@ -1970,6 +1970,7 @@ dependencies = [
 name = "seampact-gen-probe"
 version = "2.0.0"
 dependencies = [
+ "seampact-diagnostics",
  "seampact-ir",
  "seampact-json",
  "seampact-target",
@@ -2310,6 +2311,7 @@ name = "seampact-target"
 version = "2.0.0"
 dependencies = [
  "indexmap",
+ "seampact-diagnostics",
  "seampact-ir",
  "seampact-json",
  "serde",

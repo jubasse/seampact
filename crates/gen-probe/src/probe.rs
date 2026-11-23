@@ -1,9 +1,10 @@
 //! The probe adapter: a generator whose answers are its options.
 
+use seampact_diagnostics::InternalError;
 use seampact_ir::ContractIr;
 use seampact_json::JsonValue;
 use seampact_target::{
-    DescriptorSet, GenerateInput, Generated, GeneratedFile, Refusal, Refused, TargetDefinition,
+    DescriptorSet, GenerateInput, Generated, GeneratedFile, TargetDefinition, TargetFailure,
     TargetMetadata,
 };
 
@@ -31,29 +32,25 @@ impl TargetDefinition for Probe {
         &self.metadata
     }
 
-    fn parse_options(&self, raw: Option<&JsonValue>) -> Result<ProbeOptions, Refused> {
-        ProbeOptions::parse(raw)
+    fn parse_options(&self, raw: Option<&JsonValue>) -> Result<ProbeOptions, TargetFailure> {
+        Ok(ProbeOptions::parse(raw)?)
     }
 
-    fn generate(&self, input: &GenerateInput<'_, ProbeOptions>) -> Result<Generated, Refused> {
+    fn generate(
+        &self,
+        input: &GenerateInput<'_, ProbeOptions>,
+    ) -> Result<Generated, TargetFailure> {
         let options = &input.options;
 
         if let Some(refused) = options.refused() {
-            return Err(refused);
+            return Err(refused.into());
         }
 
         let mut files = options.files.clone();
 
         if options.echo == Some(true) {
             let contents = request_text(input, &self.metadata).map_err(|error| {
-                Refused(vec![Refusal {
-                    code: "probe.echo.failed".to_owned(),
-                    message: format!("The request could not be written as JSON: {error}."),
-                    fix: "Report it: every request member is JSON.".to_owned(),
-                    operation: None,
-                    member: None,
-                    docs: None,
-                }])
+                InternalError::new(format!("the probe request is not JSON: {error}"))
             })?;
 
             files.push(GeneratedFile {
@@ -68,9 +65,13 @@ impl TargetDefinition for Probe {
         })
     }
 
-    fn describe(&self, _ir: &ContractIr, options: &ProbeOptions) -> Result<DescriptorSet, Refused> {
+    fn describe(
+        &self,
+        _ir: &ContractIr,
+        options: &ProbeOptions,
+    ) -> Result<DescriptorSet, TargetFailure> {
         if let Some(refused) = options.refused() {
-            return Err(refused);
+            return Err(refused.into());
         }
 
         Ok(options.descriptors.clone().unwrap_or_default())

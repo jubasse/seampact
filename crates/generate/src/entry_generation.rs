@@ -10,7 +10,7 @@ use seampact_diagnostics::InternalError;
 use seampact_json::JsonValue;
 use seampact_target::{
     ArtefactSet, DescriptorSet, GENERATE_TROUBLESHOOTING_URL, ImportSpecifierStyle,
-    LINK_TROUBLESHOOTING_URL, LinkSet, Refusal, Refused,
+    LINK_TROUBLESHOOTING_URL, LinkSet, Refusal, TargetFailure,
 };
 
 use crate::contract_position::ContractPositions;
@@ -28,7 +28,7 @@ use crate::{AppPlan, GenerateError, GeneratedOutput};
 const LINK_CODE_PREFIX: &str = "link.";
 
 /// What describing a provider's api answers.
-type DescribeOutcome = Result<DescriptorSet, Refused>;
+type DescribeOutcome = Result<DescriptorSet, TargetFailure>;
 
 /// What a run keeps while it generates the entries of an app.
 pub(crate) struct EntryGeneration<'plan> {
@@ -233,7 +233,8 @@ fn build_links(
         );
 
         match generation.describe.of(provider, provider_api) {
-            Err(refused) => {
+            Err(TargetFailure::Internal(error)) => return Err(error.clone().into()),
+            Err(TargetFailure::Refused(refused)) => {
                 let provider_ir = provider_api
                     .ir
                     .to_json_value()

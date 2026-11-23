@@ -3,7 +3,7 @@
 use seampact_ir::ContractIr;
 use seampact_json::JsonValue;
 use seampact_target::{
-    DescriptorSet, GenerateRequest, Generated, Generator, Refused, TargetMetadata,
+    DescriptorSet, GenerateRequest, Generated, Generator, TargetFailure, TargetMetadata,
 };
 
 use crate::{Probe, ProbeOptions};
@@ -43,11 +43,15 @@ impl Generator for UnsupportedKindSwitch {
         Generator::metadata(self.supporting)
     }
 
-    fn generate(&self, request: &GenerateRequest<'_>) -> Result<Generated, Refused> {
+    fn generate(&self, request: &GenerateRequest<'_>) -> Result<Generated, TargetFailure> {
         Generator::generate(self.chosen(request.options), request)
     }
 
-    fn describe(&self, ir: &ContractIr, options: &JsonValue) -> Result<DescriptorSet, Refused> {
+    fn describe(
+        &self,
+        ir: &ContractIr,
+        options: &JsonValue,
+    ) -> Result<DescriptorSet, TargetFailure> {
         Generator::describe(self.supporting, ir, options)
     }
 }
