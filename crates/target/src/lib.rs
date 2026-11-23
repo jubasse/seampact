@@ -23,13 +23,16 @@ mod native_docs_document;
 mod need_resolution;
 mod no_options;
 mod not_generated_fixes;
+mod parse_options;
 mod refusal;
+pub mod refusal_code;
 mod registry;
+mod target_failure;
 mod unknown_value;
 
 pub use artefacts::{
-    ArtefactDeclaration, ArtefactDefault, ArtefactSet, MissingNeed, artefact_declaration_problems,
-    refuse_undeclared_artefacts,
+    ArtefactDeclaration, ArtefactDefault, ArtefactId, ArtefactSet, MissingNeed,
+    artefact_declaration_problems, refuse_undeclared_artefacts,
 };
 pub use compatibility::{
     CompatibilityError, CompatibilityKey, CompatibilityMatrix, FirstPartyProvider,
@@ -67,14 +70,16 @@ pub use located_refusals::{
 pub use metadata::{BasePathRouting, GENERATOR_VERSION, TargetId, TargetMetadata, TargetRole};
 pub use native_docs_document::NativeDocsDocument;
 pub use need_resolution::resolve_link_needs;
-pub use no_options::{NoOptions, parse_no_options};
+pub use no_options::NoOptions;
 pub use not_generated_fixes::{
     GENERATE_TROUBLESHOOTING_URL, GenerateTroubleshootingSection, LINK_TROUBLESHOOTING_URL,
     NotGeneratedForm, troubleshooting_url,
 };
+pub use parse_options::parse_options;
 pub use refusal::{Refusal, without_repeats};
 pub use registry::{
     EXEC_USE, FIRST_PARTY_TARGETS, FirstPartyTarget, Registry, TargetLookupCode,
     TargetLookupProblem,
 };
+pub use target_failure::TargetFailure;
 pub use unknown_value::refuse_unknown_value;

@@ -1,7 +1,6 @@
 //! The options every probe reads.
 
 use seampact_ir::OperationId;
-use seampact_json::JsonValue;
 use seampact_target::{DescriptorSet, GenerateWarning, GeneratedFile, Refusal, Refused};
 use serde::Deserialize;
 
@@ -45,30 +44,6 @@ pub struct ProbeRefusal {
 }
 
 impl ProbeOptions {
-    /// Reads the raw options; absent options are `{}`.
-    ///
-    /// # Errors
-    ///
-    /// An `options.invalid` refusal when the options do not have the probes' shape.
-    pub fn parse(raw: Option<&JsonValue>) -> Result<Self, Refused> {
-        let Some(raw) = raw else {
-            return Ok(Self::default());
-        };
-
-        serde_json::to_value(raw)
-            .and_then(serde_json::from_value)
-            .map_err(|error| {
-                Refused(vec![Refusal {
-                    code: "options.invalid".to_owned(),
-                    message: format!("The probe options do not have the probes' shape: {error}."),
-                    fix: "Write the options of generators.md section 2.".to_owned(),
-                    operation: None,
-                    member: Some(String::new()),
-                    docs: None,
-                }])
-            })
-    }
-
     /// The refusals the options ask for, if any.
     #[must_use]
     pub fn refused(&self) -> Option<Refused> {
@@ -83,12 +58,10 @@ impl ProbeOptions {
 impl From<ProbeRefusal> for Refusal {
     fn from(refusal: ProbeRefusal) -> Self {
         Self {
-            code: refusal.code,
-            message: refusal.message,
-            fix: refusal.fix,
             operation: refusal.operation,
             member: refusal.member,
             docs: refusal.docs,
+            ..Self::new(refusal.code, refusal.message, refusal.fix)
         }
     }
 }

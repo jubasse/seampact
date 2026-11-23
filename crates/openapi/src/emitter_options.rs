@@ -5,7 +5,7 @@
 use seampact_diagnostics::diagnostic_inert;
 use seampact_ir::bounded_unknown_text;
 use seampact_json::{JsonObject, JsonValue, js_text_of};
-use seampact_target::Refusal;
+use seampact_target::{Refusal, refusal_code};
 
 use crate::OpenApiError;
 
@@ -288,9 +288,6 @@ const INPUT_SCHEMAS_VALUES: [(&str, InputSchemasOption); 2] = [
     ("strict", InputSchemasOption::Strict),
 ];
 
-/// The code of every refusal of the options.
-const OPTIONS_INVALID_CODE: &str = "openapi.options.invalid";
-
 /// The `extensions` value that keeps every extension.
 const ALL_EXTENSIONS: &str = "all";
 
@@ -309,24 +306,30 @@ pub fn parse_emitter_options(
         return Ok(ParsedEmitterOptions::Parsed(EmitterOptions::default()));
     };
     let JsonValue::Object(record) = raw_options else {
-        return Ok(refused_with(vec![option_refusal(
-            "",
-            "The OpenAPI options must be a mapping.",
-            "Write the options as a mapping.",
-        )]));
+        return Ok(refused_with(vec![
+            Refusal::new(
+                refusal_code::OPENAPI_OPTIONS_INVALID,
+                "The OpenAPI options must be a mapping.",
+                "Write the options as a mapping.",
+            )
+            .with_member(""),
+        ]));
     };
     let mut refusals = Vec::new();
 
     for key in record.keys() {
         if !OPTION_KEYS.contains(&key.as_str()) {
-            refusals.push(option_refusal(
-                &format!("/{key}"),
-                &format!(
-                    "{} is not an OpenAPI option.",
-                    option_value_text(&JsonValue::text(key))
-                ),
-                &format!("Use one of {}.", OPTION_KEYS.join(", ")),
-            ));
+            refusals.push(
+                Refusal::new(
+                    refusal_code::OPENAPI_OPTIONS_INVALID,
+                    format!(
+                        "{} is not an OpenAPI option.",
+                        option_value_text(&JsonValue::text(key))
+                    ),
+                    format!("Use one of {}.", OPTION_KEYS.join(", ")),
+                )
+                .with_member(format!("/{key}")),
+            );
         }
     }
 
@@ -360,17 +363,6 @@ pub fn parse_emitter_options(
     }))
 }
 
-fn option_refusal(member: &str, message: &str, fix: &str) -> Refusal {
-    Refusal {
-        code: OPTIONS_INVALID_CODE.to_owned(),
-        message: message.to_owned(),
-        fix: fix.to_owned(),
-        operation: None,
-        member: Some(member.to_owned()),
-        docs: None,
-    }
-}
-
 fn refused_with(refusals: Vec<Refusal>) -> ParsedEmitterOptions {
     ParsedEmitterOptions::Refused(refusals)
 }
@@ -401,11 +393,14 @@ fn parse_extensions(raw: Option<&JsonValue>, refusals: &mut Vec<Refusal>) -> Ext
     }
 
     let JsonValue::Array(items) = raw_value else {
-        refusals.push(option_refusal(
-            "/extensions",
-            "'extensions' must be 'all', 'none' or a list of extension names.",
-            "Write 'all', 'none' or a list such as [access, paging].",
-        ));
+        refusals.push(
+            Refusal::new(
+                refusal_code::OPENAPI_OPTIONS_INVALID,
+                "'extensions' must be 'all', 'none' or a list of extension names.",
+                "Write 'all', 'none' or a list such as [access, paging].",
+            )
+            .with_member("/extensions"),
+        );
 
         return ExtensionSelection::All;
     };
@@ -430,17 +425,20 @@ fn parse_extensions(raw: Option<&JsonValue>, refusals: &mut Vec<Refusal>) -> Ext
             .map(|name| name.as_str())
             .collect();
 
-        refusals.push(option_refusal(
-            &format!("/extensions/{index}"),
-            &format!(
-                "{} is not an x-seampact extension name.",
-                option_value_text(item)
-            ),
-            &format!(
-                "Use a name after 'x-seampact-', one of {}.",
-                known_names.join(", ")
-            ),
-        ));
+        refusals.push(
+            Refusal::new(
+                refusal_code::OPENAPI_OPTIONS_INVALID,
+                format!(
+                    "{} is not an x-seampact extension name.",
+                    option_value_text(item)
+                ),
+                format!(
+                    "Use a name after 'x-seampact-', one of {}.",
+                    known_names.join(", ")
+                ),
+            )
+            .with_member(format!("/extensions/{index}")),
+        );
     }
 
     ExtensionSelection::Named(names)
@@ -465,14 +463,17 @@ fn parse_choice<Choice: Copy>(
 
     let names: Vec<&str> = values.iter().map(|(name, _)| *name).collect();
 
-    refusals.push(option_refusal(
-        &format!("/{option}"),
-        &format!(
-            "{} is not a value of '{option}'.",
-            option_value_text(raw_value)
-        ),
-        &format!("Use one of {}.", names.join(", ")),
-    ));
+    refusals.push(
+        Refusal::new(
+            refusal_code::OPENAPI_OPTIONS_INVALID,
+            format!(
+                "{} is not a value of '{option}'.",
+                option_value_text(raw_value)
+            ),
+            format!("Use one of {}.", names.join(", ")),
+        )
+        .with_member(format!("/{option}")),
+    );
 
     default_value
 }
@@ -482,11 +483,14 @@ fn parse_servers(raw: Option<&JsonValue>, refusals: &mut Vec<Refusal>) -> Vec<Se
         return Vec::new();
     };
     let JsonValue::Array(items) = raw_value else {
-        refusals.push(option_refusal(
-            "/servers",
-            "'servers' must be a list.",
-            "Write a list of { url, description }.",
-        ));
+        refusals.push(
+            Refusal::new(
+                refusal_code::OPENAPI_OPTIONS_INVALID,
+                "'servers' must be a list.",
+                "Write a list of { url, description }.",
+            )
+            .with_member("/servers"),
+        );
 
         return Vec::new();
     };
@@ -495,11 +499,14 @@ fn parse_servers(raw: Option<&JsonValue>, refusals: &mut Vec<Refusal>) -> Vec<Se
     for (index, item) in items.iter().enumerate() {
         match parse_server(item) {
             Some(server) => servers.push(server),
-            None => refusals.push(option_refusal(
-                &format!("/servers/{index}"),
-                "A server must be { url, description? } with string values.",
-                "Write the server as { url: https://api.example.com }.",
-            )),
+            None => refusals.push(
+                Refusal::new(
+                    refusal_code::OPENAPI_OPTIONS_INVALID,
+                    "A server must be { url, description? } with string values.",
+                    "Write the server as { url: https://api.example.com }.",
+                )
+                .with_member(format!("/servers/{index}")),
+            ),
         }
     }
 

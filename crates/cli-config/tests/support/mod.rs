@@ -92,13 +92,13 @@ pub fn stub_target(
 pub const fn artefact(
     id: &'static str,
     on: bool,
-    needs: &'static [&'static str],
+    needs: &'static [seampact_target::ArtefactId],
     leave_off_without_needs: bool,
 ) -> seampact_target::ArtefactDeclaration {
     use seampact_target::{ArtefactDeclaration, ArtefactDefault, MissingNeed};
 
     ArtefactDeclaration {
-        id,
+        id: seampact_target::ArtefactId::new(id),
         default: if on {
             ArtefactDefault::On
         } else {

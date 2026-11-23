@@ -10,8 +10,8 @@ use serde::{Deserialize, Serialize};
 use crate::{
     ArtefactSet, DescriptorSet, FrameworkRouteCheck, GenerateWarning, HookBootCheck,
     ImportSpecifierStyle, LinkSet, NO_MOUNT, NativeDocsDocument, Refusal, ResolvedLinkNeeds,
-    TargetMetadata, meets_every_need, refuse_undeclared_artefacts, refuse_unmet_links,
-    refuse_unsupported_ir,
+    TargetFailure, TargetMetadata, meets_every_need, refuse_undeclared_artefacts,
+    refuse_unmet_links, refuse_unsupported_ir,
 };
 
 /// One file a generator writes; the writer checks the path.
@@ -236,14 +236,17 @@ pub trait TargetDefinition: Sync {
     /// # Errors
     ///
     /// The refusals of options the target does not take.
-    fn parse_options(&self, raw: Option<&JsonValue>) -> Result<Self::Options, Refused>;
+    fn parse_options(&self, raw: Option<&JsonValue>) -> Result<Self::Options, TargetFailure>;
 
     /// Writes the files of one api.
     ///
     /// # Errors
     ///
     /// The refusals of forms the target cannot write.
-    fn generate(&self, input: &GenerateInput<'_, Self::Options>) -> Result<Generated, Refused>;
+    fn generate(
+        &self,
+        input: &GenerateInput<'_, Self::Options>,
+    ) -> Result<Generated, TargetFailure>;
 
     /// The descriptors of the kinds the target provides; only a provider overrides it, and the
     /// registry test catches one that forgets.
@@ -255,7 +258,7 @@ pub trait TargetDefinition: Sync {
         &self,
         _ir: &ContractIr,
         _options: &Self::Options,
-    ) -> Result<DescriptorSet, Refused> {
+    ) -> Result<DescriptorSet, TargetFailure> {
         Ok(DescriptorSet::default())
     }
 }
@@ -270,7 +273,7 @@ pub trait Generator: Sync {
     /// # Errors
     ///
     /// The refusals of the first check that fails, or of the target.
-    fn generate(&self, request: &GenerateRequest<'_>) -> Result<Generated, Refused>;
+    fn generate(&self, request: &GenerateRequest<'_>) -> Result<Generated, TargetFailure>;
 
     /// Checks the IR support and describes what a provider writes for `ir` under `options`
     /// (`{}` when the entry has none); empty for a target that provides nothing.
@@ -278,7 +281,20 @@ pub trait Generator: Sync {
     /// # Errors
     ///
     /// The refusals of the IR support check, the options or the provider.
-    fn describe(&self, ir: &ContractIr, options: &JsonValue) -> Result<DescriptorSet, Refused>;
+    fn describe(
+        &self,
+        ir: &ContractIr,
+        options: &JsonValue,
+    ) -> Result<DescriptorSet, TargetFailure>;
+}
+
+impl fmt::Debug for dyn Generator + '_ {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_tuple("Generator")
+            .field(&self.metadata().id.as_str())
+            .finish()
+    }
 }
 
 impl<Definition: TargetDefinition> Generator for Definition {
@@ -286,12 +302,12 @@ impl<Definition: TargetDefinition> Generator for Definition {
         TargetDefinition::metadata(self)
     }
 
-    fn generate(&self, request: &GenerateRequest<'_>) -> Result<Generated, Refused> {
+    fn generate(&self, request: &GenerateRequest<'_>) -> Result<Generated, TargetFailure> {
         let metadata = TargetDefinition::metadata(self);
         let ir_refusals = refuse_unsupported_ir(request.ir, metadata);
 
         if !ir_refusals.is_empty() {
-            return Err(Refused(ir_refusals));
+            return Err(Refused(ir_refusals).into());
         }
 
         let options = self.parse_options(request.options)?;
@@ -302,7 +318,7 @@ impl<Definition: TargetDefinition> Generator for Definition {
 
             refusals.extend(declared_artefacts);
 
-            return Err(Refused(refusals));
+            return Err(Refused(refusals).into());
         }
 
         let input = GenerateInput {
@@ -327,12 +343,16 @@ impl<Definition: TargetDefinition> Generator for Definition {
         TargetDefinition::generate(self, &input)
     }
 
-    fn describe(&self, ir: &ContractIr, options: &JsonValue) -> Result<DescriptorSet, Refused> {
+    fn describe(
+        &self,
+        ir: &ContractIr,
+        options: &JsonValue,
+    ) -> Result<DescriptorSet, TargetFailure> {
         let metadata = TargetDefinition::metadata(self);
         let ir_refusals = refuse_unsupported_ir(ir, metadata);
 
         if !ir_refusals.is_empty() {
-            return Err(Refused(ir_refusals));
+            return Err(Refused(ir_refusals).into());
         }
 
         // A target that provides nothing has no `describe` in the TypeScript: its options are

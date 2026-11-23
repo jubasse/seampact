@@ -3,7 +3,9 @@
 use seampact_gen_probe::{PROBE_CLIENT, PROBE_SERVER};
 use seampact_ir::ContractIr;
 use seampact_json::JsonValue;
-use seampact_target::{CompatibilityMatrix, GenerateRequest, Generator, resolve_link_needs};
+use seampact_target::{
+    CompatibilityMatrix, GenerateRequest, Generator, Refused, TargetFailure, resolve_link_needs,
+};
 
 type TestResult<Value> = Result<Value, Box<dyn std::error::Error>>;
 
@@ -16,6 +18,13 @@ fn reference_ir() -> TestResult<ContractIr> {
     Ok(ContractIr::from_json_text(&text)?)
 }
 
+fn refused_of(failure: TargetFailure) -> TestResult<Refused> {
+    match failure {
+        TargetFailure::Refused(refused) => Ok(refused),
+        TargetFailure::Internal(error) => Err(format!("expected refusals, got {error}").into()),
+    }
+}
+
 fn options(text: &str) -> TestResult<JsonValue> {
     Ok(serde_json::from_str(text)?)
 }
@@ -24,9 +33,12 @@ fn options(text: &str) -> TestResult<JsonValue> {
 fn the_client_probe_refuses_every_kind_when_asked() {
     let ir = reference_ir().unwrap();
     let unsupported = options(r#"{ "unsupportedKind": true }"#).unwrap();
-    let refused = PROBE_CLIENT
-        .generate(&GenerateRequest::new(&ir).with_options(&unsupported))
-        .unwrap_err();
+    let refused = refused_of(
+        PROBE_CLIENT
+            .generate(&GenerateRequest::new(&ir).with_options(&unsupported))
+            .unwrap_err(),
+    )
+    .unwrap();
     let codes: Vec<&str> = refused
         .0
         .iter()
@@ -49,9 +61,12 @@ fn the_client_probe_refuses_a_missing_client_link() {
     let matrix = CompatibilityMatrix::parse().unwrap();
     let metadata = PROBE_CLIENT.metadata();
     let needs = resolve_link_needs(&metadata.consumes, metadata.compatibility, &matrix).unwrap();
-    let refused = PROBE_CLIENT
-        .generate(&GenerateRequest::new(&ir).with_needs(&needs))
-        .unwrap_err();
+    let refused = refused_of(
+        PROBE_CLIENT
+            .generate(&GenerateRequest::new(&ir).with_needs(&needs))
+            .unwrap_err(),
+    )
+    .unwrap();
     let codes: Vec<&str> = refused
         .0
         .iter()

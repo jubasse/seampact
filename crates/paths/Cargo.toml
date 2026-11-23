@@ -13,5 +13,8 @@ seampact-js.workspace = true
 thiserror.workspace = true
 unicode-normalization.workspace = true
 
+[dev-dependencies]
+tempfile.workspace = true
+
 [lints]
 workspace = true

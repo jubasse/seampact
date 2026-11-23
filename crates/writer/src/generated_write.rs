@@ -5,16 +5,16 @@ use std::collections::{HashMap, HashSet};
 use std::fs;
 
 use camino::{Utf8Path, Utf8PathBuf};
-use seampact_paths::{absolute_normalised, case_folded};
-use seampact_target::{GeneratedFile, Refusal};
+use seampact_paths::case_folded;
+use seampact_paths::node_path::resolve_from_working_directory;
+use seampact_target::{GeneratedFile, Refusal, Refused, refusal_code};
 
 use crate::existing_file::{ExistingFileState, existing_file_state};
 use crate::generated_paths::MANIFEST_FILE_NAME;
 use crate::manifest::{ManifestEntry, ManifestRead, read_manifest, serialize_manifest};
 use crate::root_directory::{real_path_of_missing, remove_empty_directories};
 use crate::sha256::sha256_hex;
-use crate::writer_refusal::writer_refusal;
-use crate::{FilesOutcome, HandEditPolicy, WriterError, check_generated_paths, lstat_if_present};
+use crate::{HandEditPolicy, WriteStop, WriterError, check_generated_paths, lstat_if_present};
 
 const BYTE_ORDER_MARK: char = '\u{feff}';
 
@@ -48,41 +48,21 @@ struct PlannedFile {
     sha256: String,
 }
 
-/// A planned write, or the refusals of its checks.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum WritePlanOutcome {
-    /// Every check passed.
-    Planned(PlannedWrite),
-    /// The write is refused, naming each file and the fix.
-    Refused(Vec<Refusal>),
-}
-
-/// What [`write_generated_files`] answers: the files written, or the refusals.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum WriteOutcome {
-    /// The write was committed.
-    Written(WrittenFiles),
-    /// The write is refused, nothing written.
-    Refused(Vec<Refusal>),
-}
-
 /// Plans then commits the write of `files` into `out_directory` under `owner`.
 ///
 /// # Errors
 ///
-/// [`WriterError::Io`] when a file or directory cannot be read or written.
+/// [`WriteStop::Refused`] when a check refuses, nothing written; [`WriteStop::Failed`] when a
+/// file or directory cannot be read or written.
 pub fn write_generated_files(
     out_directory: &Utf8Path,
     owner: &str,
-    files: &[GeneratedFile],
+    files: Vec<GeneratedFile>,
     policy: HandEditPolicy,
-) -> Result<WriteOutcome, WriterError> {
-    match plan_generated_write(out_directory, owner, files, policy)? {
-        WritePlanOutcome::Refused(refusals) => Ok(WriteOutcome::Refused(refusals)),
-        WritePlanOutcome::Planned(write) => {
-            commit_generated_write(write).map(WriteOutcome::Written)
-        }
-    }
+) -> Result<WrittenFiles, WriteStop> {
+    let write = plan_generated_write(out_directory, owner, files, policy)?;
+
+    Ok(commit_generated_write(write)?)
 }
 
 /// Every check of a write with nothing written: the manifest, unsafe and duplicate paths, files the
@@ -90,31 +70,29 @@ pub fn write_generated_files(
 ///
 /// # Errors
 ///
-/// [`WriterError::Io`] when a file or directory cannot be read.
+/// [`WriteStop::Refused`] with every refusal of the checks; [`WriteStop::Failed`] when a file or
+/// directory cannot be read.
 pub fn plan_generated_write(
     out_directory: &Utf8Path,
     owner: &str,
-    files: &[GeneratedFile],
+    files: Vec<GeneratedFile>,
     policy: HandEditPolicy,
-) -> Result<WritePlanOutcome, WriterError> {
-    let checked = match check_generated_paths(files)? {
-        FilesOutcome::Ready(checked) => checked,
-        FilesOutcome::Refused(refusals) => return Ok(WritePlanOutcome::Refused(refusals)),
-    };
+) -> Result<PlannedWrite, WriteStop> {
+    let checked = check_generated_paths(files)?;
 
     let root_directory = real_path_of_missing(
-        &absolute_normalised(out_directory)
+        &resolve_from_working_directory(out_directory)
             .map_err(|error| WriterError::io(out_directory, &error))?,
     )?;
 
     if let Some(refusal) = manifest_file_refusal(&root_directory)? {
-        return Ok(WritePlanOutcome::Refused(vec![refusal]));
+        return Err(Refused(vec![refusal]).into());
     }
 
     let recorded = match read_manifest(&root_directory)? {
         ManifestRead::Invalid { reason } => {
-            return Ok(refused_one(
-                "writer.manifest.invalid",
+            return Err(refused_one(
+                refusal_code::WRITER_MANIFEST_INVALID,
                 format!(
                     "The manifest {} cannot be read: {reason}.",
                     root_directory.join(MANIFEST_FILE_NAME)
@@ -127,8 +105,8 @@ pub fn plan_generated_write(
             entries,
         } => {
             if let Some(other) = recorded_owner.filter(|recorded_owner| recorded_owner != owner) {
-                return Ok(refused_one(
-                    "writer.manifest.other-owner",
+                return Err(refused_one(
+                    refusal_code::WRITER_MANIFEST_OTHER_OWNER,
                     format!(
                         "The output directory {root_directory} belongs to the target '{other}', not '{owner}'."
                     ),
@@ -143,7 +121,7 @@ pub fn plan_generated_write(
         }
     };
 
-    let planned: Vec<PlannedFile> = checked.iter().map(planned_file).collect();
+    let planned: Vec<PlannedFile> = checked.into_iter().map(planned_file).collect();
     let Classified {
         refusals,
         unchanged,
@@ -151,20 +129,20 @@ pub fn plan_generated_write(
     } = classify_files(&root_directory, &planned, &recorded, policy)?;
 
     if !refusals.is_empty() {
-        return Ok(WritePlanOutcome::Refused(refusals));
+        return Err(Refused(refusals).into());
     }
 
-    Ok(WritePlanOutcome::Planned(PlannedWrite {
+    Ok(PlannedWrite {
         root_directory,
         owner: owner.to_owned(),
         files: planned,
         unchanged,
         removable,
-    }))
+    })
 }
 
-fn refused_one(code: &str, message: String, fix: impl Into<String>) -> WritePlanOutcome {
-    WritePlanOutcome::Refused(vec![writer_refusal(code, message, fix)])
+fn refused_one(code: &str, message: String, fix: impl Into<String>) -> WriteStop {
+    Refused(vec![Refusal::new(code, message, fix)]).into()
 }
 
 /// What the planned and the stale files of a write turned out to be.
@@ -249,8 +227,8 @@ fn manifest_file_refusal(root_directory: &Utf8Path) -> Result<Option<Refusal>, W
         return Ok(None);
     }
 
-    Ok(Some(writer_refusal(
-        "writer.manifest.not-regular",
+    Ok(Some(Refusal::new(
+        refusal_code::WRITER_MANIFEST_NOT_REGULAR,
         format!(
             "The manifest {manifest_path} is not a regular file, so the writer does not read or write it."
         ),
@@ -259,7 +237,7 @@ fn manifest_file_refusal(root_directory: &Utf8Path) -> Result<Option<Refusal>, W
 }
 
 /// The bytes a file is written with: no byte order mark, LF line endings, one final newline.
-fn planned_file(file: &GeneratedFile) -> PlannedFile {
+fn planned_file(file: GeneratedFile) -> PlannedFile {
     let without_mark = file
         .contents
         .strip_prefix(BYTE_ORDER_MARK)
@@ -273,7 +251,7 @@ fn planned_file(file: &GeneratedFile) -> PlannedFile {
     let bytes = text.into_bytes();
 
     PlannedFile {
-        path: file.path.clone(),
+        path: file.path,
         sha256: sha256_hex(&bytes),
         bytes,
     }
@@ -332,7 +310,7 @@ pub fn commit_generated_write(write: PlannedWrite) -> Result<WrittenFiles, Write
         .collect();
     let manifest_path = root_directory.join(MANIFEST_FILE_NAME);
 
-    fs::write(&manifest_path, serialize_manifest(&owner, &entries)?)
+    fs::write(&manifest_path, serialize_manifest(&owner, &entries))
         .map_err(|error| WriterError::io(&manifest_path, &error))?;
 
     Ok(WrittenFiles {

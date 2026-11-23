@@ -2,9 +2,7 @@
 
 use seampact_ir::OperationId;
 
-use crate::Refusal;
-
-const UNKNOWN_VALUE_CODE: &str = "ir.value.unknown";
+use crate::{Refusal, refusal_code};
 
 const UNKNOWN_VALUE_FIX: &str = "Update the target to a release that supports this value, or change the contract so it is not used.";
 
@@ -16,14 +14,11 @@ pub fn refuse_unknown_value(member: &str, value: &str, operation: Option<&Operat
         .map(|operation| format!(" in operation '{operation}'"))
         .unwrap_or_default();
 
-    Refusal {
-        code: UNKNOWN_VALUE_CODE.to_owned(),
-        message: format!(
-            "The value '{value}' of {member}{in_operation} is not one this target knows."
-        ),
-        fix: UNKNOWN_VALUE_FIX.to_owned(),
-        operation: operation.cloned(),
-        member: Some(member.to_owned()),
-        docs: None,
-    }
+    Refusal::new(
+        refusal_code::IR_VALUE_UNKNOWN,
+        format!("The value '{value}' of {member}{in_operation} is not one this target knows."),
+        UNKNOWN_VALUE_FIX,
+    )
+    .with_operation(operation.cloned())
+    .with_member(member)
 }

@@ -4,8 +4,7 @@ use std::fs;
 
 use camino::Utf8Path;
 use seampact_writer::{
-    HandEditPolicy, WriteOutcome, WritePlanOutcome, WrittenFiles, plan_generated_write,
-    write_generated_files,
+    HandEditPolicy, WriteStop, WrittenFiles, plan_generated_write, write_generated_files,
 };
 
 use crate::support::{file, read, temporary_directory};
@@ -20,9 +19,9 @@ fn written(
 ) -> WrittenFiles {
     let generated: Vec<_> = files.iter().map(|(path, text)| file(path, text)).collect();
 
-    match write_generated_files(out, owner, &generated, policy).expect("a write") {
-        WriteOutcome::Written(done) => done,
-        WriteOutcome::Refused(refusals) => panic!("refused: {refusals:?}"),
+    match write_generated_files(out, owner, generated, policy) {
+        Ok(done) => done,
+        Err(stop) => panic!("stopped: {stop:?}"),
     }
 }
 
@@ -34,12 +33,14 @@ fn refusals(
 ) -> Vec<(String, String)> {
     let generated: Vec<_> = files.iter().map(|(path, text)| file(path, text)).collect();
 
-    match write_generated_files(out, owner, &generated, policy).expect("a write") {
-        WriteOutcome::Refused(refusals) => refusals
+    match write_generated_files(out, owner, generated, policy) {
+        Err(WriteStop::Refused(refused)) => refused
+            .0
             .into_iter()
             .map(|refusal| (refusal.code, refusal.message))
             .collect(),
-        WriteOutcome::Written(done) => panic!("written: {done:?}"),
+        Err(WriteStop::Failed(error)) => panic!("failed: {error}"),
+        Ok(done) => panic!("written: {done:?}"),
     }
 }
 
@@ -269,11 +270,10 @@ mod links {
         let plan = plan_generated_write(
             &root.join("via/new"),
             "node",
-            &[file("a.ts", "a")],
+            vec![file("a.ts", "a")],
             HandEditPolicy::Refuse,
-        )
-        .expect("a plan");
+        );
 
-        assert!(matches!(plan, WritePlanOutcome::Planned(_)));
+        assert!(plan.is_ok(), "{plan:?}");
     }
 }

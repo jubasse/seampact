@@ -2,10 +2,7 @@
 
 use seampact_js::cmp_utf16;
 use seampact_paths::{OutputPathSet, RelativeOutputPath};
-use seampact_target::{GeneratedFile, Refusal};
-
-use crate::writer_refusal::writer_refusal;
-use crate::{FilesOutcome, WriterError};
+use seampact_target::{GeneratedFile, Refusal, Refused, refusal_code};
 
 /// The file in each output directory that lists what the writer wrote there.
 pub const MANIFEST_FILE_NAME: &str = ".seampact-manifest.json";
@@ -16,20 +13,20 @@ const CASE_AWARE_FIX: &str = "Report this to the target's maintainers, or, if tw
 ///
 /// # Errors
 ///
-/// Never fails today; the `Result` keeps the writer's one signature for every check.
-pub fn check_generated_paths(files: &[GeneratedFile]) -> Result<FilesOutcome, WriterError> {
+/// One `file.path.invalid` refusal per refused path.
+pub fn check_generated_paths(mut files: Vec<GeneratedFile>) -> Result<Vec<GeneratedFile>, Refused> {
     let mut refusals: Vec<Refusal> = Vec::new();
     let mut seen = OutputPathSet::new();
 
-    for file in files {
+    for file in &files {
         let reason = match RelativeOutputPath::try_new(file.path.as_str()) {
             Err(unsafe_path) => Some(unsafe_path.reason().as_str().to_owned()),
             Ok(path) => remembered_path_problem(&path, &mut seen),
         };
 
         if let Some(reason) = reason {
-            refusals.push(writer_refusal(
-                "file.path.invalid",
+            refusals.push(Refusal::new(
+                refusal_code::FILE_PATH_INVALID,
                 format!(
                     "The target generated the path '{}', and {reason}.",
                     file.path
@@ -40,14 +37,12 @@ pub fn check_generated_paths(files: &[GeneratedFile]) -> Result<FilesOutcome, Wr
     }
 
     if !refusals.is_empty() {
-        return Ok(FilesOutcome::Refused(refusals));
+        return Err(Refused(refusals));
     }
 
-    let mut sorted: Vec<GeneratedFile> = files.to_vec();
+    files.sort_by(|left, right| cmp_utf16(&left.path, &right.path));
 
-    sorted.sort_by(|left, right| cmp_utf16(&left.path, &right.path));
-
-    Ok(FilesOutcome::Ready(sorted))
+    Ok(files)
 }
 
 /// Adds the path to `seen`, then names why it is refused: a clash first, else the manifest name.

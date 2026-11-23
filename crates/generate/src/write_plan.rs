@@ -2,10 +2,9 @@
 
 use camino::{Utf8Path, Utf8PathBuf};
 use seampact_cli_config::{CheckLevel, CliIo, CliProblem, Step};
-use seampact_target::{GeneratedFile, Refusal};
+use seampact_target::{GeneratedFile, Refusal, Refused};
 use seampact_writer::{
-    HandEditPolicy, ManifestRead, PlannedWrite, WritePlanOutcome, plan_generated_write,
-    read_manifest,
+    HandEditPolicy, ManifestRead, PlannedWrite, WriteStop, plan_generated_write, read_manifest,
 };
 
 use crate::app_entry_where::app_entry_where;
@@ -22,7 +21,7 @@ pub struct EntryWrite {
     /// What the entry generated.
     pub output: GeneratedOutput,
     /// The writer's plan, or its refusals.
-    pub check: WritePlanOutcome,
+    pub check: Result<PlannedWrite, Refused>,
 }
 
 /// The documents of one directory, written by one writer call under [`DOCUMENT_OWNER`]; `level`
@@ -34,7 +33,7 @@ pub struct DocumentDirectoryWrite {
     /// The documents written there.
     pub documents: Vec<EmittedAppDocument>,
     /// The writer's plan, or its refusals.
-    pub check: WritePlanOutcome,
+    pub check: Result<PlannedWrite, Refused>,
     /// The level of a drift in this directory.
     pub level: CheckLevel,
 }
@@ -125,7 +124,7 @@ pub fn committable_writes(writes: PlannedWrites) -> Result<Step<CommittableWrite
     let mut committable = CommittableWrites::default();
 
     for EntryWrite { output, check } in writes.entries {
-        if let WritePlanOutcome::Planned(write) = check {
+        if let Ok(write) = check {
             committable
                 .entries
                 .push(CommittableEntryWrite { output, write });
@@ -139,7 +138,7 @@ pub fn committable_writes(writes: PlannedWrites) -> Result<Step<CommittableWrite
         ..
     } in writes.documents
     {
-        if let WritePlanOutcome::Planned(write) = check {
+        if let Ok(write) = check {
             committable.documents.push(CommittableDocumentWrite {
                 directory,
                 documents,
@@ -153,7 +152,7 @@ pub fn committable_writes(writes: PlannedWrites) -> Result<Step<CommittableWrite
 
 /// The problems of an entry's write the writer refused.
 fn entry_write_problems(write: &EntryWrite) -> Vec<CliProblem> {
-    let WritePlanOutcome::Refused(refusals) = &write.check else {
+    let Err(Refused(refusals)) = &write.check else {
         return Vec::new();
     };
     let output = &write.output;
@@ -169,7 +168,7 @@ fn entry_write_problems(write: &EntryWrite) -> Vec<CliProblem> {
 fn document_write_problems(
     write: &DocumentDirectoryWrite,
 ) -> Result<Vec<CliProblem>, GenerateError> {
-    let WritePlanOutcome::Refused(refusals) = &write.check else {
+    let Err(Refused(refusals)) = &write.check else {
         return Ok(Vec::new());
     };
 
@@ -197,8 +196,12 @@ fn check_write(
     owner: &str,
     files: &[GeneratedFile],
     policy: HandEditPolicy,
-) -> Result<WritePlanOutcome, GenerateError> {
-    Ok(plan_generated_write(directory, owner, files, policy)?)
+) -> Result<Result<PlannedWrite, Refused>, GenerateError> {
+    match plan_generated_write(directory, owner, files.to_vec(), policy) {
+        Ok(write) => Ok(Ok(write)),
+        Err(WriteStop::Refused(refused)) => Ok(Err(refused)),
+        Err(WriteStop::Failed(error)) => Err(error.into()),
+    }
 }
 
 /// Whether `directory` holds a manifest of documents seampact wrote.

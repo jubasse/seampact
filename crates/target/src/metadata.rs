@@ -2,7 +2,7 @@
 
 use std::fmt;
 
-use seampact_ir::IrSupport;
+use seampact_ir::{IR_REVISION, IR_VERSION, IrSupport};
 
 use crate::{
     ArtefactDeclaration, CompatibilityKey, ImportSpecifierStyle, LinkNeeds, LinkOffers,
@@ -107,4 +107,33 @@ pub struct TargetMetadata {
     pub runtime_packages: &'static [&'static str],
     /// The target's record in the compatibility data, when it has one.
     pub compatibility: Option<CompatibilityKey>,
+}
+
+impl TargetMetadata {
+    /// The metadata every instance extends (`..TargetMetadata::BASE`): [`GENERATOR_VERSION`],
+    /// empty lists, no link, no boot check and shared base paths.
+    ///
+    /// An instance sets `id`, `role` and `ir_support` itself: the base reads no declaration
+    /// kind, so a target that forgets `ir_support` refuses every contract.
+    pub const BASE: Self = Self {
+        id: TargetId::new(""),
+        version: GENERATOR_VERSION,
+        legacy_names: &[],
+        role: TargetRole::Provider,
+        ir_support: IrSupport {
+            ir_versions: &[IR_VERSION],
+            ir_revision: IR_REVISION,
+            kinds: &[],
+            features: &[],
+        },
+        artefacts: &[],
+        consumes: LinkNeeds::NONE,
+        provides: LinkOffers::NONE,
+        boot_checks: &[],
+        framework_docs_off_fix: None,
+        import_specifiers: None,
+        base_paths: BasePathRouting::Shared,
+        runtime_packages: &[],
+        compatibility: None,
+    };
 }

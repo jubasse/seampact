@@ -38,9 +38,9 @@ src/link_check.rs#provider_list	packages/core/codegen-core/src/link-check.ts#lis
 src/import_specifier.rs#import_specifier	packages/core/codegen-core/src/import-specifier.ts#importSpecifier
 src/import_specifier.rs#relative_module_specifier	packages/core/codegen-core/src/import-specifier.ts#relativeModuleSpecifier
 src/generate_warning.rs#warn_left_to_handler	packages/core/codegen-core/src/generate-warning.ts#warnLeftToHandler
-src/no_options.rs#parse_no_options	packages/core/codegen-core/src/no-options.ts#parseNoOptions
-src/no_options.rs#refuse_unknown_option	packages/core/codegen-core/src/no-options.ts#refuseUnknownOption
-src/no_options.rs#described_value	packages/core/codegen-core/src/no-options.ts#describeValue
+src/parse_options.rs#parse_options	packages/core/codegen-core/src/no-options.ts#parseNoOptions
+src/parse_options.rs#refusal_of	packages/core/codegen-core/src/no-options.ts#refuseUnknownOption
+-	packages/core/codegen-core/src/no-options.ts#describeValue	skip: serde names the value kind in its own message
 -	packages/core/spec/src/compatibility/index.ts#isOneOf	skip: serde reads each style and kind into its enum
 src/compatibility.rs#check_styles	packages/core/spec/src/compatibility/index.ts#oneOf
 src/compatibility.rs#check_styles	packages/core/spec/src/compatibility/index.ts#targetOf

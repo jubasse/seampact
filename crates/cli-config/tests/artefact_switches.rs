@@ -11,13 +11,13 @@
 mod support;
 
 use seampact_cli_config::{ArtefactSelection, select_artefacts};
-use seampact_target::ArtefactDeclaration;
+use seampact_target::{ArtefactDeclaration, ArtefactId};
 use serde_json::{Value, json};
 use support::{artefact, entry_of, stub_target};
 
 const DECLARED: &[ArtefactDeclaration] = &[
     artefact("types", true, &[], false),
-    artefact("routes", true, &["types"], false),
+    artefact("routes", true, &[ArtefactId::new("types")], false),
     artefact("nativeDocs", false, &[], false),
 ];
 
@@ -194,7 +194,7 @@ fn an_artefact_that_follows_its_needs_goes_with_them_unless_written_on() {
     const FOLLOWING: &[ArtefactDeclaration] = &[
         artefact("boundary", true, &[], false),
         artefact("validators", true, &[], false),
-        artefact("index", true, &["boundary"], true),
+        artefact("index", true, &[ArtefactId::new("boundary")], true),
     ];
 
     assert_eq!(

@@ -63,7 +63,7 @@ src/emitter_options.rs#parse_choice	packages/core/openapi/src/emitter-options.ts
 src/emitter_options.rs#parse_servers	packages/core/openapi/src/emitter-options.ts#parseServers
 src/emitter_options.rs#parse_server	packages/core/openapi/src/emitter-options.ts#parseServer
 -	packages/core/openapi/src/emitter-options.ts#isRecord	merged: src/emitter_options.rs#parse_server
-src/emitter_options.rs#option_refusal	packages/core/openapi/src/emitter-options.ts#optionRefusal
+-	packages/core/openapi/src/emitter-options.ts#optionRefusal	merged: ../target/src/refusal.rs#new
 src/emitter_options.rs#refused_with	packages/core/openapi/src/emitter-options.ts#refusedWith
 src/emitter_options.rs#option_value_text	packages/core/openapi/src/emitter-options.ts#optionValueText
 -	packages/core/openapi/src/json-value.ts#copyJsonValue	merged: src/json_value.rs#copy_optional

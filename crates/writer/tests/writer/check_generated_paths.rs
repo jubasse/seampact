@@ -2,22 +2,23 @@
 
 use crate::support::file;
 use seampact_target::GeneratedFile;
-use seampact_writer::{FilesOutcome, check_generated_paths};
+use seampact_writer::check_generated_paths;
 
 fn refusal_messages(files: &[GeneratedFile]) -> Vec<String> {
-    match check_generated_paths(files).expect("the check does not fail") {
-        FilesOutcome::Refused(refusals) => refusals
+    match check_generated_paths(files.to_vec()) {
+        Err(refused) => refused
+            .0
             .into_iter()
             .map(|refusal| refusal.message)
             .collect(),
-        FilesOutcome::Ready(_) => Vec::new(),
+        Ok(_) => Vec::new(),
     }
 }
 
 fn ready_paths(files: &[GeneratedFile]) -> Vec<String> {
-    match check_generated_paths(files).expect("the check does not fail") {
-        FilesOutcome::Ready(files) => files.into_iter().map(|file| file.path).collect(),
-        FilesOutcome::Refused(refusals) => panic!("refused: {refusals:?}"),
+    match check_generated_paths(files.to_vec()) {
+        Ok(files) => files.into_iter().map(|file| file.path).collect(),
+        Err(refused) => panic!("refused: {refused:?}"),
     }
 }
 

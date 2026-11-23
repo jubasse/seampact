@@ -3,7 +3,8 @@
 use seampact_ir::ContractIr;
 use seampact_json::JsonValue;
 use seampact_target::{
-    DescriptorSet, GenerateRequest, Generated, Generator, Refused, TargetMetadata,
+    DescriptorSet, GenerateRequest, Generated, Generator, TargetFailure, TargetMetadata,
+    parse_options,
 };
 
 use crate::{Probe, ProbeOptions};
@@ -27,7 +28,7 @@ impl UnsupportedKindSwitch {
     }
 
     fn chosen(&self, options: Option<&JsonValue>) -> &'static Probe {
-        let asks_refusal = ProbeOptions::parse(options)
+        let asks_refusal = parse_options::<ProbeOptions>(options)
             .is_ok_and(|options| options.unsupported_kind == Some(true));
 
         if asks_refusal {
@@ -43,11 +44,15 @@ impl Generator for UnsupportedKindSwitch {
         Generator::metadata(self.supporting)
     }
 
-    fn generate(&self, request: &GenerateRequest<'_>) -> Result<Generated, Refused> {
+    fn generate(&self, request: &GenerateRequest<'_>) -> Result<Generated, TargetFailure> {
         Generator::generate(self.chosen(request.options), request)
     }
 
-    fn describe(&self, ir: &ContractIr, options: &JsonValue) -> Result<DescriptorSet, Refused> {
+    fn describe(
+        &self,
+        ir: &ContractIr,
+        options: &JsonValue,
+    ) -> Result<DescriptorSet, TargetFailure> {
         Generator::describe(self.supporting, ir, options)
     }
 }

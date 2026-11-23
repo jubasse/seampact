@@ -1970,6 +1970,7 @@ dependencies = [
 name = "seampact-gen-probe"
 version = "2.0.0"
 dependencies = [
+ "seampact-diagnostics",
  "seampact-ir",
  "seampact-json",
  "seampact-target",
@@ -2090,6 +2091,7 @@ dependencies = [
  "seampact-ir",
  "seampact-js",
  "seampact-json",
+ "seampact-paths",
  "seampact-span",
  "serde_json",
  "tempfile",
@@ -2272,6 +2274,7 @@ version = "2.0.0"
 dependencies = [
  "camino",
  "seampact-js",
+ "tempfile",
  "thiserror",
  "unicode-normalization",
 ]
@@ -2310,6 +2313,7 @@ name = "seampact-target"
 version = "2.0.0"
 dependencies = [
  "indexmap",
+ "seampact-diagnostics",
  "seampact-ir",
  "seampact-json",
  "serde",

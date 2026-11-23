@@ -4,12 +4,12 @@
 use indexmap::IndexMap;
 use seampact_ir::{ApiDocument, ContractIr, DocumentId};
 use seampact_js::{cmp_utf16, js_key_order};
-use seampact_target::{Refusal, without_repeats};
+use seampact_target::{Refusal, refusal_code, without_repeats};
 
 use crate::documents::{
     api_extension_value, build_planned_document, every_surface_selection, unsupported_ir_refusals,
 };
-use crate::merged_document::{ApiSource, assemble_merged_document, merge_refusal};
+use crate::merged_document::{ApiSource, assemble_merged_document};
 use crate::prefix_document::{is_valid_prefix, prefix_document};
 use crate::serialize::serialize_document;
 use crate::{EmitterOptions, OpenApiError};
@@ -56,17 +56,14 @@ pub fn merge_documents(
     options: &MergeOptions,
 ) -> Result<MergeOutcome, OpenApiError> {
     if inputs.is_empty() {
-        return Ok(refused(vec![Refusal {
-            code: "openapi.merge.empty".to_owned(),
-            message: format!(
+        return Ok(refused(vec![Refusal::new(
+            refusal_code::OPENAPI_MERGE_EMPTY,
+            format!(
                 "The merged document '{}' holds no api: no app it covers serves or documents one.",
                 options.name
             ),
-            fix: "List in its 'apps' an app with a server target or an OpenAPI-only app, or remove the document.".to_owned(),
-            operation: None,
-            member: None,
-            docs: None,
-        }]));
+            "List in its 'apps' an app with a server target or an OpenAPI-only app, or remove the document.",
+        )]));
     }
 
     let mut refusals = prefix_refusals(inputs, options);
@@ -118,8 +115,8 @@ fn prefix_refusals(inputs: &[MergeInput], options: &MergeOptions) -> Vec<Refusal
 
     for (api, prefix) in js_key_order(&options.prefix) {
         if !api_names.contains(&api.as_str()) {
-            refusals.push(merge_refusal(
-                "openapi.merge.prefix-api",
+            refusals.push(Refusal::new(
+                refusal_code::OPENAPI_MERGE_PREFIX_API,
                 format!(
                     "The merged document '{}' sets a prefix for '{api}', an api none of its apps gives.",
                     options.name
@@ -132,8 +129,8 @@ fn prefix_refusals(inputs: &[MergeInput], options: &MergeOptions) -> Vec<Refusal
         }
 
         if !is_valid_prefix(prefix) {
-            refusals.push(merge_refusal(
-                "openapi.merge.prefix-invalid",
+            refusals.push(Refusal::new(
+                refusal_code::OPENAPI_MERGE_PREFIX_INVALID,
                 format!(
                     "The prefix '{prefix}' of '{api}' is not an OpenAPI component key segment."
                 ),
@@ -215,10 +212,8 @@ fn unknown_document_refusal(ir: &ContractIr, document: Option<&DocumentId>) -> R
         names.join(", ")
     };
 
-    Refusal {
-        member: Some("/api/documents".to_owned()),
-        ..merge_refusal(
-            "openapi.merge.unknown-document",
+    Refusal::new(
+            refusal_code::OPENAPI_MERGE_UNKNOWN_DOCUMENT,
             format!(
                 "The api '{}' declares no document '{}'.",
                 ir.api.id.as_str(),
@@ -228,7 +223,7 @@ fn unknown_document_refusal(ir: &ContractIr, document: Option<&DocumentId>) -> R
                 "Name one of {listed} in the app's config, or leave the document out to give every route."
             ),
         )
-    }
+        .with_member("/api/documents")
 }
 
 #[cfg(test)]

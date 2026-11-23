@@ -1,13 +1,9 @@
 //! Where Node finds an installed package: `node_modules` of a directory or of one above it.
 
-use std::env;
-
-use camino::{Utf8Component, Utf8Path, Utf8PathBuf};
+use camino::{Utf8Path, Utf8PathBuf};
+use seampact_paths::node_path::{node_modules_lookup, resolve_from_working_directory};
 
 use crate::BundleError;
-
-const NODE_MODULES: &str = "node_modules";
-const PACKAGE_MANIFEST: &str = "package.json";
 
 fn io_error(path: &Utf8Path, message: String) -> BundleError {
     BundleError::Io {
@@ -22,37 +18,8 @@ fn io_error(path: &Utf8Path, message: String) -> BundleError {
 ///
 /// [`BundleError::Io`] when the working directory is needed and is unreadable or not UTF-8.
 pub fn resolve_directory(base_directory: &Utf8Path) -> Result<Utf8PathBuf, BundleError> {
-    let absolute = if base_directory.is_absolute() {
-        base_directory.to_path_buf()
-    } else {
-        let current = env::current_dir()
-            .map_err(|error| io_error(base_directory, error.to_string()))
-            .and_then(|current| {
-                Utf8PathBuf::from_path_buf(current).map_err(|current| {
-                    io_error(
-                        base_directory,
-                        format!("the working directory {} is not UTF-8", current.display()),
-                    )
-                })
-            })?;
-
-        current.join(base_directory)
-    };
-    let mut collapsed = Utf8PathBuf::new();
-
-    for component in absolute.components() {
-        match component {
-            Utf8Component::CurDir => {}
-            Utf8Component::ParentDir => {
-                collapsed.pop();
-            }
-            Utf8Component::Prefix(_) | Utf8Component::RootDir | Utf8Component::Normal(_) => {
-                collapsed.push(component.as_str());
-            }
-        }
-    }
-
-    Ok(collapsed)
+    resolve_from_working_directory(base_directory)
+        .map_err(|error| io_error(base_directory, error.to_string()))
 }
 
 /// Whether `name` is a plain or scoped npm package name; one with `..` or a root would climb out
@@ -93,33 +60,23 @@ pub fn installed_package_directory(
         return Ok(None);
     }
 
-    let mut directory = resolve_directory(base_directory)?;
+    let directory = resolve_directory(base_directory)?;
 
-    loop {
-        let mut candidate = directory.join(NODE_MODULES);
-
-        for segment in name.split('/').filter(|segment| !segment.is_empty()) {
-            candidate.push(segment);
-        }
-
-        if candidate.join(PACKAGE_MANIFEST).exists() {
-            return candidate
+    node_modules_lookup(&directory, name)
+        .map(|package_directory| {
+            package_directory
                 .canonicalize_utf8()
-                .map(Some)
-                .map_err(|error| io_error(&candidate, error.to_string()));
-        }
-
-        let Some(parent) = directory.parent() else {
-            return Ok(None);
-        };
-
-        directory = parent.to_path_buf();
-    }
+                .map_err(|error| io_error(&package_directory, error.to_string()))
+        })
+        .transpose()
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    const NODE_MODULES: &str = "node_modules";
+    const PACKAGE_MANIFEST: &str = "package.json";
 
     #[test]
     fn a_relative_base_collapses_dots_before_climbing() {

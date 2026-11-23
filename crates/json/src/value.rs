@@ -10,7 +10,7 @@ use crate::error::quoted_in_error;
 use crate::{JsonError, JsonNumber, JsonObject, escape_pointer};
 
 /// The integers [`JsonValue`]'s `Serialize` writes as JSON integers: up to 2^53 in magnitude.
-const WHOLE_INTEGER_RANGE: RangeInclusive<i64> = -TWO_POW_53..=TWO_POW_53;
+pub(crate) const WHOLE_INTEGER_RANGE: RangeInclusive<i64> = -TWO_POW_53..=TWO_POW_53;
 
 /// 2^53, the largest integer below which an `f64` holds every integer.
 const TWO_POW_53: i64 = 9_007_199_254_740_992;

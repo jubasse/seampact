@@ -70,11 +70,8 @@ pub fn read_manifest(root_directory: &Utf8Path) -> Result<ManifestRead, WriterEr
 
 /// The manifest text of `owner` and its entries, version 2, written with `indented_json`; the
 /// entries go in UTF-16 order of path and `formatter` is left out of an entry without one.
-///
-/// # Errors
-///
-/// Never fails today; the `Result` keeps the writer's one signature.
-pub fn serialize_manifest(owner: &str, entries: &[ManifestEntry]) -> Result<String, WriterError> {
+#[must_use]
+pub fn serialize_manifest(owner: &str, entries: &[ManifestEntry]) -> String {
     let mut sorted: Vec<&ManifestEntry> = entries.iter().collect();
 
     sorted.sort_by(|left, right| cmp_utf16(&left.path, &right.path));
@@ -89,7 +86,7 @@ pub fn serialize_manifest(owner: &str, entries: &[ManifestEntry]) -> Result<Stri
         ("files", JsonValue::Array(files)),
     ]);
 
-    Ok(indented_json(&manifest))
+    indented_json(&manifest)
 }
 
 fn entry_value(entry: &ManifestEntry) -> JsonValue {

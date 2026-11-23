@@ -11,6 +11,7 @@ use std::path::PathBuf;
 use camino::{Utf8Component, Utf8Path, Utf8PathBuf};
 use indexmap::{IndexMap, IndexSet};
 use seampact_js::cmp_utf16;
+use seampact_paths::node_path::resolve;
 
 use crate::ROOT_BOUNDARY;
 use crate::paths::normalized_segments;
@@ -110,30 +111,6 @@ pub fn load_ascent_of(abs_root: &Utf8Path) -> u32 {
     u32::try_from(directories).unwrap_or(u32::MAX)
 }
 
-/// `file` resolved against `root` as `path.resolve` does: lexically, `..` stopping at the top.
-fn resolve_from(root: &Utf8Path, file: &str) -> Utf8PathBuf {
-    let candidate = Utf8Path::new(file);
-    let mut resolved = if candidate.is_absolute() {
-        Utf8PathBuf::new()
-    } else {
-        root.to_owned()
-    };
-
-    for component in candidate.components() {
-        match component {
-            Utf8Component::Prefix(prefix) => resolved.push(prefix.as_str()),
-            Utf8Component::RootDir => resolved.push(component.as_str()),
-            Utf8Component::CurDir => {}
-            Utf8Component::ParentDir => {
-                resolved.pop();
-            }
-            Utf8Component::Normal(name) => resolved.push(name),
-        }
-    }
-
-    resolved
-}
-
 /// Why a workspace root cannot back an [`FsReader`].
 #[derive(Debug, thiserror::Error)]
 pub enum FsReaderError {
@@ -184,7 +161,7 @@ impl FsReader {
     }
 
     fn absolute(&self, file: &str) -> Utf8PathBuf {
-        resolve_from(&self.real_root, file)
+        resolve(&self.real_root, file)
     }
 }
 
@@ -569,13 +546,13 @@ mod tests {
     fn a_file_resolves_lexically_against_the_root_and_stops_at_the_top() {
         let root = Utf8Path::new("/work/ws");
 
-        assert_eq!(resolve_from(root, "a/../b"), Utf8Path::new("/work/ws/b"));
+        assert_eq!(resolve(root, "a/../b"), Utf8Path::new("/work/ws/b"));
         assert_eq!(
-            resolve_from(root, "../secret.yaml"),
+            resolve(root, "../secret.yaml"),
             Utf8Path::new("/work/secret.yaml")
         );
-        assert_eq!(resolve_from(root, "../../../../x"), Utf8Path::new("/x"));
-        assert_eq!(resolve_from(root, "."), Utf8Path::new("/work/ws"));
-        assert_eq!(resolve_from(root, "/abs/x"), Utf8Path::new("/abs/x"));
+        assert_eq!(resolve(root, "../../../../x"), Utf8Path::new("/x"));
+        assert_eq!(resolve(root, "."), Utf8Path::new("/work/ws"));
+        assert_eq!(resolve(root, "/abs/x"), Utf8Path::new("/abs/x"));
     }
 }

@@ -119,11 +119,11 @@ pub fn select_artefacts(
         .iter()
         .filter(|artefact| {
             switches
-                .get(artefact.id)
+                .get(artefact.id.as_str())
                 .copied()
                 .unwrap_or(artefact.default == ArtefactDefault::On)
         })
-        .map(|artefact| artefact.id)
+        .map(|artefact| artefact.id.as_str())
         .collect();
 
     drop_unwritten_without_needs(declared, &switches, &mut artefacts);
@@ -165,7 +165,10 @@ fn unknown_switch_problems(
     tunes_boot_checks: bool,
     switches: &IndexMap<&str, bool>,
 ) -> Vec<CliProblem> {
-    let declared_ids: Vec<&str> = declared.iter().map(|artefact| artefact.id).collect();
+    let declared_ids: Vec<&str> = declared
+        .iter()
+        .map(|artefact| artefact.id.as_str())
+        .collect();
 
     switches
         .keys()
@@ -202,12 +205,18 @@ fn drop_unwritten_without_needs(
     artefacts: &mut Vec<&str>,
 ) {
     for artefact in declared {
-        if artefact.missing_need != MissingNeed::LeaveOff || switches.contains_key(artefact.id) {
+        if artefact.missing_need != MissingNeed::LeaveOff
+            || switches.contains_key(artefact.id.as_str())
+        {
             continue;
         }
 
-        if artefact.needs.iter().any(|need| !artefacts.contains(need)) {
-            artefacts.retain(|id| *id != artefact.id);
+        if artefact
+            .needs
+            .iter()
+            .any(|need| !artefacts.contains(&need.as_str()))
+        {
+            artefacts.retain(|id| *id != artefact.id.as_str());
         }
     }
 }
@@ -219,12 +228,12 @@ fn needed_artefact_problems(
 ) -> Vec<CliProblem> {
     declared
         .iter()
-        .filter(|artefact| artefacts.contains(&artefact.id))
+        .filter(|artefact| artefacts.contains(&artefact.id.as_str()))
         .flat_map(|artefact| {
             artefact
                 .needs
                 .iter()
-                .filter(|need| !artefacts.contains(need))
+                .filter(|need| !artefacts.contains(&need.as_str()))
                 .map(|need| {
                     located_problem(
                         "config.artefacts.needed",
@@ -244,7 +253,10 @@ fn no_artefact_problem(
     entry: &TargetEntrySettings,
     declared: &[ArtefactDeclaration],
 ) -> CliProblem {
-    let declared_ids: Vec<&str> = declared.iter().map(|artefact| artefact.id).collect();
+    let declared_ids: Vec<&str> = declared
+        .iter()
+        .map(|artefact| artefact.id.as_str())
+        .collect();
 
     located_problem(
         "config.artefacts.none",
