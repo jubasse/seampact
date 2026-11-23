@@ -53,13 +53,13 @@
     "axios": ">=1.7 <2"
   },
   "dependencies": {
-    "prettier": "3.9.10"
+    "prettier": "3.10.1"
   },
   "devDependencies": {
     "@seampact/codegen-core": "workspace:*",
     "@seampact/codegen-fetch": "workspace:*",
     "@seampact/spec": "workspace:*",
-    "axios": "1.21.0",
+    "axios": "1.21.1",
     "msw": "2.15.0"
   }
 }

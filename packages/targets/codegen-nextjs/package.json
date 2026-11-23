@@ -50,13 +50,13 @@
     "@seampact/spec": "workspace:*"
   },
   "dependencies": {
-    "prettier": "3.9.10"
+    "prettier": "3.10.1"
   },
   "devDependencies": {
     "@seampact/codegen-core": "workspace:*",
     "@seampact/spec": "workspace:*",
     "@types/node": "24.19.2",
-    "next": "16.4.5",
+    "next": "16.4.6",
     "typescript": "6.0.3",
     "zod": "4.6.7"
   }
