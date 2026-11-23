@@ -87,17 +87,3 @@ pub(crate) fn diff_command(
 
     Ok(if failed { EXIT_REFUSED } else { EXIT_SUCCESS })
 }
-
-/// The diff options of `today` and a raw `diff` settings value, for the oracle subject, which
-/// reads its case options as the config writes them.
-#[cfg(feature = "oracle")]
-pub(crate) fn diff_options(
-    today: String,
-    settings: Option<&seampact_json::JsonValue>,
-) -> Result<seampact_diff_table::DiffOptions, seampact_diagnostics::InternalError> {
-    let settings = settings
-        .map(seampact_cli_config::DiffSettings::from_value)
-        .transpose()?;
-
-    Ok(settings.unwrap_or_default().into_options(today))
-}

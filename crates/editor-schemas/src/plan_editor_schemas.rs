@@ -96,7 +96,7 @@ pub fn plan_editor_schemas(
     let files = editor_schema_files(&editor_names(source.declarations))?;
 
     for file in &files {
-        let target = file.path_in(&directory)?;
+        let target = directory.join(file.file_name.as_path());
         let temporary = Utf8PathBuf::from(format!("{target}{TEMPORARY_SUFFIX}"));
 
         for written in [target, temporary] {

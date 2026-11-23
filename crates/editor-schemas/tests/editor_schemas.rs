@@ -1,9 +1,7 @@
 //! The editor names and the specialised schemas, through the public API.
 
-use camino::Utf8Path;
 use seampact_editor_schemas::{
-    EditorCatalogue, EditorDeclaration, EditorNames, EditorSchemaFile, editor_names,
-    editor_schema_files,
+    EditorCatalogue, EditorDeclaration, EditorNames, editor_names, editor_schema_files,
 };
 use seampact_js::cmp_utf16;
 
@@ -138,40 +136,11 @@ fn a_name_position_lists_the_names_with_their_sentences() -> Result<(), Box<dyn 
     let files = editor_schema_files(&names)?;
     let api = files
         .iter()
-        .find(|file| file.file_name == "api.schema.json")
+        .find(|file| file.file_name.as_str() == "api.schema.json")
         .ok_or("no api schema")?;
 
     assert!(api.text.contains("\"Declared in api.yaml line 3.\""));
     assert!(api.text.contains("\"enumDescriptions\""));
 
     Ok(())
-}
-
-#[test]
-fn a_file_name_that_leaves_the_directory_is_refused() {
-    let escaping = EditorSchemaFile {
-        file_name: "../api.schema.json".to_owned(),
-        text: String::new(),
-    };
-    let directory = Utf8Path::new("schemas");
-
-    for (file, expected) in [
-        (&escaping, None),
-        (
-            &EditorSchemaFile {
-                file_name: "api.schema.json".to_owned(),
-                text: String::new(),
-            },
-            Some("schemas/api.schema.json"),
-        ),
-    ] {
-        let path = file.path_in(directory).ok();
-
-        assert_eq!(
-            path.as_deref().map(Utf8Path::as_str),
-            expected,
-            "file {}",
-            file.file_name
-        );
-    }
 }

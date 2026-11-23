@@ -12,6 +12,7 @@ use seampact_editor_schemas::{
 use seampact_ir::{Layer, Origin};
 use seampact_json::{JsonObject, JsonValue, stringify_json};
 use seampact_oracle::{ROOT_TOKEN, RecordedAnswer, RecordedToolCall, SubjectAnswer};
+use seampact_paths::RelativeOutputPath;
 use seampact_pipeline::PipelineDeclared;
 use seampact_span::Location;
 
@@ -70,7 +71,7 @@ fn write_editor_schemas_answer(
     let mut written = IndexMap::new();
 
     for file in &plan.files {
-        let target = plan.directory.join(&file.file_name);
+        let target = plan.directory.join(file.file_name.as_path());
         let bytes = fs::read(&target).map_err(|error| format!("{target}: {error}"))?;
         let relative = target
             .strip_prefix(root)
@@ -111,7 +112,7 @@ fn schema_file_of(value: &JsonValue) -> Option<EditorSchemaFile> {
     let members = value.as_object()?;
 
     Some(EditorSchemaFile {
-        file_name: members.text_member("fileName")?.to_owned(),
+        file_name: RelativeOutputPath::try_new(members.text_member("fileName")?).ok()?,
         text: members.text_member("text")?.to_owned(),
     })
 }

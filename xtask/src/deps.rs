@@ -37,7 +37,7 @@ struct ForbiddenEdge {
     to: &'static str,
 }
 
-const FORBIDDEN_EDGES: [ForbiddenEdge; 3] = [
+const FORBIDDEN_EDGES: [ForbiddenEdge; 11] = [
     ForbiddenEdge {
         from: "seampact-generate",
         to: "seampact-generators",
@@ -49,6 +49,38 @@ const FORBIDDEN_EDGES: [ForbiddenEdge; 3] = [
     ForbiddenEdge {
         from: "seampact-cli",
         to: "seampact-gen-probe",
+    },
+    ForbiddenEdge {
+        from: "seampact-openapi",
+        to: "seampact-pass-access-identity",
+    },
+    ForbiddenEdge {
+        from: "seampact-openapi",
+        to: "seampact-pass-access-rights",
+    },
+    ForbiddenEdge {
+        from: "seampact-openapi",
+        to: "seampact-pass-derive-errors",
+    },
+    ForbiddenEdge {
+        from: "seampact-openapi",
+        to: "seampact-pass-derive-wire",
+    },
+    ForbiddenEdge {
+        from: "seampact-openapi",
+        to: "seampact-pass-link",
+    },
+    ForbiddenEdge {
+        from: "seampact-openapi",
+        to: "seampact-pass-tree-nodes",
+    },
+    ForbiddenEdge {
+        from: "seampact-openapi",
+        to: "seampact-pass-tree-schemas",
+    },
+    ForbiddenEdge {
+        from: "seampact-openapi",
+        to: "seampact-pass-tree-shared",
     },
 ];
 

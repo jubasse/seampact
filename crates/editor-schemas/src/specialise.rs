@@ -1,6 +1,5 @@
 //! The published authoring schemas with the workspace's names listed at each name position.
 
-use camino::{Utf8Path, Utf8PathBuf};
 use seampact_authoring::AUTHORING_SCHEMA_FILES;
 use seampact_diagnostics::InternalError;
 use seampact_json::{JsonObject, JsonValue, indented_json};
@@ -20,27 +19,9 @@ const SCHEMA_REFERENCE_TITLE: &str = "schema reference";
 pub struct EditorSchemaFile {
     /// `<kind>.schema.json`, the published file name, so relative `$ref`s and modelines keep
     /// working.
-    pub file_name: String,
+    pub file_name: RelativeOutputPath,
     /// The file text, two-space indented with a final newline.
     pub text: String,
-}
-
-impl EditorSchemaFile {
-    /// The file's path below `directory`, once its name is checked as a relative path.
-    ///
-    /// # Errors
-    ///
-    /// [`EditorSchemasError::Io`] naming `directory` when the file name leaves it.
-    pub fn path_in(&self, directory: &Utf8Path) -> Result<Utf8PathBuf, EditorSchemasError> {
-        let relative = RelativeOutputPath::try_new(self.file_name.as_str()).map_err(|error| {
-            EditorSchemasError::Io {
-                path: directory.to_string(),
-                message: error.to_string(),
-            }
-        })?;
-
-        Ok(directory.join(relative.as_path()))
-    }
 }
 
 /// The published authoring schemas, each name position listing the names `names` holds, one file
@@ -82,11 +63,17 @@ pub fn editor_schema_files(
     let files = AUTHORING_SCHEMA_FILES
         .iter()
         .zip(&copies)
-        .map(|(file, (_, schema))| EditorSchemaFile {
-            file_name: file.file_name.to_owned(),
-            text: indented_json(schema),
+        .map(|(file, (_, schema))| {
+            let file_name = RelativeOutputPath::try_new(file.file_name).map_err(|error| {
+                InternalError::new(format!("the authoring schema file name is unsafe: {error}"))
+            })?;
+
+            Ok(EditorSchemaFile {
+                file_name,
+                text: indented_json(schema),
+            })
         })
-        .collect();
+        .collect::<Result<Vec<_>, InternalError>>()?;
 
     Ok(files)
 }
