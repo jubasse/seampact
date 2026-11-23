@@ -2,7 +2,7 @@
 
 use serde::Serialize;
 
-use crate::Refusal;
+use crate::{Refusal, refusal_code};
 
 /// Whether an artefact is on when the app config leaves it alone.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -99,14 +99,12 @@ pub fn refuse_undeclared_artefacts(
     requested
         .iter()
         .filter(|id| !declared_ids.contains(id))
-        .map(|id| Refusal {
-            code: "artefact.unknown".to_owned(),
-            message: format!("The artefact '{id}' is not one this target declares ({listed})."),
-            fix: "Remove it from the target's `artefacts` entry, or use one of the declared ids."
-                .to_owned(),
-            operation: None,
-            member: None,
-            docs: None,
+        .map(|id| {
+            Refusal::new(
+                refusal_code::ARTEFACT_UNKNOWN,
+                format!("The artefact '{id}' is not one this target declares ({listed})."),
+                "Remove it from the target's `artefacts` entry, or use one of the declared ids.",
+            )
         })
         .collect()
 }

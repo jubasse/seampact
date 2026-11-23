@@ -6,14 +6,13 @@ use std::fs;
 
 use camino::{Utf8Path, Utf8PathBuf};
 use seampact_paths::{absolute_normalised, case_folded};
-use seampact_target::{GeneratedFile, Refusal};
+use seampact_target::{GeneratedFile, Refusal, refusal_code};
 
 use crate::existing_file::{ExistingFileState, existing_file_state};
 use crate::generated_paths::MANIFEST_FILE_NAME;
 use crate::manifest::{ManifestEntry, ManifestRead, read_manifest, serialize_manifest};
 use crate::root_directory::{real_path_of_missing, remove_empty_directories};
 use crate::sha256::sha256_hex;
-use crate::writer_refusal::writer_refusal;
 use crate::{FilesOutcome, HandEditPolicy, WriterError, check_generated_paths, lstat_if_present};
 
 const BYTE_ORDER_MARK: char = '\u{feff}';
@@ -114,7 +113,7 @@ pub fn plan_generated_write(
     let recorded = match read_manifest(&root_directory)? {
         ManifestRead::Invalid { reason } => {
             return Ok(refused_one(
-                "writer.manifest.invalid",
+                refusal_code::WRITER_MANIFEST_INVALID,
                 format!(
                     "The manifest {} cannot be read: {reason}.",
                     root_directory.join(MANIFEST_FILE_NAME)
@@ -128,7 +127,7 @@ pub fn plan_generated_write(
         } => {
             if let Some(other) = recorded_owner.filter(|recorded_owner| recorded_owner != owner) {
                 return Ok(refused_one(
-                    "writer.manifest.other-owner",
+                    refusal_code::WRITER_MANIFEST_OTHER_OWNER,
                     format!(
                         "The output directory {root_directory} belongs to the target '{other}', not '{owner}'."
                     ),
@@ -164,7 +163,7 @@ pub fn plan_generated_write(
 }
 
 fn refused_one(code: &str, message: String, fix: impl Into<String>) -> WritePlanOutcome {
-    WritePlanOutcome::Refused(vec![writer_refusal(code, message, fix)])
+    WritePlanOutcome::Refused(vec![Refusal::new(code, message, fix)])
 }
 
 /// What the planned and the stale files of a write turned out to be.
@@ -249,8 +248,8 @@ fn manifest_file_refusal(root_directory: &Utf8Path) -> Result<Option<Refusal>, W
         return Ok(None);
     }
 
-    Ok(Some(writer_refusal(
-        "writer.manifest.not-regular",
+    Ok(Some(Refusal::new(
+        refusal_code::WRITER_MANIFEST_NOT_REGULAR,
         format!(
             "The manifest {manifest_path} is not a regular file, so the writer does not read or write it."
         ),

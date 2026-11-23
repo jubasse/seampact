@@ -2,9 +2,8 @@
 
 use seampact_format::{SourceKind, format_source};
 use seampact_json::{JsonValue, indented_json, write_json_string};
-use seampact_target::{GeneratedFile, Refusal};
+use seampact_target::{GeneratedFile, Refusal, refusal_code};
 
-use crate::writer_refusal::writer_refusal;
 use crate::{FilesOutcome, WriterError};
 
 const PHP_OPEN_TAG_LINE: &str = "<?php\n";
@@ -116,8 +115,8 @@ fn unsafe_header_refusal(header: &HeaderSource<'_>) -> Option<Refusal> {
 
     write_json_string(&mut quoted, value);
 
-    Some(writer_refusal(
-        "file.header.unsafe",
+    Some(Refusal::new(
+        refusal_code::FILE_HEADER_UNSAFE,
         format!(
             "The {name} {quoted} holds a control character or `?>`, which would break the generated header line."
         ),
@@ -151,8 +150,8 @@ fn finish_file(file: &GeneratedFile, header_line: &str) -> Result<GeneratedFile,
             .map(|(extension, _)| *extension)
             .collect();
 
-        return Err(Box::new(writer_refusal(
-            "file.extension.unsupported",
+        return Err(Box::new(Refusal::new(
+            refusal_code::FILE_EXTENSION_UNSUPPORTED,
             format!(
                 "The target generated '{}', whose extension is not one the writer formats ({}).",
                 file.path,
@@ -182,8 +181,8 @@ fn finish_file(file: &GeneratedFile, header_line: &str) -> Result<GeneratedFile,
 }
 
 fn format_failed(path: &str, reason: &dyn std::fmt::Display) -> Refusal {
-    writer_refusal(
-        "file.format.failed",
+    Refusal::new(
+        refusal_code::FILE_FORMAT_FAILED,
         format!("The writer could not format '{path}': {reason}"),
         "Report this to the target's maintainers: the target generated source its parser rejects.",
     )
@@ -198,8 +197,8 @@ fn php_headed(file: &GeneratedFile, header_line: &str) -> Result<String, Box<Ref
     let contents = file.contents.replace("\r\n", "\n");
 
     let Some(rest) = contents.strip_prefix(PHP_OPEN_TAG_LINE) else {
-        return Err(Box::new(writer_refusal(
-            "file.php.open-tag",
+        return Err(Box::new(Refusal::new(
+            refusal_code::FILE_PHP_OPEN_TAG,
             format!(
                 "The target generated '{}', which does not start with `<?php` on a line of its own.",
                 file.path

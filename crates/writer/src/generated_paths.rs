@@ -2,9 +2,8 @@
 
 use seampact_js::cmp_utf16;
 use seampact_paths::{OutputPathSet, RelativeOutputPath};
-use seampact_target::{GeneratedFile, Refusal};
+use seampact_target::{GeneratedFile, Refusal, refusal_code};
 
-use crate::writer_refusal::writer_refusal;
 use crate::{FilesOutcome, WriterError};
 
 /// The file in each output directory that lists what the writer wrote there.
@@ -28,8 +27,8 @@ pub fn check_generated_paths(files: &[GeneratedFile]) -> Result<FilesOutcome, Wr
         };
 
         if let Some(reason) = reason {
-            refusals.push(writer_refusal(
-                "file.path.invalid",
+            refusals.push(Refusal::new(
+                refusal_code::FILE_PATH_INVALID,
                 format!(
                     "The target generated the path '{}', and {reason}.",
                     file.path

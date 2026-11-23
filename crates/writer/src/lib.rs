@@ -11,7 +11,6 @@ mod hand_edit_policy;
 mod manifest;
 mod root_directory;
 mod sha256;
-mod writer_refusal;
 
 pub use error::WriterError;
 pub use file_presence::{lstat_if_present, read_file_if_present};

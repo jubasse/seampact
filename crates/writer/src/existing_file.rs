@@ -3,11 +3,10 @@
 use std::fs;
 
 use camino::Utf8Path;
-use seampact_target::Refusal;
+use seampact_target::{Refusal, refusal_code};
 
 use crate::root_directory::leaves_root;
 use crate::sha256::sha256_hex;
-use crate::writer_refusal::writer_refusal;
 use crate::{HandEditPolicy, WriterError, lstat_if_present};
 
 const HAND_EDIT_FIX: &str = "Move the hand-written code next to the generated files, then delete the edited file and generate again, or run `seampact generate --force` to overwrite it.";
@@ -37,7 +36,7 @@ pub(crate) fn existing_file_state(
 
     if leaves_root(root, &file_path)? {
         return Ok(refused(
-            "writer.path.outside",
+            refusal_code::WRITER_PATH_OUTSIDE,
             format!(
                 "'{file_path}' resolves outside the output directory {root} through a symbolic link."
             ),
@@ -51,7 +50,7 @@ pub(crate) fn existing_file_state(
 
     if !metadata.is_file() {
         return Ok(refused(
-            "writer.file.not-generated",
+            refusal_code::WRITER_FILE_NOT_GENERATED,
             format!("'{file_path}' is not a regular file, so the writer did not generate it."),
             format!("Move it out of the output directory {root}."),
         ));
@@ -66,7 +65,7 @@ pub(crate) fn existing_file_state(
 
     if sha256 != recorded && policy == HandEditPolicy::Refuse {
         return Ok(refused(
-            "writer.file.edited",
+            refusal_code::WRITER_FILE_EDITED,
             format!(
                 "'{file_path}' was edited by hand since it was generated, so it is not overwritten or removed."
             ),
@@ -84,7 +83,7 @@ fn unrecorded_file_refusal(
 ) -> ExistingFileState {
     if let Some(earlier) = case_renamed_from {
         return refused(
-            "writer.file.not-generated",
+            refusal_code::WRITER_FILE_NOT_GENERATED,
             format!(
                 "'{file_path}' exists, and the previous run generated '{earlier}', so this run renames it only by letter case; on a case-insensitive file system they are one file."
             ),
@@ -93,7 +92,7 @@ fn unrecorded_file_refusal(
     }
 
     refused(
-        "writer.file.not-generated",
+        refusal_code::WRITER_FILE_NOT_GENERATED,
         format!(
             "'{file_path}' exists and the writer did not generate it, so it is not overwritten."
         ),
@@ -102,5 +101,5 @@ fn unrecorded_file_refusal(
 }
 
 fn refused(code: &str, message: String, fix: String) -> ExistingFileState {
-    ExistingFileState::Refused(writer_refusal(code, message, fix))
+    ExistingFileState::Refused(Refusal::new(code, message, fix))
 }

@@ -155,13 +155,10 @@ pub(crate) fn unsupported_ir_refusals(ir: &ContractIr) -> Vec<Refusal> {
 
     check_contract_ir_support(ir, &support)
         .into_iter()
-        .map(|mismatch| Refusal {
-            code: mismatch.code.as_str().to_owned(),
-            message: mismatch.message,
-            fix: UNSUPPORTED_IR_FIX.to_owned(),
-            operation: mismatch.operation,
-            member: Some(mismatch.member),
-            docs: None,
+        .map(|mismatch| {
+            Refusal::new(mismatch.code.as_str(), mismatch.message, UNSUPPORTED_IR_FIX)
+                .with_operation(mismatch.operation)
+                .with_member(mismatch.member)
         })
         .collect()
 }

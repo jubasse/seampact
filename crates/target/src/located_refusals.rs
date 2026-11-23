@@ -19,14 +19,14 @@ pub fn refuse_not_generated_yet(
         .map(|operation| format!(" in operation '{operation}'"))
         .unwrap_or_default();
 
-    Refusal {
-        code: format!("{}.unsupported", form.as_str()),
-        message: format!("{description}{in_operation} is not generated yet."),
-        fix: form.fix().to_owned(),
-        operation: location.operation.clone(),
-        member: Some(location.member.clone()),
-        docs: Some(troubleshooting_url(form.section())),
-    }
+    Refusal::new(
+        format!("{}.unsupported", form.as_str()),
+        format!("{description}{in_operation} is not generated yet."),
+        form.fix(),
+    )
+    .with_operation(location.operation.clone())
+    .with_member(&location.member)
+    .with_docs(troubleshooting_url(form.section()))
 }
 
 /// An IR member this target must act on, holding an open-enum value it does not know (ADR 0005
@@ -39,14 +39,13 @@ pub fn refuse_unknown_value_at(location: &IrLocation, value: &str) -> Refusal {
 /// An IR that breaks a rule the compiler guarantees, such as a reference to a missing schema.
 #[must_use]
 pub fn refuse_inconsistent_ir(code: &str, description: &str, location: &IrLocation) -> Refusal {
-    Refusal {
-        code: code.to_owned(),
-        message: format!("{description} {}.", location_text(location)),
-        fix: INCONSISTENT_IR_FIX.to_owned(),
-        operation: location.operation.clone(),
-        member: Some(location.member.clone()),
-        docs: None,
-    }
+    Refusal::new(
+        code,
+        format!("{description} {}.", location_text(location)),
+        INCONSISTENT_IR_FIX,
+    )
+    .with_operation(location.operation.clone())
+    .with_member(&location.member)
 }
 
 fn location_text(location: &IrLocation) -> String {

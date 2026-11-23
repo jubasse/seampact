@@ -1,6 +1,6 @@
 //! The link check: every consumed kind has a link of an accepted style.
 
-use crate::{LinkKind, LinkSet, Refusal, ResolvedLinkNeed, ResolvedLinkNeeds};
+use crate::{LinkKind, LinkSet, Refusal, ResolvedLinkNeed, ResolvedLinkNeeds, refusal_code};
 
 /// One refusal per consumed kind whose link is missing (unless optional), of another kind, or of a
 /// style the target does not read, naming the kind and both styles.
@@ -29,8 +29,8 @@ fn refuse_unmet_link(kind: LinkKind, need: &ResolvedLinkNeed, links: &LinkSet) -
             return None;
         }
 
-        return Some(link_refusal(
-            "link.missing",
+        return Some(Refusal::new(
+            refusal_code::LINK_MISSING,
             format!(
                 "This target consumes a '{kind_name}' link in style {accepted}, and none is given."
             ),
@@ -41,8 +41,8 @@ fn refuse_unmet_link(kind: LinkKind, need: &ResolvedLinkNeed, links: &LinkSet) -
     let descriptor = &link.descriptor;
 
     if descriptor.kind() != kind {
-        return Some(link_refusal(
-            "link.kind.mismatch",
+        return Some(Refusal::new(
+            refusal_code::LINK_KIND_MISMATCH,
             format!(
                 "The '{kind_name}' link points at a '{}' descriptor.",
                 descriptor.kind().as_str()
@@ -62,25 +62,14 @@ fn refuse_unmet_link(kind: LinkKind, need: &ResolvedLinkNeed, links: &LinkSet) -
         )
     });
 
-    Some(link_refusal(
-        "link.style.unsupported",
+    Some(Refusal::new(
+        refusal_code::LINK_STYLE_UNSUPPORTED,
         format!(
             "The '{kind_name}' link provides style '{}'; this target reads {accepted}.",
             descriptor.style().as_str()
         ),
         format!("Link {providers}{no_link_alternative}."),
     ))
-}
-
-fn link_refusal(code: &str, message: String, fix: String) -> Refusal {
-    Refusal {
-        code: code.to_owned(),
-        message,
-        fix,
-        operation: None,
-        member: None,
-        docs: None,
-    }
 }
 
 /// The packages quoted and listed as "`a`, `b` or `c`".

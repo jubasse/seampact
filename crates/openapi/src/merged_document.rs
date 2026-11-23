@@ -6,7 +6,7 @@ use indexmap::IndexMap;
 use seampact_diagnostics::InternalError;
 use seampact_js::cmp_utf16;
 use seampact_json::{JsonObject, JsonValue, stringify_json};
-use seampact_target::Refusal;
+use seampact_target::{Refusal, refusal_code};
 
 use crate::documents::{OPENAPI_VERSION, Route, most_used_format, paths_by_route, servers_array};
 use crate::emit_context::{EXTENSION_PREFIX, extension_member, is_extension_selected};
@@ -365,8 +365,8 @@ fn clash_refusal(first: &Placed, second: &Placed, kind: ClashKind) -> Refusal {
     );
 
     if first.api == second.api {
-        return merge_refusal(
-            "openapi.merge.api-versions",
+        return Refusal::new(
+            refusal_code::OPENAPI_MERGE_API_VERSIONS,
             format!("{message} differ: two apps give different versions of the api."),
             format!(
                 "Build every app the merged document covers from the same version of the api '{}', or give two different apis distinct api ids.",
@@ -376,36 +376,24 @@ fn clash_refusal(first: &Placed, second: &Placed, kind: ClashKind) -> Refusal {
     }
 
     match kind {
-        ClashKind::Route => merge_refusal(
-            "openapi.merge.route-clash",
+        ClashKind::Route => Refusal::new(
+            refusal_code::OPENAPI_MERGE_ROUTE_CLASH,
             format!("{message} answer the same method and path."),
             "Give one of the operations a distinct contract path, or write the apis in separate merged documents.".to_owned(),
         ),
-        ClashKind::Path => merge_refusal(
-            "openapi.merge.route-clash",
+        ClashKind::Path => Refusal::new(
+            refusal_code::OPENAPI_MERGE_ROUTE_CLASH,
             format!("{message} are one path under different parameter names."),
             "Give the path parameters the same names in both contracts, or write the apis in separate merged documents.".to_owned(),
         ),
-        ClashKind::Name => merge_refusal(
-            "openapi.merge.name-clash",
+        ClashKind::Name => Refusal::new(
+            refusal_code::OPENAPI_MERGE_NAME_CLASH,
             format!("{message} are different elements under one name."),
             format!(
                 "Set a prefix for '{}' or '{}' in the merged document's 'prefix', such as '{}: {}'.",
                 first.api, second.api, second.api, second.api
             ),
         ),
-    }
-}
-
-/// A refusal of a merged document that names no operation and no member.
-pub(crate) fn merge_refusal(code: &str, message: String, fix: String) -> Refusal {
-    Refusal {
-        code: code.to_owned(),
-        message,
-        fix,
-        operation: None,
-        member: None,
-        docs: None,
     }
 }
 

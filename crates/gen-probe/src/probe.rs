@@ -5,7 +5,7 @@ use seampact_ir::ContractIr;
 use seampact_json::JsonValue;
 use seampact_target::{
     DescriptorSet, GenerateInput, Generated, GeneratedFile, TargetDefinition, TargetFailure,
-    TargetMetadata,
+    TargetMetadata, parse_options,
 };
 
 use crate::ProbeOptions;
@@ -33,7 +33,7 @@ impl TargetDefinition for Probe {
     }
 
     fn parse_options(&self, raw: Option<&JsonValue>) -> Result<ProbeOptions, TargetFailure> {
-        Ok(ProbeOptions::parse(raw)?)
+        Ok(parse_options(raw)?)
     }
 
     fn generate(

@@ -26,18 +26,19 @@ fn refusal_of(mismatch: IrSupportMismatch, metadata: &TargetMetadata) -> Refusal
         texts.join(", ")
     };
 
-    Refusal {
-        code: mismatch.code.as_str().to_owned(),
-        message: format!(
+    let fix = fix_of(&mismatch, metadata.id.as_str());
+
+    Refusal::new(
+        mismatch.code.as_str(),
+        format!(
             "{} The IR has {}; {target} expects {expected}.",
             mismatch.message,
             support_text(&mismatch.value)
         ),
-        fix: fix_of(&mismatch, metadata.id.as_str()),
-        operation: mismatch.operation,
-        member: Some(mismatch.member),
-        docs: None,
-    }
+        fix,
+    )
+    .with_operation(mismatch.operation)
+    .with_member(mismatch.member)
 }
 
 fn fix_of(mismatch: &IrSupportMismatch, target: &str) -> String {

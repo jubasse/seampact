@@ -21,6 +21,49 @@ pub struct Refusal {
     pub docs: Option<String>,
 }
 
+impl Refusal {
+    /// A refusal of `code` with no operation, member or docs link.
+    #[must_use]
+    pub fn new(
+        code: impl Into<String>,
+        message: impl Into<String>,
+        fix: impl Into<String>,
+    ) -> Self {
+        Self {
+            code: code.into(),
+            message: message.into(),
+            fix: fix.into(),
+            operation: None,
+            member: None,
+            docs: None,
+        }
+    }
+
+    /// The refusal located at the JSON Pointer `member`.
+    #[must_use]
+    pub fn with_member(mut self, member: impl Into<String>) -> Self {
+        self.member = Some(member.into());
+
+        self
+    }
+
+    /// The refusal of the form of `operation`; `None` leaves it unset.
+    #[must_use]
+    pub fn with_operation(mut self, operation: Option<OperationId>) -> Self {
+        self.operation = operation;
+
+        self
+    }
+
+    /// The refusal pointing at the troubleshooting section `docs`.
+    #[must_use]
+    pub fn with_docs(mut self, docs: impl Into<String>) -> Self {
+        self.docs = Some(docs.into());
+
+        self
+    }
+}
+
 /// The refusals with each repeat of a code, member and operation left out, the first kept: a form
 /// shared by several operations, such as an error code's params, is refused once.
 #[must_use]
@@ -57,13 +100,12 @@ mod tests {
         operation: Option<&str>,
         message: &str,
     ) -> Refusal {
-        Refusal {
-            code: code.to_owned(),
-            message: message.to_owned(),
-            fix: String::new(),
-            operation: operation.map(|id| OperationId::new(id.to_owned())),
-            member: member.map(str::to_owned),
-            docs: None,
+        let refusal = Refusal::new(code, message, "")
+            .with_operation(operation.map(|id| OperationId::new(id.to_owned())));
+
+        match member {
+            Some(member) => refusal.with_member(member),
+            None => refusal,
         }
     }
 
