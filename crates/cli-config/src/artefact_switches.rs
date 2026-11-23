@@ -48,6 +48,27 @@ pub fn hook_check_switch_of(artefacts: Option<&ArtefactSwitches>) -> Option<Hook
     }
 }
 
+/// The `bootCheck.frameworkRoutes` switch an entry writes in `bootCheck`'s object form.
+#[must_use]
+pub fn framework_routes_switch_in(
+    artefacts: Option<&ArtefactSwitches>,
+) -> Option<FrameworkRoutesSwitch> {
+    match artefacts?.0.get(BOOT_CHECK_ARTEFACT)? {
+        ArtefactSwitch::BootCheck(switches) => switches.framework_routes,
+        ArtefactSwitch::Flag(_) => None,
+    }
+}
+
+/// Whether the entry switches the whole boot check off, or its framework-route check alone.
+#[must_use]
+pub fn is_framework_route_check_switched_off(artefacts: Option<&ArtefactSwitches>) -> bool {
+    let boot_check_off = artefacts.and_then(|switches| switches.0.get(BOOT_CHECK_ARTEFACT))
+        == Some(&ArtefactSwitch::Flag(false));
+
+    boot_check_off
+        || framework_routes_switch_in(artefacts) == Some(FrameworkRoutesSwitch::Flag(false))
+}
+
 /// The hook check level of an entry: `error` unless it writes another.
 #[must_use]
 pub fn hook_check_level_of(artefacts: Option<&ArtefactSwitches>) -> HookBootCheckLevel {

@@ -43,6 +43,7 @@ mod schema_problems;
 mod step;
 mod symbolic_link;
 mod target_entry_settings;
+mod warnings_settings;
 
 use seampact_diagnostics::RuleId;
 
@@ -53,8 +54,8 @@ pub use artefact_switch::{
     StrictRouteCheck,
 };
 pub use artefact_switches::{
-    ArtefactSelection, hook_check_level_of, hook_check_switch_of, is_framework_route_check_strict,
-    select_artefacts,
+    ArtefactSelection, framework_routes_switch_in, hook_check_level_of, hook_check_switch_of,
+    is_framework_route_check_strict, is_framework_route_check_switched_off, select_artefacts,
 };
 pub use bundle_source::bundle_source_of;
 pub use check_level::{CheckLevel, MatrixCheckLevel};
@@ -98,6 +99,7 @@ pub use resolved_source::ResolvedSource;
 pub use step::Step;
 pub use symbolic_link::{is_path_taken, is_symbolic_link};
 pub use target_entry_settings::{ConfiguredTargetEntry, FrameworkDocsSwitch, TargetEntrySettings};
+pub use warnings_settings::WarningsSettings;
 
 /// Every rule id the crate reports, read by the oracle's rule id registry.
 pub const RULE_IDS: &[RuleId] = &[];

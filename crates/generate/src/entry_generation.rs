@@ -7,7 +7,7 @@ use seampact_cli_config::{
     CliProblem, PlannedAppDocument, Step, TargetEntrySettings, entry_where, located_problem,
 };
 use seampact_diagnostics::InternalError;
-use seampact_json::{JsonValue, items_of, object_of, text_of};
+use seampact_json::JsonValue;
 use seampact_target::{
     ArtefactSet, DescriptorSet, GENERATE_TROUBLESHOOTING_URL, ImportSpecifierStyle,
     LINK_TROUBLESHOOTING_URL, LinkSet, Refusal, Refused,
@@ -41,7 +41,7 @@ pub(crate) struct EntryGeneration<'plan> {
     pub(crate) app_documents: Vec<&'plan PlannedAppDocument>,
     /// The warning codes the config ignores.
     #[expect(dead_code, reason = "read by generate_api, brief 2")]
-    pub(crate) ignored_warnings: Vec<&'plan str>,
+    pub(crate) ignored_warnings: Vec<String>,
 }
 
 /// Each provider's `describe` answer, kept by entry, source and api so it runs once.
@@ -91,16 +91,6 @@ fn entry_artefacts<'plan>(
     })
 }
 
-fn ignored_warning_codes<'plan>(plan: &'plan AppPlan<'_>) -> Vec<&'plan str> {
-    let ignore =
-        object_of(plan.config.warnings.as_ref()).and_then(|warnings| warnings.get("ignore"));
-
-    items_of(ignore)
-        .iter()
-        .filter_map(|code| text_of(Some(code)))
-        .collect()
-}
-
 /// Generates the files of every entry and api of `plan`, in link order; `app` names the app of a
 /// root run.
 ///
@@ -135,7 +125,7 @@ pub fn generate_entries(
             .collect(),
         describe: memoized_describe(),
         app_documents: plan.documents.iter().map(|each| &each.planned).collect(),
-        ignored_warnings: ignored_warning_codes(plan),
+        ignored_warnings: plan.config.warnings_settings()?.ignore,
     };
     let mut outputs = Vec::new();
     let mut problems = Vec::new();

@@ -32,6 +32,12 @@ pub enum GenerateError {
     /// A bundle could not be fetched or compiled with its imports.
     #[error(transparent)]
     Fetch(#[from] BundleFetchError),
+    /// The OpenAPI documents could not be rendered.
+    #[error(transparent)]
+    OpenApi(#[from] OpenApiError),
+    /// The compatibility data could not be read.
+    #[error(transparent)]
+    Compatibility(#[from] CompatibilityError),
     /// A local bundle could not be read.
     #[error(transparent)]
     Bundle(#[from] BundleError),
@@ -54,20 +60,5 @@ impl From<CliConfigError> for GenerateError {
             CliConfigError::Io { path, message } => Self::Io { path, message },
             CliConfigError::Internal(internal) => Self::Internal(internal),
         }
-    }
-}
-
-impl From<OpenApiError> for GenerateError {
-    fn from(error: OpenApiError) -> Self {
-        match error {
-            OpenApiError::Internal(internal) => Self::Internal(internal),
-        }
-    }
-}
-
-// The compatibility data is embedded in the binary: a file that does not read is a bug.
-impl From<CompatibilityError> for GenerateError {
-    fn from(error: CompatibilityError) -> Self {
-        Self::Internal(InternalError::new(error.to_string()))
     }
 }

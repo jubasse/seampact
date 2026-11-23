@@ -62,7 +62,7 @@ pub struct TargetEntrySettings {
     pub mount: Option<String>,
     /// The server's routes outside the contract the boot check accepts.
     #[serde(default)]
-    pub framework_routes: Vec<FrameworkRouteEntry>,
+    pub framework_routes: Option<Vec<FrameworkRouteEntry>>,
     /// Whether the target switches its framework's own docs off.
     #[serde(default)]
     pub framework_docs: Option<FrameworkDocsSwitch>,

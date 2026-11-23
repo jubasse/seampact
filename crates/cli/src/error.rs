@@ -8,6 +8,8 @@ use seampact_diff::DiffError;
 use seampact_editor_schemas::EditorSchemasError;
 use seampact_generate::GenerateError;
 use seampact_lint::LintError;
+use seampact_openapi::OpenApiError;
+use seampact_target::CompatibilityError;
 
 /// What stops a command before it answers an exit code: a stub reached, a bug, or a file the
 /// system refused.
@@ -45,6 +47,12 @@ pub enum CliError {
     /// The editor schemas could not be planned or written.
     #[error(transparent)]
     EditorSchemas(#[from] EditorSchemasError),
+    /// The OpenAPI documents could not be rendered.
+    #[error(transparent)]
+    OpenApi(#[from] OpenApiError),
+    /// The compatibility data could not be read.
+    #[error(transparent)]
+    Compatibility(#[from] CompatibilityError),
     /// The diff stopped.
     #[error(transparent)]
     Diff(#[from] DiffError),
@@ -58,6 +66,8 @@ impl From<GenerateError> for CliError {
             GenerateError::Internal(internal) => Self::Internal(internal),
             GenerateError::Fetch(fetch) => Self::Fetch(fetch),
             GenerateError::Bundle(bundle) => Self::Bundle(bundle),
+            GenerateError::OpenApi(openapi) => Self::OpenApi(openapi),
+            GenerateError::Compatibility(compatibility) => Self::Compatibility(compatibility),
         }
     }
 }

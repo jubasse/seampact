@@ -5,8 +5,8 @@ use camino::Utf8PathBuf;
 use indexmap::IndexMap;
 use seampact_cli_config::{
     AppConfigEntry, ArtefactSelection, CliIo, CliProblem, ConfiguredTargetEntry, LoadedAppConfig,
-    Step, check_app_compatibility, entry_where, located_problem, open_api_api_names,
-    print_warnings, select_artefacts,
+    Step, check_app_compatibility, default_document_directory, entry_where, located_problem,
+    open_api_api_names, print_warnings, select_artefacts,
 };
 use seampact_diagnostics::InternalError;
 use seampact_target::{ArtefactSet, CompatibilityMatrix, Generator, Registry, TargetRole};
@@ -28,9 +28,6 @@ use crate::framework_route_check::unread_framework_route_key_problems;
 use crate::planned_document::{PlannedDocument, plan_documents};
 use crate::planned_entry::{PlannedApi, PlannedEntry, planned_entry};
 
-/// The directory below an app's config where its documents go when `openapi` names no file.
-const DEFAULT_DOCUMENT_DIRECTORY: &str = "openapi";
-
 /// The generator each entry's `use` names, by entry id.
 pub(crate) type Targets = IndexMap<String, &'static dyn Generator>;
 
@@ -51,15 +48,6 @@ pub struct AppPlan<'run> {
     pub compiled: Vec<CompiledApi>,
     /// The role of each entry's target, by entry id.
     pub roles: IndexMap<String, TargetRole>,
-}
-
-fn default_document_directory(config: &LoadedAppConfig) -> Utf8PathBuf {
-    let directory = config
-        .file
-        .parent()
-        .map_or_else(Utf8PathBuf::new, ToOwned::to_owned);
-
-    directory.join(DEFAULT_DOCUMENT_DIRECTORY)
 }
 
 /// Plans one app: its targets, links, artefacts, compatibility, apis, operations and documents,
@@ -121,7 +109,7 @@ pub fn plan_app<'run>(
         .map(str::to_owned)
         .collect();
 
-    ref_names.extend(open_api_api_names(config));
+    ref_names.extend(open_api_api_names(config)?);
 
     let refs: Vec<&str> = ref_names.iter().map(String::as_str).collect();
     let source_names = sources_holding_refs(config, &refs);

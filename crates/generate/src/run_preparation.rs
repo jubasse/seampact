@@ -8,7 +8,6 @@ use seampact_cli_config::{
     ResolvedSource, RunConfig, Step, read_run_config, unlocated_problem,
 };
 use seampact_diagnostics::InternalError;
-use seampact_json::{JsonValue, object_of, text_of};
 use seampact_target::{CompatibilityMatrix, Registry};
 use seampact_writer::HandEditPolicy;
 
@@ -204,7 +203,11 @@ fn prepare_apps(
     {
         swept.push(SweptDirectory {
             directory: directory.to_owned(),
-            level: root_openapi_level(&workspace.root.checks)?,
+            level: workspace
+                .root
+                .checks_settings()?
+                .openapi
+                .unwrap_or(DEFAULT_DRIFT_CHECK_LEVEL),
         });
     }
 
@@ -218,17 +221,6 @@ fn openapi_level(config: &LoadedAppConfig) -> Result<CheckLevel, InternalError> 
         .checks()?
         .openapi
         .unwrap_or(DEFAULT_DRIFT_CHECK_LEVEL))
-}
-
-fn root_openapi_level(checks: &JsonValue) -> Result<CheckLevel, InternalError> {
-    let Some(written) = object_of(Some(checks)).and_then(|object| object.get("openapi")) else {
-        return Ok(DEFAULT_DRIFT_CHECK_LEVEL);
-    };
-
-    [CheckLevel::Disabled, CheckLevel::Warning, CheckLevel::Error]
-        .into_iter()
-        .find(|level| text_of(Some(written)) == Some(level.as_str()))
-        .ok_or_else(|| InternalError::new("the root's checks.openapi is no check level"))
 }
 
 fn plan_each_app<'run>(
