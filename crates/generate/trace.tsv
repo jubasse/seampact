@@ -3,60 +3,60 @@ src/contract_position.rs#nodes_along	packages/core/cli/src/commands/contract-pos
 src/contract_position.rs#child_of	packages/core/cli/src/commands/contract-position.ts#childOf
 src/contract_position.rs#located_origin	packages/core/cli/src/commands/contract-position.ts#locatedOrigin
 src/contract_position.rs#origin_position	packages/core/cli/src/commands/contract-position.ts#originPosition
-src/run_preparation.rs#prepare_run	packages/core/cli/src/commands/run-preparation.ts#prepareRun	pending: brief 1
--	packages/core/cli/src/commands/run-preparation.ts#unknownLocalBundleProblems	pending: brief 1
--	packages/core/cli/src/commands/run-preparation.ts#prepareApps	pending: brief 1
--	packages/core/cli/src/commands/run-preparation.ts#planEachApp	pending: brief 1
--	packages/core/cli/src/commands/run-preparation.ts#scoped	pending: brief 1
--	packages/core/cli/src/commands/app-plan.ts#planApp	pending: brief 1
--	packages/core/cli/src/commands/app-plan.ts#selectEntryArtefacts	pending: brief 1
--	packages/core/cli/src/commands/app-plan.ts#resolveTargets	pending: brief 1
--	packages/core/cli/src/commands/entry-links.ts#unknownLinkEntryProblems	pending: brief 1
--	packages/core/cli/src/commands/entry-links.ts#orderEntries	pending: brief 1
--	packages/core/cli/src/commands/entry-links.ts#linksOf	pending: brief 1
--	packages/core/cli/src/commands/entry-links.ts#linkWhere	pending: brief 1
--	packages/core/cli/src/commands/app-plan.ts#documentName	pending: brief 1
--	packages/core/cli/src/commands/filter-operations.ts#matches	pending: brief 1
--	packages/core/cli/src/commands/app-plan.ts#planEachEntry	pending: brief 1
--	packages/core/cli/src/commands/framework-route-check.ts#unreadFrameworkRouteKeyProblems	pending: brief 1
--	packages/core/cli/src/commands/framework-docs.ts#frameworkDocsProblems	pending: brief 1
--	packages/core/cli/src/commands/app-plan.ts#planEntryApis	pending: brief 1
--	packages/core/cli/src/commands/filter-operations.ts#isInDocument	pending: brief 1
--	packages/core/cli/src/commands/filter-operations.ts#unknownSelectionProblems	pending: brief 1
--	packages/core/cli/src/commands/filter-operations.ts#filterOperations	pending: brief 1
--	packages/core/cli/src/commands/entry-links.ts#pairedApi	pending: brief 1
--	packages/core/cli/src/commands/entry-links.ts#pairingProblems	pending: brief 1
--	packages/core/cli/src/commands/entry-links.ts#unconsumedKindProblems	pending: brief 1
--	packages/core/cli/src/commands/entry-links.ts#unprovidedKindProblems	pending: brief 1
--	packages/core/cli/src/commands/entry-links.ts#apiPairProblems	pending: brief 1
--	packages/core/cli/src/commands/app-plan.ts#plannedEntry	pending: brief 1
--	packages/core/cli/src/commands/app-plan.ts#compiledIr	pending: brief 1
--	packages/core/cli/src/commands/write-plan.ts#documentWriteProblems	pending: brief 1
--	packages/core/cli/src/commands/write-plan.ts#holdsWrittenDocuments	pending: brief 1
--	packages/core/cli/src/commands/entry-generation.ts#entryArtefacts	pending: brief 1
+src/run_preparation.rs#prepare_run	packages/core/cli/src/commands/run-preparation.ts#prepareRun
+src/run_preparation.rs#unknown_local_bundle_problems	packages/core/cli/src/commands/run-preparation.ts#unknownLocalBundleProblems
+src/run_preparation.rs#prepare_apps	packages/core/cli/src/commands/run-preparation.ts#prepareApps
+src/run_preparation.rs#plan_each_app	packages/core/cli/src/commands/run-preparation.ts#planEachApp
+src/run_preparation.rs#scoped	packages/core/cli/src/commands/run-preparation.ts#scoped
+src/app_plan.rs#plan_app	packages/core/cli/src/commands/app-plan.ts#planApp
+src/app_plan.rs#select_entry_artefacts	packages/core/cli/src/commands/app-plan.ts#selectEntryArtefacts
+src/app_plan.rs#resolve_targets	packages/core/cli/src/commands/app-plan.ts#resolveTargets
+src/entry_links.rs#unknown_link_entry_problems	packages/core/cli/src/commands/entry-links.ts#unknownLinkEntryProblems
+src/entry_links.rs#order_entries	packages/core/cli/src/commands/entry-links.ts#orderEntries
+src/entry_links.rs#links_of	packages/core/cli/src/commands/entry-links.ts#linksOf
+src/entry_links.rs#link_where	packages/core/cli/src/commands/entry-links.ts#linkWhere
+src/planned_document.rs#document_name	packages/core/cli/src/commands/app-plan.ts#documentName
+src/filter_operations.rs#matches	packages/core/cli/src/commands/filter-operations.ts#matches
+src/app_plan.rs#plan_each_entry	packages/core/cli/src/commands/app-plan.ts#planEachEntry
+src/framework_route_check.rs#unread_framework_route_key_problems	packages/core/cli/src/commands/framework-route-check.ts#unreadFrameworkRouteKeyProblems
+src/framework_docs.rs#framework_docs_problems	packages/core/cli/src/commands/framework-docs.ts#frameworkDocsProblems
+src/app_plan.rs#plan_entry_apis	packages/core/cli/src/commands/app-plan.ts#planEntryApis
+src/filter_operations.rs#is_in_document	packages/core/cli/src/commands/filter-operations.ts#isInDocument
+src/filter_operations.rs#unknown_selection_problems	packages/core/cli/src/commands/filter-operations.ts#unknownSelectionProblems
+src/filter_operations.rs#filter_operations	packages/core/cli/src/commands/filter-operations.ts#filterOperations
+src/entry_links.rs#paired_api	packages/core/cli/src/commands/entry-links.ts#pairedApi
+src/entry_links.rs#pairing_problems	packages/core/cli/src/commands/entry-links.ts#pairingProblems
+src/entry_links.rs#unconsumed_kind_problems	packages/core/cli/src/commands/entry-links.ts#unconsumedKindProblems
+src/entry_links.rs#unprovided_kind_problems	packages/core/cli/src/commands/entry-links.ts#unprovidedKindProblems
+src/entry_links.rs#api_pair_problems	packages/core/cli/src/commands/entry-links.ts#apiPairProblems
+src/planned_entry.rs#planned_entry	packages/core/cli/src/commands/app-plan.ts#plannedEntry
+src/planned_document.rs#compiled_ir	packages/core/cli/src/commands/app-plan.ts#compiledIr
+src/write_plan.rs#document_write_problems	packages/core/cli/src/commands/write-plan.ts#documentWriteProblems
+src/write_plan.rs#holds_written_documents	packages/core/cli/src/commands/write-plan.ts#holdsWrittenDocuments
+src/entry_generation.rs#entry_artefacts	packages/core/cli/src/commands/entry-generation.ts#entryArtefacts
 src/drift_level.rs#strictest_level	packages/core/cli/src/commands/drift-level.ts#strictestLevel
--	packages/core/cli/src/commands/write-plan.ts#entryWriteProblems	pending: brief 1
--	packages/core/cli/src/commands/entry-generation.ts#memoizedDescribe	pending: brief 1
--	packages/core/cli/src/commands/exclusive-base-paths.ts#exclusiveBasePathProblems	pending: brief 1
--	packages/core/cli/src/commands/write-plan.ts#checkWrite	pending: brief 1
--	packages/core/cli/src/commands/framework-route-check.ts#frameworkRouteCheckOf	pending: brief 1
--	packages/core/cli/src/commands/import-specifier-styles.ts#importSpecifierStyles	pending: brief 1
-src/write_plan.rs#committable_writes	packages/core/cli/src/commands/write-plan.ts#committableWrites	pending: brief 1
--	packages/core/cli/src/commands/app-plan.ts#servedIr	pending: brief 1
--	packages/core/cli/src/commands/app-plan.ts#planDocuments	pending: brief 1
--	packages/core/cli/src/commands/entry-generation.ts#refusalWhere	pending: brief 1
--	packages/core/cli/src/commands/entry-generation.ts#withDocs	pending: brief 1
--	packages/core/cli/src/commands/entry-generation.ts#generateEntries	pending: brief 1
--	packages/core/cli/src/commands/document-emission.ts#emitAppDocuments	pending: brief 1
--	packages/core/cli/src/commands/entry-generation.ts#buildLinks	pending: brief 1
--	packages/core/cli/src/commands/entry-generation.ts#generateApi	pending: brief 2
--	packages/core/cli/src/commands/import-specifier-styles.ts#recordAsk	pending: brief 2
--	packages/core/cli/src/commands/link-set.ts#isLinkKind	pending: brief 2
+src/write_plan.rs#entry_write_problems	packages/core/cli/src/commands/write-plan.ts#entryWriteProblems
+src/entry_generation.rs#memoized_describe	packages/core/cli/src/commands/entry-generation.ts#memoizedDescribe
+src/exclusive_base_paths.rs#exclusive_base_path_problems	packages/core/cli/src/commands/exclusive-base-paths.ts#exclusiveBasePathProblems
+src/write_plan.rs#check_write	packages/core/cli/src/commands/write-plan.ts#checkWrite
+src/framework_route_check.rs#framework_route_check_of	packages/core/cli/src/commands/framework-route-check.ts#frameworkRouteCheckOf
+src/import_specifier_styles.rs#import_specifier_styles	packages/core/cli/src/commands/import-specifier-styles.ts#importSpecifierStyles
+src/write_plan.rs#committable_writes	packages/core/cli/src/commands/write-plan.ts#committableWrites
+src/planned_document.rs#served_ir	packages/core/cli/src/commands/app-plan.ts#servedIr
+src/planned_document.rs#plan_documents	packages/core/cli/src/commands/app-plan.ts#planDocuments
+src/entry_generation.rs#refusal_where	packages/core/cli/src/commands/entry-generation.ts#refusalWhere
+src/entry_generation.rs#with_docs	packages/core/cli/src/commands/entry-generation.ts#withDocs
+src/entry_generation.rs#generate_entries	packages/core/cli/src/commands/entry-generation.ts#generateEntries
+src/document_emission.rs#emit_app_documents	packages/core/cli/src/commands/document-emission.ts#emitAppDocuments
+src/entry_generation.rs#build_links	packages/core/cli/src/commands/entry-generation.ts#buildLinks
+src/entry_generation.rs#generate_api	packages/core/cli/src/commands/entry-generation.ts#generateApi	pending: brief 2
+src/import_specifier_styles.rs#record_ask	packages/core/cli/src/commands/import-specifier-styles.ts#recordAsk	pending: brief 2
+src/link_set.rs#is_link_kind	packages/core/cli/src/commands/link-set.ts#isLinkKind	pending: brief 2
 -	packages/core/cli/src/commands/write-plan.ts#documentDirectories	pending: brief 2
 src/write_plan.rs#commit_writes	packages/core/cli/src/commands/write-plan.ts#commitWrites	pending: brief 2
 src/write_plan.rs#plan_writes	packages/core/cli/src/commands/write-plan.ts#planWrites	pending: brief 2
 -	packages/core/cli/src/commands/entry-generation.ts#isIgnoredWarning	pending: brief 2
--	packages/core/cli/src/commands/exclusive-base-paths.ts#sharedBasePathProblems	pending: brief 2
+src/exclusive_base_paths.rs#shared_base_path_problems	packages/core/cli/src/commands/exclusive-base-paths.ts#sharedBasePathProblems	pending: brief 2
 -	packages/core/cli/src/commands/exclusive-base-paths.ts#overlaps	pending: brief 2
 -	packages/core/cli/src/commands/write-drift.ts#driftItems	pending: brief 2
 src/write_drift.rs#find_write_drift	packages/core/cli/src/commands/write-drift.ts#findWriteDrift	pending: brief 2
@@ -65,12 +65,12 @@ src/write_drift.rs#find_write_drift	packages/core/cli/src/commands/write-drift.t
 -	packages/core/cli/src/commands/write-drift.ts#refusalProblem	pending: brief 2
 -	packages/core/cli/src/commands/write-drift.ts#fileDrift	pending: brief 2
 -	packages/core/cli/src/commands/write-drift.ts#readCommitted	pending: brief 2
--	packages/core/cli/src/commands/write-plan.ts#documentProblem	pending: brief 2
--	packages/core/cli/src/commands/link-set.ts#relativeLocation	pending: brief 2
+src/write_plan.rs#document_problem	packages/core/cli/src/commands/write-plan.ts#documentProblem	pending: brief 2
+src/link_set.rs#relative_location	packages/core/cli/src/commands/link-set.ts#relativeLocation	pending: brief 2
 -	packages/core/cli/src/commands/exclusive-base-paths.ts#sharedBasePathProblem	pending: brief 2
--	packages/core/cli/src/commands/link-set.ts#addLink	pending: brief 2
+src/link_set.rs#add_link	packages/core/cli/src/commands/link-set.ts#addLink	pending: brief 2
 -	packages/core/cli/src/commands/link-set.ts#addLinkByKind.validators	pending: brief 2
--	packages/core/cli/src/commands/import-specifier-styles.ts#mixedStylesProblem	pending: brief 2
+src/import_specifier_styles.rs#mixed_styles_problem	packages/core/cli/src/commands/import-specifier-styles.ts#mixedStylesProblem	pending: brief 2
 -	packages/core/cli/src/commands/link-set.ts#addLinkByKind.types	pending: brief 2
 -	packages/core/cli/src/commands/link-set.ts#addLinkByKind.client	pending: brief 2
 -	packages/core/cli/src/commands/native-docs-document.ts#quoted	pending: brief 2
@@ -78,6 +78,7 @@ src/write_drift.rs#find_write_drift	packages/core/cli/src/commands/write-drift.t
 -	packages/core/cli/src/commands/native-docs-document.ts#emitterOptionsOf	pending: brief 2
 -	packages/core/cli/src/commands/native-docs-document.ts#nativeDocsDocumentOf	pending: brief 2
 -	packages/core/cli/src/commands/native-docs-document.ts#ambiguousDocumentProblem	pending: brief 2
--	packages/core/cli/src/commands/merged-documents.ts#emitMergedDocuments	pending: brief 2
+src/merged_documents.rs#emit_merged_documents	packages/core/cli/src/commands/merged-documents.ts#emitMergedDocuments	pending: brief 2
 -	packages/core/cli/src/commands/merged-documents.ts#mergeInput	pending: brief 2
 -	packages/core/cli/src/commands/merged-documents.ts#mergedText	pending: brief 2
+src/mounted_base_paths.rs#mounted_base_paths	packages/core/codegen-core/src/mounted-base-paths.ts#mountedBasePaths

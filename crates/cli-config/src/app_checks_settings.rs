@@ -5,6 +5,7 @@ use serde::Deserialize;
 
 use crate::check_level::{CheckLevel, MatrixCheckLevel};
 use crate::read_app_config::LoadedAppConfig;
+use crate::read_root_config::LoadedRootConfig;
 
 /// The members of `spec/src/config/checks-config.ts#AppChecks`; each absent when not written.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Deserialize)]
@@ -31,6 +32,24 @@ impl LoadedAppConfig {
             return Ok(AppChecksSettings::default());
         };
         let value = serde_json::to_value(checks)
+            .map_err(|error| InternalError::new(format!("the checks do not serialise: {error}")))?;
+
+        serde_json::from_value(value).map_err(|error| {
+            InternalError::new(format!(
+                "checks that passed the schema do not read: {error}"
+            ))
+        })
+    }
+}
+
+impl LoadedRootConfig {
+    /// The root's `checks`; every level absent when the root writes none.
+    ///
+    /// # Errors
+    ///
+    /// [`InternalError`] when the `checks` that passed the config schema do not read.
+    pub fn checks_settings(&self) -> Result<AppChecksSettings, InternalError> {
+        let value = serde_json::to_value(&self.checks)
             .map_err(|error| InternalError::new(format!("the checks do not serialise: {error}")))?;
 
         serde_json::from_value(value).map_err(|error| {
