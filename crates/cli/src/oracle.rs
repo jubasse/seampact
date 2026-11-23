@@ -4,6 +4,7 @@
 mod bundle;
 mod cli_case;
 mod diff;
+mod json;
 mod lint;
 mod openapi;
 mod recorded;

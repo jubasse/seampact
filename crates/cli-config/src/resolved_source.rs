@@ -2,7 +2,7 @@
 
 use camino::{Utf8Path, Utf8PathBuf};
 use indexmap::IndexMap;
-use seampact_bundle::BundleSource;
+use seampact_bundle_source::BundleSource;
 use seampact_diagnostics::InternalError;
 use seampact_js::js_key_order;
 use seampact_json::{JsonValue, object_of, text_of};

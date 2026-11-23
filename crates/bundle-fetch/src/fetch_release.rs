@@ -7,7 +7,8 @@
 use std::io::{ErrorKind, Read};
 use std::time::{Duration, Instant};
 
-use seampact_bundle::{BUNDLE_ARCHIVE_BYTES_MAX, BundleFailureCode, ReleaseBundleSource};
+use seampact_bundle::{BUNDLE_ARCHIVE_BYTES_MAX, BundleFailureCode};
+use seampact_bundle_source::ReleaseBundleSource;
 use seampact_diagnostics::quote_text;
 use url::Url;
 

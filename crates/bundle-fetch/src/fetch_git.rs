@@ -6,7 +6,7 @@
 //! `--git-dir`.
 
 use camino::{Utf8Path, Utf8PathBuf};
-use seampact_bundle::GitBundleSource;
+use seampact_bundle_source::GitBundleSource;
 use tempfile::Builder;
 
 use crate::fetched::Fetched;

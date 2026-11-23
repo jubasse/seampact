@@ -43,5 +43,5 @@ src/fetch_release.rs#redirected	packages/core/compiler/src/bundle/fetch-release.
 src/fetch_release.rs#release_failed	packages/core/compiler/src/bundle/fetch-release.ts#releaseFailed
 src/fetch_release.rs#too_large	packages/core/compiler/src/bundle/fetch-release.ts#tooLarge
 -	packages/core/compiler/src/bundle/fetch-package.ts#installedPackageDirectory	merged: ../bundle/src/installed_package.rs#installed_package_directory
--	packages/core/compiler/src/bundle/imports.ts#bundleSourceOf	merged: ../bundle/src/source.rs#written_bundle_source
+-	packages/core/compiler/src/bundle/imports.ts#bundleSourceOf	merged: ../bundle-source/src/lib.rs#written_bundle_source
 src/git_run.rs#directory_bytes	packages/core/compiler/src/bundle/fetch-git.ts#directoryBytes

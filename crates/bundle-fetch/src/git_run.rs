@@ -7,7 +7,8 @@ use std::thread::{self, JoinHandle};
 use std::time::{Duration, Instant};
 
 use camino::{Utf8Path, Utf8PathBuf};
-use seampact_bundle::{BUNDLE_EXTRACTED_BYTES_MAX, GitBundleSource};
+use seampact_bundle::BUNDLE_EXTRACTED_BYTES_MAX;
+use seampact_bundle_source::GitBundleSource;
 use seampact_diagnostics::quote_text;
 use seampact_js::is_ecmascript_white_space;
 

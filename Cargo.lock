@@ -1265,7 +1265,6 @@ dependencies = [
  "seampact-json",
  "seampact-load",
  "seampact-oracle",
- "serde",
  "serde_json",
  "sha2",
  "tempfile",
@@ -1280,6 +1279,7 @@ dependencies = [
  "indexmap",
  "rustls",
  "seampact-bundle",
+ "seampact-bundle-source",
  "seampact-compiler",
  "seampact-diagnostics",
  "seampact-ir",
@@ -1293,6 +1293,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "seampact-bundle-source"
+version = "2.0.0"
+dependencies = [
+ "seampact-json",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "seampact-cli"
 version = "2.0.0"
 dependencies = [
@@ -1302,6 +1311,7 @@ dependencies = [
  "seampact-authoring",
  "seampact-bundle",
  "seampact-bundle-fetch",
+ "seampact-bundle-source",
  "seampact-cli-config",
  "seampact-compiler",
  "seampact-diagnostics",
@@ -1333,18 +1343,17 @@ dependencies = [
  "camino",
  "indexmap",
  "jsonschema",
- "seampact-bundle",
+ "seampact-bundle-source",
  "seampact-diagnostics",
  "seampact-js",
  "seampact-json",
  "seampact-load",
+ "seampact-paths",
  "seampact-span",
- "seampact-target",
  "seampact-validate",
  "serde_json",
  "tempfile",
  "thiserror",
- "unicode-normalization",
 ]
 
 [[package]]
@@ -1703,6 +1712,16 @@ dependencies = [
  "seampact-naming",
  "seampact-pipeline",
  "serde_json",
+]
+
+[[package]]
+name = "seampact-paths"
+version = "2.0.0"
+dependencies = [
+ "camino",
+ "seampact-js",
+ "thiserror",
+ "unicode-normalization",
 ]
 
 [[package]]

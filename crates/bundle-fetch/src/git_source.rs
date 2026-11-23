@@ -1,7 +1,8 @@
 //! What a git source names: its URL, its tag and its directory, checked before any `git` runs.
 
 use camino::{Utf8Path, Utf8PathBuf};
-use seampact_bundle::{GitBundleSource, resolve_directory};
+use seampact_bundle::resolve_directory;
+use seampact_bundle_source::GitBundleSource;
 use seampact_diagnostics::{InternalError, quote_text};
 use url::Url;
 

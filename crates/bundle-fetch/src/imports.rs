@@ -6,7 +6,7 @@
 //! refuses (no source form, or more than one) is not fetched: the compilation reports it.
 
 use indexmap::IndexMap;
-use seampact_bundle::{BundleSource, written_bundle_source};
+use seampact_bundle_source::{BundleSource, written_bundle_source};
 use seampact_compiler::{PipelineOptions, PipelineResult, compile_workspace};
 use seampact_diagnostics::{InternalError, quote_text};
 use seampact_ir::ImportedIr;

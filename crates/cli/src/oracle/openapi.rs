@@ -1,13 +1,15 @@
 //! The OpenAPI cases: the documents of one IR, and the merge of several.
 
 use seampact_ir::{ContractIr, DocumentId, OperationId};
-use seampact_json::{JsonObject, JsonValue, canonical_document};
+use seampact_json::{JsonValue, canonical_document};
 use seampact_openapi::{
     EmitOutcome, MergeInput, MergeOptions, MergeOutcome, OpenApiError, ParsedEmitterOptions,
     emit_documents, merge_documents, parse_emitter_options,
 };
 use seampact_oracle::{MergeCase, OpenApiAnswer, SubjectAnswer};
 use seampact_target::Refusal;
+
+use crate::oracle::json::{array_of, coded_problem_json};
 
 /// The answer of an emitter that failed: a bug, never a stub.
 fn failed_answer(error: &OpenApiError) -> SubjectAnswer<OpenApiAnswer> {
@@ -115,29 +117,21 @@ fn read_ir(ir: &JsonValue) -> Result<ContractIr, SubjectAnswer<OpenApiAnswer>> {
 
 /// The refusals as `openapi/refusals.json` holds them, absent members left out.
 fn refusals_json(refusals: &[Refusal]) -> JsonValue {
-    JsonValue::Array(refusals.iter().map(refusal_json).collect())
+    array_of(refusals, refusal_json)
 }
 
 fn refusal_json(refusal: &Refusal) -> JsonValue {
-    let mut entry = JsonObject::from_iter([
-        ("code".to_owned(), JsonValue::text(&refusal.code)),
-        ("message".to_owned(), JsonValue::text(&refusal.message)),
-        ("fix".to_owned(), JsonValue::text(&refusal.fix)),
-    ]);
-    let optional_members = [
-        ("docs", refusal.docs.as_deref()),
-        ("member", refusal.member.as_deref()),
-        (
-            "operation",
-            refusal.operation.as_ref().map(OperationId::as_str),
-        ),
-    ];
-
-    for (name, value) in optional_members {
-        if let Some(present) = value {
-            entry.insert(name.to_owned(), JsonValue::text(present));
-        }
-    }
-
-    JsonValue::Object(entry)
+    coded_problem_json(
+        &refusal.code,
+        &refusal.message,
+        &refusal.fix,
+        [
+            ("docs", refusal.docs.as_deref()),
+            ("member", refusal.member.as_deref()),
+            (
+                "operation",
+                refusal.operation.as_ref().map(OperationId::as_str),
+            ),
+        ],
+    )
 }

@@ -1,0 +1,8 @@
+src/unsafe_path_reason.rs#output_path_problem	packages/core/codegen-core/src/generated-paths.ts#unsafePathReason
+src/case_folded.rs#case_folded	packages/core/codegen-core/src/generated-paths.ts#caseFolded
+src/relative_output_path.rs#directories	packages/core/codegen-core/src/generated-paths.ts#directoryPrefixes
+src/output_path_set.rs#remember	packages/core/codegen-core/src/generated-paths.ts#rememberPath
+src/output_path_set.rs#file_clash	packages/core/codegen-core/src/generated-paths.ts#pathRefusalReason
+src/output_path_set.rs#directory_clash	packages/core/codegen-core/src/generated-paths.ts#directoryRefusalReason
+-	packages/core/codegen-core/src/generated-paths.ts#checkGeneratedPaths	skip: the writer's loop over the generated files, seampact-writer's
+-	packages/core/codegen-core/src/generated-paths.ts#manifestRefusalReason	skip: the manifest file name is the writer's, seampact-writer's

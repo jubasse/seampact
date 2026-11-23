@@ -6,23 +6,24 @@ use std::time::Duration;
 
 use camino::{Utf8Path, Utf8PathBuf};
 use indexmap::IndexMap;
-use seampact_bundle::BundleSource;
 use seampact_bundle_fetch::{
     BundleFetchOptions, BundleFetchResult, BundleSourceFailure, LocalSourcePolicy, ReleaseGet,
     ReleaseGetError, ReleaseResponse, Url, WorkspaceImportFailure, WorkspaceImportsOptions,
     WorkspaceImportsResult, compile_workspace_with_imports, fetch_bundle,
 };
+use seampact_bundle_source::BundleSource;
 use seampact_cli_config::bundle_source_of;
 use seampact_compiler::{PipelineApiResult, PipelineOptions, PipelineResult};
 use seampact_diagnostics::diagnostic_list_json;
 use seampact_ir::SourceMap;
-use seampact_json::{JsonNumber, JsonObject, JsonValue};
+use seampact_json::{JsonObject, JsonValue};
 use seampact_load::{FsReader, LoadOptions};
 use seampact_oracle::{ROOT_TOKEN, RecordedAnswer, RecordedToolCall, SubjectAnswer};
 use seampact_pipeline::PipelineDeclared;
 use seampact_span::{Location, SourceFiles};
 
 use crate::document_order::in_document_order;
+use crate::oracle::json::{array_of, coded_problem_json, integer, push_present_texts};
 
 const FETCH_BUNDLE: &str = "fetchBundle";
 const COMPILE_WORKSPACE_WITH_IMPORTS: &str = "compileWorkspaceWithImports";
@@ -122,10 +123,7 @@ fn compile_result(
         ])),
         WorkspaceImportsResult::Failed(failures) => Ok(JsonValue::object(vec![
             ("ok", JsonValue::Bool(false)),
-            (
-                "failures",
-                JsonValue::Array(failures.iter().map(import_failure_json).collect()),
-            ),
+            ("failures", array_of(&failures, import_failure_json)),
         ])),
     }
 }
@@ -254,9 +252,7 @@ fn fetch_result_json(result: &BundleFetchResult) -> Result<JsonValue, String> {
                 ("failures", failures_json(failures)),
             ];
 
-            if let Some(integrity) = integrity {
-                entries.push(("integrity", JsonValue::text(integrity)));
-            }
+            push_present_texts(&mut entries, [("integrity", integrity.as_deref())]);
 
             Ok(JsonValue::object(entries))
         }
@@ -264,27 +260,20 @@ fn fetch_result_json(result: &BundleFetchResult) -> Result<JsonValue, String> {
 }
 
 fn failures_json(failures: &[BundleSourceFailure]) -> JsonValue {
-    JsonValue::Array(failures.iter().map(failure_json).collect())
+    array_of(failures, failure_json)
 }
 
 fn failure_json(failure: &BundleSourceFailure) -> JsonValue {
-    let mut entries = vec![
-        ("code", JsonValue::text(failure.code.as_str())),
-        ("message", JsonValue::text(&failure.message)),
-        ("fix", JsonValue::text(&failure.fix)),
-    ];
-
-    for (name, value) in [
-        ("file", &failure.file),
-        ("expected", &failure.expected),
-        ("actual", &failure.actual),
-    ] {
-        if let Some(value) = value {
-            entries.push((name, JsonValue::text(value)));
-        }
-    }
-
-    JsonValue::object(entries)
+    coded_problem_json(
+        failure.code.as_str(),
+        &failure.message,
+        &failure.fix,
+        [
+            ("file", failure.file.as_deref()),
+            ("expected", failure.expected.as_deref()),
+            ("actual", failure.actual.as_deref()),
+        ],
+    )
 }
 
 fn import_failure_json(failure: &WorkspaceImportFailure) -> JsonValue {
@@ -304,13 +293,7 @@ fn compiled_json(result: &PipelineResult) -> Result<JsonValue, String> {
     Ok(JsonValue::object(vec![
         (
             "files",
-            JsonValue::Array(
-                result
-                    .read_files
-                    .iter()
-                    .map(|file| JsonValue::text(file))
-                    .collect(),
-            ),
+            array_of(&result.read_files, |file| JsonValue::text(file)),
         ),
         ("diagnostics", diagnostic_list_json(&result.diagnostics)),
         (
@@ -342,10 +325,7 @@ fn api_json(api: &PipelineApiResult, files: &SourceFiles) -> Result<JsonValue, S
     }
 
     if let Some(declared) = &api.declared {
-        entries.push((
-            "declared",
-            JsonValue::Array(declared.iter().map(declared_json).collect()),
-        ));
+        entries.push(("declared", array_of(declared, declared_json)));
     }
 
     Ok(JsonValue::object(entries))
@@ -368,20 +348,16 @@ fn locations_json(
 fn location_json(location: &Location) -> JsonValue {
     JsonValue::object(vec![
         ("file", JsonValue::text(&location.file)),
-        ("line", number(i64::from(location.line))),
-        ("column", number(i64::from(location.column))),
-        ("endLine", number(i64::from(location.end_line))),
-        ("endColumn", number(i64::from(location.end_column))),
+        ("line", integer(i64::from(location.line))),
+        ("column", integer(i64::from(location.column))),
+        ("endLine", integer(i64::from(location.end_line))),
+        ("endColumn", integer(i64::from(location.end_column))),
     ])
-}
-
-fn number(value: i64) -> JsonValue {
-    JsonValue::Number(JsonNumber::from_i64(value))
 }
 
 fn source_map_json(map: &SourceMap) -> JsonValue {
     JsonValue::object(vec![
-        ("irRevision", number(map.ir_revision)),
+        ("irRevision", integer(map.ir_revision)),
         (
             "locations",
             JsonValue::Object(
@@ -392,10 +368,10 @@ fn source_map_json(map: &SourceMap) -> JsonValue {
                             key.clone(),
                             JsonValue::object(vec![
                                 ("file", JsonValue::text(&location.file)),
-                                ("line", number(location.line)),
-                                ("column", number(location.column)),
-                                ("endLine", number(location.end_line)),
-                                ("endColumn", number(location.end_column)),
+                                ("line", integer(location.line)),
+                                ("column", integer(location.column)),
+                                ("endLine", integer(location.end_line)),
+                                ("endColumn", integer(location.end_column)),
                             ]),
                         )
                     })
@@ -408,10 +384,7 @@ fn source_map_json(map: &SourceMap) -> JsonValue {
 fn declared_json(declared: &PipelineDeclared) -> JsonValue {
     let mut origin = Vec::new();
 
-    if let Some(api) = &declared.origin.api {
-        origin.push(("api", JsonValue::text(api)));
-    }
-
+    push_present_texts(&mut origin, [("api", declared.origin.api.as_deref())]);
     origin.push(("layer", JsonValue::text(&declared.origin.layer.to_string())));
     origin.push(("pointer", JsonValue::text(&declared.origin.pointer)));
 

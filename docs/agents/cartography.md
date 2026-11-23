@@ -306,6 +306,7 @@ In pipeline order (ADR 0006 section 1).
 - `crates/authoring`: The authoring grammar data (embedded authoring schemas, markers, keywords, reserved names), the loaded tree the loader hands over and its typed member readers.
 - `crates/bundle`: Contract bundles: build, write (directory, tarball, npm package), read and verify, with no network.
 - `crates/bundle-fetch`: Fetching contract bundles: the package, git and release channels, the cache and workspace imports; the one network crate.
+- `crates/bundle-source`: Where an imported contract bundle comes from: the package, release, git and Maven forms a workspace or a config writes, and their pinned integrity.
 - `crates/cli`: The seampact binary and its library: argument parsing, dispatch, help, the problem printer and the commands.
 - `crates/cli-config`: The CLI's config reading: the app, root, workspace and run configs and the problems they report.
 - `crates/compiler`: The compiler: the stages in run order (`compile_workspace` with its stop rule, `run_half`), and behind the `oracle` feature the subject `cargo xtask oracle` compiles fixtures and runs halves with.
@@ -331,9 +332,10 @@ In pipeline order (ADR 0006 section 1).
 - `crates/pass-tree-nodes`: The `tree.nodes` pass half: the operations, the conventions, packs and lint settings of the api.
 - `crates/pass-tree-schemas`: The `tree.schemas` pass half: the schema catalogues and the schema service every later half reads.
 - `crates/pass-tree-shared`: The code of the `tree.nodes` half that earlier halves reach: operation names, raw tree readers and the relay origin.
+- `crates/paths`: Validated relative output paths, the clashes of paths a case-insensitive file system reads as one, and the untrusted bundle entry rules.
 - `crates/pipeline`: The pass pipeline: half names, the draft IR, the half outputs and their merge (with the element-owner rule), the derivation table and roles, the schema service trait, the draft delta convention, the readers over the loaded tree (pointers and origins, tree nodes, inherited settings, conventions, units, declared entries) and the half context.
 - `crates/span`: Source spans of the Rust port: file ids, byte ranges, the file table and the conversion to line and UTF-16 column.
-- `crates/target`: What OpenAPI, the CLI and the generator planning share from `codegen-core`: refusals, IR locations, the not-generated fixes and case folding.
+- `crates/target`: What OpenAPI, the CLI and the generator planning share from `codegen-core`: refusals, IR locations and the not-generated fixes.
 - `crates/templates`: The template reader of ADR 0002 section 13: a raw template read into the IR's template, with the slots of its place.
 - `crates/validate`: The validate stage: the authoring tree checked against the authoring JSON Schemas, ported from packages/core/compiler/src/validate.
 

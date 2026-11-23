@@ -4,9 +4,11 @@ use seampact_bundle::{
     BundleBuildOptions, BundleBuildResult, BundleError, BundleFailure, BundleFile,
     BundleNamedVersionOverride, build_bundle, bundle_manifest_bytes, bundle_tarball,
 };
-use seampact_json::{JsonNumber, JsonValue};
+use seampact_json::JsonValue;
 use seampact_load::FsReader;
 use seampact_oracle::{BundleAnswer, BundleCase, SubjectAnswer, gunzipped_ustar_entries};
+
+use crate::oracle::json::{array_of, coded_problem_json, integer};
 
 /// Why a case gave no answer: the bundle crate failed, or the case could not be set up.
 enum CaseError {
@@ -56,9 +58,7 @@ fn answer_of(case: &BundleCase) -> Result<BundleAnswer, CaseError> {
     let contents = match built {
         BundleBuildResult::Built { contents, .. } => contents,
         BundleBuildResult::Failed { failures, .. } => {
-            return Ok(BundleAnswer::Refused(JsonValue::Array(
-                failures.iter().map(failure_json).collect(),
-            )));
+            return Ok(BundleAnswer::Refused(array_of(&failures, failure_json)));
         }
     };
 
@@ -68,7 +68,7 @@ fn answer_of(case: &BundleCase) -> Result<BundleAnswer, CaseError> {
         .map_err(|error| CaseError::Setup(error.to_string()))?;
 
     Ok(BundleAnswer::Built {
-        files: JsonValue::Array(contents.manifest.files.iter().map(file_json).collect()),
+        files: array_of(&contents.manifest.files, file_json),
         manifest,
         integrity: contents.manifest.integrity.clone(),
         ustar: JsonValue::try_from(ustar).map_err(|error| CaseError::Setup(error.to_string()))?,
@@ -81,30 +81,21 @@ fn file_json(file: &BundleFile) -> JsonValue {
         (
             "size",
             // A size past i64 is no file a bundle holds; null makes the oracle report it.
-            i64::try_from(file.size).map_or(JsonValue::Null, |size| {
-                JsonValue::Number(JsonNumber::from_i64(size))
-            }),
+            i64::try_from(file.size).map_or(JsonValue::Null, integer),
         ),
         ("sha256", JsonValue::text(&file.sha256)),
     ])
 }
 
 fn failure_json(failure: &BundleFailure) -> JsonValue {
-    let mut entries = vec![
-        ("code", JsonValue::text(failure.code.as_str())),
-        ("message", JsonValue::text(&failure.message)),
-        ("fix", JsonValue::text(&failure.fix)),
-    ];
-
-    for (key, value) in [
-        ("file", &failure.file),
-        ("expected", &failure.expected),
-        ("actual", &failure.actual),
-    ] {
-        if let Some(found) = value {
-            entries.push((key, JsonValue::text(found)));
-        }
-    }
-
-    JsonValue::object(entries)
+    coded_problem_json(
+        failure.code.as_str(),
+        &failure.message,
+        &failure.fix,
+        [
+            ("file", failure.file.as_deref()),
+            ("expected", failure.expected.as_deref()),
+            ("actual", failure.actual.as_deref()),
+        ],
+    )
 }
