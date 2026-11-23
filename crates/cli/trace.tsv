@@ -48,7 +48,7 @@ src/cli_io.rs#refuse	packages/core/cli/src/commands/lint-command.ts#refuse
 -	packages/core/cli/src/commands/compile-sources.ts#printedDiagnostics	merged: ../generate/src/compile_sources.rs#printed_diagnostics
 -	packages/core/cli/src/commands/compile-sources.ts#labelledLocations	skip: the hooks diagnosticFileLabel and sourceReader serve the embedded binary of the TypeScript package, which the Rust binary does not have
 -	packages/core/cli/src/commands/api-refs.ts#parseApiRef	merged: ../cli-config/src/api_refs.rs#parse_api_ref
--	packages/core/cli/src/commands/api-refs.ts#apiRefsOf	merged: ../cli-config/src/api_refs.rs#api_refs_of
+-	packages/core/cli/src/commands/api-refs.ts#apiRefsOf	merged: ../cli-config/src/api_refs.rs#api_refs
 -	packages/core/cli/src/commands/api-refs.ts#usedSources	merged: ../generate/src/api_refs.rs#used_sources
 -	packages/core/cli/src/commands/api-refs.ts#unknownSourceProblems	merged: ../generate/src/api_refs.rs#unknown_source_problems
 -	packages/core/cli/src/commands/api-refs.ts#entryApiRefs	merged: ../generate/src/api_refs.rs#entry_api_refs

@@ -10,11 +10,11 @@ use seampact_diff::{diff_contract_sets, format_diff_report};
 use seampact_diff_table::DiffResult;
 use seampact_generate::LocalBundles;
 use seampact_generate::compile_sources;
-use seampact_generate::{UsedSources, add_qualify_fix, entry_api_refs, used_sources};
+use seampact_generate::{add_qualify_fix, entry_api_refs, used_sources};
 
 use crate::config_location::ConfigLocation;
 use crate::diff_baseline::read_baseline;
-use crate::step::Step;
+use crate::stop::Stop;
 use crate::{CliError, EXIT_REFUSED, EXIT_SUCCESS, refuse};
 
 /// Compares the compiled sources with the baseline at `against`, one report per api; answers
@@ -32,10 +32,10 @@ pub(crate) fn diff_command(
         ReadAppConfigOutcome::Refused(problems) => return Ok(refuse(io, &problems)),
         ReadAppConfigOutcome::Read(config) => config,
     };
-    let extra_refs = open_api_api_names(&config)?;
-    let used_names = match used_sources(&config, &extra_refs)? {
-        UsedSources::Refused(problems) => return Ok(refuse(io, &problems)),
-        UsedSources::Used(names) => names,
+    let extra_refs = open_api_api_names(&config);
+    let used_names = match used_sources(&config, &extra_refs) {
+        Err(problems) => return Ok(refuse(io, problems.as_slice())),
+        Ok(names) => names,
     };
 
     if used_names.is_empty() {
@@ -49,16 +49,17 @@ pub(crate) fn diff_command(
         ));
     }
 
-    let baseline = match read_baseline(&resolved_path(io.cwd(), against))? {
-        Step::Refused(problems) => return Ok(refuse(io, &problems)),
-        Step::Done(baseline) => baseline,
+    let baseline = match read_baseline(&resolved_path(io.cwd(), against)) {
+        Err(Stop::Refused(problems)) => return Ok(refuse(io, problems.as_slice())),
+        Err(Stop::Failed(failure)) => return Err(failure),
+        Ok(baseline) => baseline,
     };
     let compiled = compile_sources(&config, &used_names, &LocalBundles::new(), io)?;
 
     if compiled.failed {
         let mut refs = entry_api_refs(&config);
 
-        refs.extend(extra_refs.iter().map(String::as_str));
+        refs.extend(extra_refs);
 
         return Ok(refuse(io, &add_qualify_fix(compiled.problems, &refs)));
     }
@@ -70,7 +71,8 @@ pub(crate) fn diff_command(
     }
 
     let options = config
-        .diff_settings()?
+        .diff
+        .clone()
         .unwrap_or_default()
         .into_options(io.today());
     let results = diff_contract_sets(&baseline, &current, &options)?;

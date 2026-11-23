@@ -1,14 +1,15 @@
 //! The OpenAPI documents of an app, rendered from the IR each serves.
 
-use seampact_cli_config::{CheckLevel, CliProblem, OperationsFilter, Step};
+use seampact_cli_config::{CheckLevel, CliProblem, OperationsFilter, Problems};
 use seampact_diagnostics::InternalError;
 use seampact_openapi::{
     EmitOutcome, EmitterOptions, ParsedEmitterOptions, emit_documents, parse_emitter_options,
 };
 
+use crate::EmittedAppDocument;
 use crate::planned_document::{PlannedDocument, document_name};
 use crate::refusal_problem::problem_from_refusal;
-use crate::{EmittedAppDocument, GenerateError};
+use crate::stop::Stop;
 
 /// What decides that two documents render alike: the api, the operations served and the options.
 #[derive(PartialEq)]
@@ -24,11 +25,12 @@ struct EmissionKey {
 ///
 /// # Errors
 ///
-/// [`GenerateError::OpenApi`] or [`GenerateError::Internal`] for a bug.
+/// [`Stop::Refused`] with the problems of the documents the emitter refuses, [`Stop::Failed`] for
+/// a bug or a render failure.
 pub fn emit_app_documents(
     documents: &[PlannedDocument],
     level: CheckLevel,
-) -> Result<Step<Vec<EmittedAppDocument>>, GenerateError> {
+) -> Result<Vec<EmittedAppDocument>, Stop> {
     let mut emitted_apis: Vec<(EmissionKey, EmitOutcome)> = Vec::new();
     let mut emitted = Vec::new();
     let mut problems: Vec<CliProblem> = Vec::new();
@@ -96,9 +98,7 @@ pub fn emit_app_documents(
         });
     }
 
-    if problems.is_empty() {
-        Ok(Step::Done(emitted))
-    } else {
-        Ok(Step::Refused(problems))
-    }
+    Problems::refuse_any(problems)?;
+
+    Ok(emitted)
 }

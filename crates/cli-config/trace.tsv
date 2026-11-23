@@ -63,24 +63,24 @@ src/read_root_config.rs#listed_app	packages/core/cli/src/config/read-root-config
 src/read_root_config.rs#unknown_merged_app_problems	packages/core/cli/src/config/read-root-config.ts#unknownMergedAppProblems
 src/read_workspace_configs.rs#read_workspace_configs	packages/core/cli/src/config/read-workspace-configs.ts#readWorkspaceConfigs
 src/read_run_config.rs#read_run_config	packages/core/cli/src/config/read-run-config.ts#readRunConfig
-src/artefact_switches.rs#is_framework_route_check_off	packages/core/cli/src/config/artefact-switches.ts#isFrameworkRouteCheckOff
-src/artefact_switches.rs#framework_routes_switch_of	packages/core/cli/src/config/artefact-switches.ts#frameworkRoutesSwitchOf
+-	packages/core/cli/src/config/artefact-switches.ts#isFrameworkRouteCheckOff	merged: src/artefact_switches.rs#is_framework_route_check_switched_off
+-	packages/core/cli/src/config/artefact-switches.ts#frameworkRoutesSwitchOf	merged: src/artefact_switches.rs#framework_routes_switch_in
 src/document_plan.rs#plan_app_documents	packages/core/cli/src/config/document-plan.ts#planAppDocuments
 src/document_plan.rs#default_document_directory	packages/core/cli/src/config/document-plan.ts#defaultDocumentDirectory
 src/document_plan.rs#default_documents	packages/core/cli/src/config/document-plan.ts#defaultDocuments
 src/document_plan.rs#add_served_api	packages/core/cli/src/config/document-plan.ts#addServedApi
 src/document_plan.rs#listed_documents	packages/core/cli/src/config/document-plan.ts#listedDocuments
 src/document_plan.rs#api_placements	packages/core/cli/src/config/document-plan.ts#apiPlacements
-src/document_plan.rs#is_one_placement	packages/core/cli/src/config/document-plan.ts#isOnePlacement
-src/document_plan.rs#placed	packages/core/cli/src/config/document-plan.ts#placed
+src/open_api_settings.rs#is_one_placement	packages/core/cli/src/config/document-plan.ts#isOnePlacement
+-	packages/core/cli/src/config/document-plan.ts#placed	merged: src/open_api_settings.rs#from_value
 src/document_plan.rs#find_api	packages/core/cli/src/config/document-plan.ts#findApi
 src/document_plan.rs#document_inside_output_problems	packages/core/cli/src/config/document-plan.ts#documentInsideOutputProblems
 src/document_plan.rs#path_conflict_problems	packages/core/cli/src/config/document-plan.ts#pathConflictProblems
 src/document_plan.rs#name_of	packages/core/cli/src/config/document-plan.ts#nameOf
-src/document_plan.rs#role_of	packages/core/cli/src/config/document-plan.ts#roleOf
-src/document_plan.rs#plan_merged_documents	packages/core/cli/src/config/document-plan.ts#planMergedDocuments
-src/document_plan.rs#app_contributions	packages/core/cli/src/config/document-plan.ts#appContributions
-src/document_plan.rs#refused	packages/core/cli/src/config/document-plan.ts#refused
+-	packages/core/cli/src/config/document-plan.ts#roleOf	skip: the app plan hands the plan the entries of server targets, so no role is looked up
+src/merged_document_plan.rs#plan_merged_documents	packages/core/cli/src/config/document-plan.ts#planMergedDocuments
+src/merged_document_plan.rs#app_contributions	packages/core/cli/src/config/document-plan.ts#appContributions
+-	packages/core/cli/src/config/document-plan.ts#refused	skip: a refusal is the error of the result
 src/artefact_switches.rs#select_artefacts	packages/core/cli/src/config/artefact-switches.ts#selectArtefacts
 src/artefact_switches.rs#hook_check_switch_of	packages/core/cli/src/config/artefact-switches.ts#hookCheckSwitchOf
 src/artefact_switches.rs#hook_check_level_of	packages/core/cli/src/config/artefact-switches.ts#hookCheckLevelOf

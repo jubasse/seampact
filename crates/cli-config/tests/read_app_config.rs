@@ -11,15 +11,14 @@ mod support;
 
 use std::fmt::Write as _;
 
-use seampact_cli_config::{ReadAppConfigOutcome, ResolvedSource};
-use seampact_json::JsonValue;
+use seampact_cli_config::{ApiPlacements, MatrixCheckLevel, ReadAppConfigOutcome, ResolvedSource};
+use seampact_json::{JsonValue, items_of, object_of};
 use support::{SERVER_ENTRY_HEAD, read_config, read_text, read_tree_app, refused, write_tree};
 
 fn entry_member(text: &str, member: &str) -> Option<JsonValue> {
     let config = read_config(read_text(text));
-    let JsonValue::Object(entry) = &config.entries.first().expect("an entry").entry else {
-        panic!("an entry is a mapping");
-    };
+    let written = object_of(Some(&config.written)).expect("a mapping");
+    let entry = object_of(items_of(written.get("targets")).first()).expect("an entry mapping");
 
     entry.get(member).cloned()
 }
@@ -236,7 +235,7 @@ fn artefact_switches_and_waiting_keys() {
         "    artefacts: { types: false, nativeDocs: true, bootCheck: false }\n    allowUntested: [express@6]\nchecks: { matrix: error }\n",
     )));
 
-    assert!(read.checks.is_some());
+    assert_eq!(read.checks.matrix, Some(MatrixCheckLevel::Error));
     assert!(
         first_problem_message(&with_head("    artefacts: { types: off }\n"))
             .contains("must be boolean")
@@ -343,7 +342,13 @@ fn openapi_checks_and_diff_are_read_as_written() {
         "openapi:\n  tasks: { public: openapi/public.yaml, full: { path: openapi/full.yaml, reasons: omit } }\nchecks: {}\ndiff: { gate: both }\n",
     ));
 
-    assert!(read.openapi.is_some() && read.checks.is_some() && read.diff.is_some());
+    let openapi = read.openapi.as_ref().expect("an openapi key");
+    let Some(ApiPlacements::ByDocument(documents)) = openapi.apis.get("tasks") else {
+        panic!("tasks maps its documents");
+    };
+
+    assert_eq!(documents.keys().collect::<Vec<_>>(), ["public", "full"]);
+    assert!(read.diff.is_some());
     assert!(
         first_problem_message("openapi:\n  tasks: [openapi/tasks.yaml]\n")
             .contains("An api's documents are a path")

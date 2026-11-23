@@ -1,12 +1,13 @@
 //! The base paths two entries of an exclusive-routing target must not both serve.
 
-use seampact_cli_config::{CliProblem, Step};
+use seampact_cli_config::{CliProblem, Problems};
 use seampact_target::{BasePathRouting, NO_MOUNT};
 
 use crate::GenerateError;
 use crate::mounted_base_paths::mounted_base_paths;
 use crate::not_ported::not_ported_yet;
 use crate::planned_entry::PlannedEntry;
+use crate::stop::Stop;
 
 /// One api an exclusive-routing entry serves, with the base paths it mounts.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -23,19 +24,20 @@ pub(crate) struct ServedApi {
 ///
 /// # Errors
 ///
-/// [`GenerateError::NotPortedYet`] when two apis are served, until `sharedBasePathProblems` is ported.
-pub fn exclusive_base_path_problems(planned: &[&PlannedEntry]) -> Result<Step<()>, GenerateError> {
+/// [`Stop::Refused`] with the overlaps; [`Stop::Failed`] with [`GenerateError::NotPortedYet`] when
+/// two apis are served, until `sharedBasePathProblems` is ported.
+pub fn exclusive_base_path_problems(planned: &[&PlannedEntry]) -> Result<(), Stop> {
     let mut served: Vec<ServedApi> = Vec::new();
 
     for entry in planned
         .iter()
         .filter(|each| each.target.metadata().base_paths == BasePathRouting::Exclusive)
     {
-        let mount = entry.entry.settings.mount.as_deref().unwrap_or(NO_MOUNT);
+        let mount = entry.settings.mount.as_deref().unwrap_or(NO_MOUNT);
 
         for api in &entry.apis {
             served.push(ServedApi {
-                entry_id: entry.entry.settings.id.clone(),
+                entry_id: entry.settings.id.clone(),
                 api: api.api.clone(),
                 base_paths: mounted_base_paths(&api.ir, mount),
             });
@@ -50,11 +52,7 @@ pub fn exclusive_base_path_problems(planned: &[&PlannedEntry]) -> Result<Step<()
         }
     }
 
-    if problems.is_empty() {
-        Ok(Step::Done(()))
-    } else {
-        Ok(Step::Refused(problems))
-    }
+    Ok(Problems::refuse_any(problems)?)
 }
 
 fn shared_base_path_problems(

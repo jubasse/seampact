@@ -2,15 +2,14 @@
 
 use std::collections::HashMap;
 
-use indexmap::IndexMap;
 use seampact_cli_config::{
-    CliProblem, PlannedAppDocument, Step, TargetEntrySettings, entry_where, located_problem,
+    CliProblem, PlannedAppDocument, Problems, TargetEntrySettings, entry_where, located_problem,
 };
 use seampact_diagnostics::InternalError;
 use seampact_json::JsonValue;
 use seampact_target::{
-    ArtefactSet, DescriptorSet, GENERATE_TROUBLESHOOTING_URL, ImportSpecifierStyle,
-    LINK_TROUBLESHOOTING_URL, LinkSet, Refusal, TargetFailure,
+    DescriptorSet, GENERATE_TROUBLESHOOTING_URL, ImportSpecifierStyle, LINK_TROUBLESHOOTING_URL,
+    LinkSet, Refusal, TargetFailure,
 };
 
 use crate::contract_position::ContractPositions;
@@ -23,7 +22,8 @@ use crate::link_set::{add_link, is_link_kind, relative_location};
 use crate::not_ported::not_ported_yet;
 use crate::planned_entry::{PlannedApi, PlannedEntry};
 use crate::refusal_problem::problem_from_refusal;
-use crate::{AppPlan, GenerateError, GeneratedOutput};
+use crate::stop::{Stop, gather};
+use crate::{AppPlan, GeneratedOutput};
 
 const LINK_CODE_PREFIX: &str = "link.";
 
@@ -32,8 +32,8 @@ type DescribeOutcome = Result<DescriptorSet, TargetFailure>;
 
 /// What a run keeps while it generates the entries of an app.
 pub(crate) struct EntryGeneration<'plan> {
-    /// Every planned entry, by id.
-    pub(crate) by_id: IndexMap<&'plan str, &'plan PlannedEntry>,
+    /// Every planned entry.
+    pub(crate) entries: &'plan [PlannedEntry],
     /// The describe answers already known.
     pub(crate) describe: Describe,
     /// The documents the app writes.
@@ -41,7 +41,7 @@ pub(crate) struct EntryGeneration<'plan> {
     pub(crate) app_documents: Vec<&'plan PlannedAppDocument>,
     /// The warning codes the config ignores.
     #[expect(dead_code, reason = "read by generate_api, brief 2")]
-    pub(crate) ignored_warnings: Vec<String>,
+    pub(crate) ignored_warnings: &'plan [String],
 }
 
 /// Each provider's `describe` answer, kept by entry, source and api so it runs once.
@@ -63,14 +63,13 @@ impl Describe {
         provider_api: &PlannedApi,
     ) -> &DescribeOutcome {
         let key = (
-            provider.entry.settings.id.clone(),
+            provider.settings.id.clone(),
             provider_api.source.clone(),
             provider_api.api.clone(),
         );
 
         self.described.entry(key).or_insert_with(|| {
             let options = provider
-                .entry
                 .settings
                 .options
                 .clone()
@@ -81,84 +80,61 @@ impl Describe {
     }
 }
 
-/// The artefacts switched on for `entry_id`.
-fn entry_artefacts<'plan>(
-    artefacts: &'plan IndexMap<String, ArtefactSet>,
-    entry_id: &str,
-) -> Result<&'plan ArtefactSet, InternalError> {
-    artefacts.get(entry_id).ok_or_else(|| {
-        InternalError::new(format!("no selected artefacts for the entry {entry_id}"))
-    })
-}
-
 /// Generates the files of every entry and api of `plan`, in link order; `app` names the app of a
 /// root run.
 ///
 /// # Errors
 ///
-/// [`GenerateError::NotPortedYet`] until `generateApi` is ported, [`GenerateError::Internal`] for
-/// a bug.
+/// [`Stop::Refused`] with the problems of every api the targets refuse; [`Stop::Failed`] with
+/// [`GenerateError::NotPortedYet`](crate::GenerateError::NotPortedYet) until `generateApi` is
+/// ported, or for a bug.
 pub fn generate_entries(
     plan: &AppPlan<'_>,
     app: Option<&str>,
-) -> Result<Step<Vec<GeneratedOutput>>, GenerateError> {
+) -> Result<Vec<GeneratedOutput>, Stop> {
     let level = plan
         .config
-        .checks()?
+        .checks
         .generated
         .unwrap_or(DEFAULT_DRIFT_CHECK_LEVEL);
-    let styles = match import_specifier_styles(&plan.entries)? {
-        Step::Refused(problems) => return Ok(Step::Refused(problems)),
-        Step::Done(styles) => styles,
-    };
+    let styles = import_specifier_styles(&plan.entries)?;
     let entries: Vec<&PlannedEntry> = plan.entries.iter().collect();
 
-    if let Step::Refused(problems) = exclusive_base_path_problems(&entries)? {
-        return Ok(Step::Refused(problems));
-    }
+    exclusive_base_path_problems(&entries)?;
 
     let mut generation = EntryGeneration {
-        by_id: plan
-            .entries
-            .iter()
-            .map(|each| (each.entry.settings.id.as_str(), each))
-            .collect(),
+        entries: &plan.entries,
         describe: memoized_describe(),
         app_documents: plan.documents.iter().map(|each| &each.planned).collect(),
-        ignored_warnings: plan.config.warnings_settings()?.ignore,
+        ignored_warnings: &plan.config.warnings.ignore,
     };
     let mut outputs = Vec::new();
     let mut problems = Vec::new();
 
     for consumer in &plan.entries {
-        let entry_id = consumer.entry.settings.id.as_str();
-        let artefacts = entry_artefacts(&plan.artefacts, entry_id)?;
+        let style = styles.get(consumer.settings.id.as_str()).copied();
 
         for planned_api in &consumer.apis {
-            let style = styles.get(entry_id).copied();
+            let step = generate_api(consumer, planned_api, style, &mut generation);
 
-            match generate_api(consumer, planned_api, artefacts, style, &mut generation)? {
-                Step::Refused(refused) => problems.extend(refused),
-                Step::Done(generated) => outputs.push(generated.into_output(level, app)),
+            if let Some(generated) = gather(step, &mut problems)? {
+                outputs.push(generated.into_output(level, app));
             }
         }
     }
 
-    if problems.is_empty() {
-        Ok(Step::Done(outputs))
-    } else {
-        Ok(Step::Refused(problems))
-    }
+    Problems::refuse_any(problems)?;
+
+    Ok(outputs)
 }
 
 fn generate_api(
     _consumer: &PlannedEntry,
     _planned_api: &PlannedApi,
-    _artefacts: &ArtefactSet,
     _style: Option<ImportSpecifierStyle>,
     _generation: &mut EntryGeneration<'_>,
-) -> Result<Step<GeneratedApi>, GenerateError> {
-    Err(not_ported_yet("generateApi"))
+) -> Result<GeneratedApi, Stop> {
+    Err(not_ported_yet("generateApi").into())
 }
 
 /// `refusal` with the troubleshooting section of its code when it names none.
@@ -208,13 +184,16 @@ fn build_links(
     consumer: &PlannedEntry,
     consumer_api: &PlannedApi,
     generation: &mut EntryGeneration<'_>,
-) -> Result<Step<LinkSet>, GenerateError> {
+) -> Result<LinkSet, Stop> {
     let mut links = LinkSet::default();
     let mut problems: Vec<CliProblem> = Vec::new();
-    let consumer_id = &consumer.entry.settings.id;
+    let consumer_id = &consumer.settings.id;
 
-    for (kind, provider_id) in links_of(&consumer.entry.settings) {
-        let provider = generation.by_id.get(provider_id).copied();
+    for (kind, provider_id) in links_of(&consumer.settings) {
+        let provider = generation
+            .entries
+            .iter()
+            .find(|each| each.settings.id == provider_id);
         let provider_api = provider.and_then(|each| paired_api(each, consumer_api));
         let known_kind = is_link_kind(kind)?;
 
@@ -269,9 +248,7 @@ fn build_links(
         }
     }
 
-    if problems.is_empty() {
-        Ok(Step::Done(links))
-    } else {
-        Ok(Step::Refused(problems))
-    }
+    Problems::refuse_any(problems)?;
+
+    Ok(links)
 }

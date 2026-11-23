@@ -2,42 +2,17 @@
 
 use indexmap::IndexMap;
 use seampact_js::js_key_order;
-use seampact_json::{JsonValue, object_of};
 use seampact_target::{ArtefactDeclaration, ArtefactDefault, ArtefactSet, Generator, MissingNeed};
 
 use crate::artefact_switch::{
     ArtefactSwitch, ArtefactSwitches, FrameworkRoutesSwitch, HookBootCheckLevel,
 };
+use crate::problems::Problems;
 use crate::target_entry_settings::TargetEntrySettings;
-use crate::{CliConfigError, CliProblem, entry_where, located_problem};
+use crate::{CliProblem, entry_where, located_problem};
 
 const BOOT_CHECK_ARTEFACT: &str = "bootCheck";
 const NATIVE_DOCS_ARTEFACT: &str = "nativeDocs";
-const FRAMEWORK_ROUTES_SWITCH: &str = "frameworkRoutes";
-
-/// The `bootCheck.frameworkRoutes` switch an entry writes in `bootCheck`'s object form.
-pub(crate) fn framework_routes_switch_of(artefacts: Option<&JsonValue>) -> Option<&JsonValue> {
-    let boot_check = object_of(artefacts).and_then(|object| object.get(BOOT_CHECK_ARTEFACT));
-
-    object_of(boot_check).and_then(|object| object.get(FRAMEWORK_ROUTES_SWITCH))
-}
-
-/// Off when the entry switches the whole boot check off, or its framework-route check alone.
-pub(crate) fn is_framework_route_check_off(artefacts: Option<&JsonValue>) -> bool {
-    let boot_check = object_of(artefacts).and_then(|object| object.get(BOOT_CHECK_ARTEFACT));
-
-    boot_check == Some(&JsonValue::Bool(false))
-        || framework_routes_switch_of(artefacts) == Some(&JsonValue::Bool(false))
-}
-
-/// The artefacts an entry generates, or the problems that refuse its switches.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum ArtefactSelection {
-    /// The artefacts switched on, in the target's declaration order.
-    Selected(ArtefactSet),
-    /// The switches the target does not allow.
-    Refused(Vec<CliProblem>),
-}
 
 /// The `bootCheck.hooks` level an entry writes in `bootCheck`'s object form.
 #[must_use]
@@ -100,20 +75,22 @@ pub fn is_framework_route_check_strict(artefacts: Option<&ArtefactSwitches>) -> 
 ///
 /// # Errors
 ///
-/// Never fails today; the result keeps the error of the signature the callers were written to.
+/// [`Problems`] for a switch the target does not declare, an entry that leaves every artefact off,
+/// or an artefact switched on whose need is off.
 pub fn select_artefacts(
     entry: &TargetEntrySettings,
     target: &dyn Generator,
-) -> Result<ArtefactSelection, CliConfigError> {
+) -> Result<ArtefactSet, Problems> {
     let metadata = target.metadata();
     let declared = metadata.artefacts;
     let switches = boolean_switches_of(entry.artefacts.as_ref());
-    let unknown =
-        unknown_switch_problems(entry, declared, !metadata.boot_checks.is_empty(), &switches);
 
-    if !unknown.is_empty() {
-        return Ok(ArtefactSelection::Refused(unknown));
-    }
+    Problems::refuse_any(unknown_switch_problems(
+        entry,
+        declared,
+        !metadata.boot_checks.is_empty(),
+        &switches,
+    ))?;
 
     let mut artefacts: Vec<&str> = declared
         .iter()
@@ -129,20 +106,12 @@ pub fn select_artefacts(
     drop_unwritten_without_needs(declared, &switches, &mut artefacts);
 
     if !declared.is_empty() && artefacts.is_empty() {
-        return Ok(ArtefactSelection::Refused(vec![no_artefact_problem(
-            entry, declared,
-        )]));
+        return Err(no_artefact_problem(entry, declared).into());
     }
 
-    let needed = needed_artefact_problems(entry, declared, &artefacts);
+    Problems::refuse_any(needed_artefact_problems(entry, declared, &artefacts))?;
 
-    if !needed.is_empty() {
-        return Ok(ArtefactSelection::Refused(needed));
-    }
-
-    Ok(ArtefactSelection::Selected(ArtefactSet::new(
-        artefacts.into_iter().map(str::to_owned),
-    )))
+    Ok(ArtefactSet::new(artefacts.into_iter().map(str::to_owned)))
 }
 
 /// The switches written as a boolean, in JavaScript key order.

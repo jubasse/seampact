@@ -1,22 +1,14 @@
 //! The links between target entries: their order, and the checks that each link names an entry
 //! whose target provides it, whose consumer takes it and whose apis pair.
 
-use indexmap::IndexMap;
-use seampact_cli_config::{CliProblem, TargetEntrySettings, entry_where, located_problem};
+use seampact_cli_config::{
+    CliProblem, Problems, TargetEntrySettings, entry_where, located_problem,
+};
 use seampact_js::js_key_order;
 use seampact_target::LinkKind;
 
 use crate::PlannedApi;
 use crate::planned_entry::PlannedEntry;
-
-/// What listing the entries in link order answers.
-#[derive(Debug, Clone, PartialEq)]
-pub enum EntryOrderOutcome<'entries> {
-    /// The entries, each after the providers it links.
-    Ordered(Vec<&'entries TargetEntrySettings>),
-    /// The link cycle.
-    Refused(Vec<CliProblem>),
-}
 
 /// The links of `entry` as kind and provider id, in the order JavaScript lists object keys.
 #[must_use]
@@ -63,11 +55,14 @@ pub fn unknown_link_entry_problems(entries: &[&TargetEntrySettings]) -> Vec<CliP
     problems
 }
 
-/// Lists `entries` so each comes after the providers it links, or names the first cycle.
-#[must_use]
+/// Lists `entries` so each comes after the providers it links.
+///
+/// # Errors
+///
+/// [`Problems`] naming the first link cycle.
 pub fn order_entries<'entries>(
     entries: &[&'entries TargetEntrySettings],
-) -> EntryOrderOutcome<'entries> {
+) -> Result<Vec<&'entries TargetEntrySettings>, Problems> {
     let mut walk = OrderWalk {
         entries,
         ordered: Vec::new(),
@@ -76,11 +71,11 @@ pub fn order_entries<'entries>(
 
     for entry in entries {
         if let Some(problem) = walk.visit(entry) {
-            return EntryOrderOutcome::Refused(vec![problem]);
+            return Err(problem.into());
         }
     }
 
-    EntryOrderOutcome::Ordered(walk.ordered)
+    Ok(walk.ordered)
 }
 
 struct OrderWalk<'walk, 'entries> {
@@ -148,14 +143,14 @@ fn kinds_text(kinds: impl Iterator<Item = LinkKind>) -> String {
 
 /// One problem for each link whose provider's target does not provide its kind.
 #[must_use]
-pub fn unprovided_kind_problems(planned: &IndexMap<String, PlannedEntry>) -> Vec<CliProblem> {
+pub fn unprovided_kind_problems(planned: &[PlannedEntry]) -> Vec<CliProblem> {
     let mut problems = Vec::new();
 
-    for consumer in planned.values() {
-        let entry = &consumer.entry.settings;
+    for consumer in planned {
+        let entry = &consumer.settings;
 
         for (kind, provider_id) in links_of(entry) {
-            let Some(provider) = planned.get(provider_id) else {
+            let Some(provider) = provider_among(planned, provider_id) else {
                 continue;
             };
             let metadata = provider.target.metadata();
@@ -183,11 +178,11 @@ pub fn unprovided_kind_problems(planned: &IndexMap<String, PlannedEntry>) -> Vec
 
 /// One problem for each link of a kind the consumer's target does not consume.
 #[must_use]
-pub fn unconsumed_kind_problems(planned: &IndexMap<String, PlannedEntry>) -> Vec<CliProblem> {
+pub fn unconsumed_kind_problems(planned: &[PlannedEntry]) -> Vec<CliProblem> {
     let mut problems = Vec::new();
 
-    for consumer in planned.values() {
-        let entry = &consumer.entry.settings;
+    for consumer in planned {
+        let entry = &consumer.settings;
         let metadata = consumer.target.metadata();
 
         for (kind, provider_id) in links_of(entry) {
@@ -222,12 +217,12 @@ pub fn unconsumed_kind_problems(planned: &IndexMap<String, PlannedEntry>) -> Vec
 /// One problem for each api a consumer generates that its provider does not pair or keeps fewer
 /// operations of.
 #[must_use]
-pub fn pairing_problems(planned: &IndexMap<String, PlannedEntry>) -> Vec<CliProblem> {
+pub fn pairing_problems(planned: &[PlannedEntry]) -> Vec<CliProblem> {
     let mut problems = Vec::new();
 
-    for consumer in planned.values() {
-        for (_, provider_id) in links_of(&consumer.entry.settings) {
-            let Some(provider) = planned.get(provider_id) else {
+    for consumer in planned {
+        for (_, provider_id) in links_of(&consumer.settings) {
+            let Some(provider) = provider_among(planned, provider_id) else {
                 continue;
             };
 
@@ -238,6 +233,13 @@ pub fn pairing_problems(planned: &IndexMap<String, PlannedEntry>) -> Vec<CliProb
     }
 
     problems
+}
+
+fn provider_among<'planned>(
+    planned: &'planned [PlannedEntry],
+    provider_id: &str,
+) -> Option<&'planned PlannedEntry> {
+    planned.iter().find(|each| each.settings.id == provider_id)
 }
 
 /// The api of `provider` that pairs `consumer_api`: the same api of the same source.
@@ -257,8 +259,8 @@ fn api_pair_problems(
     provider: &PlannedEntry,
     consumer_api: &PlannedApi,
 ) -> Vec<CliProblem> {
-    let consumer_id = &consumer.entry.settings.id;
-    let provider_id = &provider.entry.settings.id;
+    let consumer_id = &consumer.settings.id;
+    let provider_id = &provider.settings.id;
     let api = &consumer_api.api;
     let location = link_where(consumer_id, provider_id, Some(api));
 

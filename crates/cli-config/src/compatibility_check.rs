@@ -2,7 +2,6 @@
 //! library versions each target was tested on.
 
 use camino::Utf8Path;
-use indexmap::IndexMap;
 use seampact_diagnostics::InternalError;
 use seampact_json::{object_of, text_of};
 use seampact_target::{
@@ -10,15 +9,15 @@ use seampact_target::{
     supported_majors_of,
 };
 
-use crate::artefact_switches::{ArtefactSelection, select_artefacts};
+use crate::artefact_switches::select_artefacts;
 use crate::check_level::MatrixCheckLevel;
 use crate::installed_version::{
     FRAMEWORK_MISSING_CODE, InstalledPackageRole, InstalledVersion, InstalledVersionOutcome,
     read_installed_version,
 };
 use crate::package_manager::{DependencyKind, install_fix};
-use crate::target_entry_settings::TargetEntrySettings;
-use crate::{CliConfigError, CliProblem, LoadedAppConfig, entry_where, located_problem};
+use crate::target_entry_settings::{ConfiguredTargetEntry, TargetEntrySettings};
+use crate::{CliConfigError, CliProblem, entry_where, located_problem};
 
 /// The artefact whose own validators import their library, as `OWN_VALIDATORS_ARTEFACT` of the
 /// node-server boundary files.
@@ -33,17 +32,40 @@ pub struct CompatibilityOutcome {
     pub warnings: Vec<CliProblem>,
 }
 
-/// What `check_compatibility` reads: the entries, their resolved targets and installed versions.
+/// A target entry with the generator its `use` names.
+#[derive(Debug, Clone, Copy)]
+pub struct EntryTarget<'config> {
+    /// The entry and its output directory.
+    pub entry: &'config ConfiguredTargetEntry,
+    /// The generator the entry's `use` names.
+    pub target: &'static dyn Generator,
+}
+
+/// The versions installed for one entry: its framework and each library its artefacts import.
+#[derive(Debug, Clone, PartialEq)]
+pub struct InstalledVersions {
+    /// The framework package of the entry's target.
+    pub framework: InstalledVersion,
+    /// The libraries the entry's switched-on artefacts import.
+    pub libraries: Vec<InstalledVersion>,
+}
+
+/// One entry as `check_compatibility` reads it.
+#[derive(Debug)]
+pub struct CompatibilityEntry<'input> {
+    /// The entry's members.
+    pub settings: &'input TargetEntrySettings,
+    /// The generator the entry's `use` names.
+    pub target: &'input dyn Generator,
+    /// The versions installed; absent for a target the matrix records no framework for.
+    pub installed: Option<InstalledVersions>,
+}
+
+/// What `check_compatibility` reads: the entries with their installed versions.
 #[derive(Debug)]
 pub struct CompatibilityInput<'input> {
     /// The target entries, in order.
-    pub entries: &'input [TargetEntrySettings],
-    /// The resolved generator of each entry, by entry id.
-    pub targets: &'input IndexMap<String, &'static dyn Generator>,
-    /// The installed version of the framework package of each entry, by entry id.
-    pub installed_versions: &'input IndexMap<String, InstalledVersion>,
-    /// The installed version of each library the entry's switched-on artefacts import, by entry id.
-    pub installed_libraries: &'input IndexMap<String, Vec<InstalledVersion>>,
+    pub entries: &'input [CompatibilityEntry<'input>],
     /// The compatibility data.
     pub matrix: &'input CompatibilityMatrix,
     /// How an untested major is reported.
@@ -57,60 +79,32 @@ struct TestedSubject<'subject> {
 }
 
 /// Reads each entry's installed framework version from its output directory, where the generated
-/// code resolves its imports, then checks the app against `matrix`; `targets` is the resolved
-/// generator of each entry, by entry id.
+/// code resolves its imports, then checks the entries against `matrix`.
 ///
 /// # Errors
 ///
-/// [`CliConfigError::Internal`] when an entry has no resolved target, [`CliConfigError::Io`] when
-/// a `package.json` cannot be read.
+/// [`CliConfigError::Io`] when a `package.json` cannot be read, [`CliConfigError::Internal`] for a
+/// bug.
 pub fn check_app_compatibility(
-    config: &LoadedAppConfig,
-    targets: &IndexMap<String, &'static dyn Generator>,
+    targets: &[EntryTarget<'_>],
+    level: MatrixCheckLevel,
     matrix: &CompatibilityMatrix,
 ) -> Result<CompatibilityOutcome, CliConfigError> {
-    let configured = config.target_entries()?;
-    let mut installed_versions = IndexMap::new();
-    let mut installed_libraries = IndexMap::new();
+    let mut entries = Vec::with_capacity(targets.len());
     let mut problems = Vec::new();
 
-    for each in &configured {
-        let entry = &each.settings;
-        let Some(record) = matrix_record_of(entry, targets, matrix)? else {
-            continue;
+    for each in targets {
+        let entry = &each.entry.settings;
+        let installed = match matrix_record_of(each.target, matrix) {
+            Some(record) => read_installed_versions(each, record, &mut problems)?,
+            None => None,
         };
-        let where_ = entry_where(&entry.id, None);
 
-        match read_installed_version(
-            &each.root,
-            &record.framework.package,
-            InstalledPackageRole::Framework,
-            &where_,
-        )? {
-            InstalledVersionOutcome::Refused(problem) => problems.push(problem),
-            InstalledVersionOutcome::Installed(installed) => {
-                installed_versions.insert(entry.id.clone(), installed);
-            }
-        }
-
-        let mut libraries = Vec::new();
-
-        for library in libraries_in_use(entry, targets, record)? {
-            match read_installed_version(
-                &each.root,
-                &library.package,
-                InstalledPackageRole::Library,
-                &where_,
-            )? {
-                InstalledVersionOutcome::Refused(problem) => problems.push(problem),
-                InstalledVersionOutcome::Installed(installed) => libraries.push(installed),
-            }
-        }
-
-        installed_libraries.insert(entry.id.clone(), libraries);
-        problems.extend(own_validators_library_problems(
-            entry, targets, record, &each.root,
-        )?);
+        entries.push(CompatibilityEntry {
+            settings: entry,
+            target: each.target,
+            installed,
+        });
     }
 
     if !problems.is_empty() {
@@ -120,50 +114,97 @@ pub fn check_app_compatibility(
         });
     }
 
-    let entries: Vec<TargetEntrySettings> =
-        configured.into_iter().map(|each| each.settings).collect();
-
     Ok(check_compatibility(&CompatibilityInput {
         entries: &entries,
-        targets,
-        installed_versions: &installed_versions,
-        installed_libraries: &installed_libraries,
         matrix,
-        level: config.checks()?.matrix.unwrap_or_default(),
+        level,
     })?)
+}
+
+/// The versions installed for `each`, whose target the matrix records as `record`; the problems
+/// of what is missing go to `problems`.
+fn read_installed_versions(
+    each: &EntryTarget<'_>,
+    record: &TargetCompatibility,
+    problems: &mut Vec<CliProblem>,
+) -> Result<Option<InstalledVersions>, CliConfigError> {
+    let entry = &each.entry.settings;
+    let root = &each.entry.root;
+    let where_ = entry_where(&entry.id, None);
+    let framework = match read_installed_version(
+        root,
+        &record.framework.package,
+        InstalledPackageRole::Framework,
+        &where_,
+    )? {
+        InstalledVersionOutcome::Refused(problem) => {
+            problems.push(problem);
+
+            None
+        }
+        InstalledVersionOutcome::Installed(installed) => Some(installed),
+    };
+    let mut libraries = Vec::new();
+
+    for library in libraries_in_use(entry, each.target, record) {
+        match read_installed_version(
+            root,
+            &library.package,
+            InstalledPackageRole::Library,
+            &where_,
+        )? {
+            InstalledVersionOutcome::Refused(problem) => problems.push(problem),
+            InstalledVersionOutcome::Installed(installed) => libraries.push(installed),
+        }
+    }
+
+    problems.extend(own_validators_library_problems(
+        entry,
+        record,
+        each.target,
+        root,
+    )?);
+
+    Ok(framework.map(|framework| InstalledVersions {
+        framework,
+        libraries,
+    }))
 }
 
 /// Checks each entry's installed framework and library versions against the matrix.
 ///
 /// # Errors
 ///
-/// [`InternalError`] when an entry has no resolved target, no installed version or no library
+/// [`InternalError`] when an entry the matrix records has no installed version or no library
 /// record for an installed library.
 pub fn check_compatibility(
     input: &CompatibilityInput<'_>,
 ) -> Result<CompatibilityOutcome, InternalError> {
     let mut outcome = CompatibilityOutcome::default();
 
-    for entry in input.entries {
-        let Some(record) = matrix_record_of(entry, input.targets, input.matrix)? else {
+    for each in input.entries {
+        let entry = each.settings;
+        let Some(record) = matrix_record_of(each.target, input.matrix) else {
             outcome.problems.extend(unrecorded_target_problems(entry));
 
             continue;
         };
-        let installed = input.installed_versions.get(&entry.id).ok_or_else(|| {
+        let installed = each.installed.as_ref().ok_or_else(|| {
             InternalError::new(format!(
                 "no installed version of {} for the entry {}",
                 record.framework.package, entry.id
             ))
         })?;
 
-        check_entry(entry, record, installed, input.level, &mut outcome);
+        check_entry(
+            entry,
+            record,
+            &installed.framework,
+            input.level,
+            &mut outcome,
+        );
 
-        for library in input
-            .installed_libraries
-            .get(&entry.id)
-            .map_or(&[][..], Vec::as_slice)
-        {
+        for library in &installed.libraries {
             check_library(entry, record, library, input.level, &mut outcome)?;
         }
     }
@@ -417,32 +458,22 @@ fn unrecorded_target_problems(entry: &TargetEntrySettings) -> Vec<CliProblem> {
     )]
 }
 
-fn target_of<'targets>(
-    entry: &TargetEntrySettings,
-    targets: &'targets IndexMap<String, &'static dyn Generator>,
-) -> Result<&'targets dyn Generator, InternalError> {
-    targets
-        .get(&entry.id)
-        .copied()
-        .ok_or_else(|| InternalError::new(format!("no resolved target for the entry {}", entry.id)))
-}
-
 fn libraries_in_use<'matrix>(
     entry: &TargetEntrySettings,
-    targets: &IndexMap<String, &'static dyn Generator>,
+    target: &dyn Generator,
     record: &'matrix TargetCompatibility,
-) -> Result<Vec<&'matrix LibrarySupport>, CliConfigError> {
-    let target = target_of(entry, targets)?;
-    let ArtefactSelection::Selected(artefacts) = select_artefacts(entry, target)? else {
-        return Ok(Vec::new());
+) -> Vec<&'matrix LibrarySupport> {
+    // A refused selection is reported by the artefact check, which runs before this one.
+    let Ok(artefacts) = select_artefacts(entry, target) else {
+        return Vec::new();
     };
 
-    Ok(record
+    record
         .libraries
         .iter()
         .flatten()
         .filter(|library| artefacts.contains(&library.artefact) && is_selected(entry, library))
-        .collect())
+        .collect()
 }
 
 fn is_selected(entry: &TargetEntrySettings, library: &LibrarySupport) -> bool {
@@ -457,20 +488,19 @@ fn is_selected(entry: &TargetEntrySettings, library: &LibrarySupport) -> bool {
 
 fn own_validators_library_problems(
     entry: &TargetEntrySettings,
-    targets: &IndexMap<String, &'static dyn Generator>,
     record: &TargetCompatibility,
+    target: &dyn Generator,
     root: &Utf8Path,
 ) -> Result<Vec<CliProblem>, CliConfigError> {
     let Some(own_validator) = record.own_validators.first() else {
         return Ok(Vec::new());
     };
-    let target = target_of(entry, targets)?;
 
     if entry.link.contains_key("validators") {
         return Ok(Vec::new());
     }
 
-    let ArtefactSelection::Selected(artefacts) = select_artefacts(entry, target)? else {
+    let Ok(artefacts) = select_artefacts(entry, target) else {
         return Ok(Vec::new());
     };
 
@@ -519,21 +549,16 @@ fn known_ids(record: &TargetCompatibility) -> Vec<&str> {
 /// The record the matrix holds for the entry's target; none for a target the matrix does not
 /// record.
 fn matrix_record_of<'matrix>(
-    entry: &TargetEntrySettings,
-    targets: &IndexMap<String, &'static dyn Generator>,
+    target: &dyn Generator,
     matrix: &'matrix CompatibilityMatrix,
-) -> Result<Option<&'matrix TargetCompatibility>, InternalError> {
-    let target = target_of(entry, targets)?;
-    let Some(key) = target.metadata().compatibility else {
-        return Ok(None);
-    };
-    let package = match key {
+) -> Option<&'matrix TargetCompatibility> {
+    let package = match target.metadata().compatibility? {
         CompatibilityKey::Server(package) | CompatibilityKey::Client(package) => package,
     };
 
-    Ok(matrix
+    matrix
         .all_targets()
-        .find(|record| record.package == package))
+        .find(|record| record.package == package)
 }
 
 fn tested_majors_text(record: &TargetCompatibility) -> String {

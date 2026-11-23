@@ -4,8 +4,7 @@ use std::fs;
 
 use camino::{Utf8Path, Utf8PathBuf};
 use indexmap::IndexMap;
-use seampact_cli_config::CliProblem;
-use seampact_cli_config::unlocated_problem;
+use seampact_cli_config::{CliProblem, Problems, unlocated_problem};
 use seampact_diagnostics::InternalError;
 use seampact_ir::ContractIr;
 use seampact_ir_check::{IrCheckFailure, IrOpenReport, check_open_ir};
@@ -14,7 +13,7 @@ use seampact_json::{JsonValue, stringify_json};
 
 use crate::CliError;
 use crate::compile_command::IR_FILE_SUFFIX;
-use crate::step::Step;
+use crate::stop::Stop;
 
 /// How many schema problems a message lists.
 const LISTED_PROBLEM_LIMIT: usize = 5;
@@ -26,41 +25,35 @@ const AGAINST_FIX: &str = "Pass `--against` an IR file, or a directory of `<api>
 /// # Errors
 ///
 /// [`CliError::Io`] when a file cannot be read, [`CliError::Internal`] for a bug.
-pub(crate) fn read_baseline(
-    path: &Utf8Path,
-) -> Result<Step<IndexMap<String, ContractIr>>, CliError> {
-    let files = match baseline_files(path)? {
-        Step::Refused(problems) => return Ok(Step::Refused(problems)),
-        Step::Done(files) => files,
-    };
+pub(crate) fn read_baseline(path: &Utf8Path) -> Result<IndexMap<String, ContractIr>, Stop> {
+    let files = baseline_files(path)?;
     let mut irs = IndexMap::new();
     let mut problems: Vec<CliProblem> = Vec::new();
 
     for file in &files {
-        match read_ir_file(file)? {
-            Step::Refused(refused) => problems.extend(refused),
-            Step::Done(ir) => {
+        match read_ir_file(file) {
+            Ok(ir) => {
                 irs.insert(ir.api.id.as_str().to_owned(), ir);
             }
+            Err(Stop::Refused(refused)) => problems.extend(refused),
+            Err(failed @ Stop::Failed(_)) => return Err(failed),
         }
     }
 
-    if problems.is_empty() {
-        Ok(Step::Done(irs))
-    } else {
-        Ok(Step::Refused(problems))
-    }
+    Problems::refuse_any(problems)?;
+
+    Ok(irs)
 }
 
-fn baseline_files(path: &Utf8Path) -> Result<Step<Vec<Utf8PathBuf>>, CliError> {
+fn baseline_files(path: &Utf8Path) -> Result<Vec<Utf8PathBuf>, Stop> {
     let Some(metadata) = stat_if_present(path)? else {
-        return Ok(refused(format!(
+        return Err(refused(format!(
             "'{path}' does not exist, and `--against` reads a file or a directory (a bundle or a git ref is not read yet)."
         )));
     };
 
     if !metadata.is_dir() {
-        return Ok(Step::Done(vec![path.to_path_buf()]));
+        return Ok(vec![path.to_path_buf()]);
     }
 
     let entries = path
@@ -80,14 +73,12 @@ fn baseline_files(path: &Utf8Path) -> Result<Step<Vec<Utf8PathBuf>>, CliError> {
     let names = in_utf16_order(names);
 
     if names.is_empty() {
-        return Ok(refused(format!(
+        return Err(refused(format!(
             "The directory '{path}' holds no `*{IR_FILE_SUFFIX}` file."
         )));
     }
 
-    Ok(Step::Done(
-        names.iter().map(|name| path.join(name)).collect(),
-    ))
+    Ok(names.iter().map(|name| path.join(name)).collect())
 }
 
 /// `names` sorted as JavaScript's default sort orders them, by UTF-16 code unit.
@@ -97,23 +88,23 @@ fn in_utf16_order(mut names: Vec<String>) -> Vec<String> {
     names
 }
 
-fn read_ir_file(file: &Utf8Path) -> Result<Step<ContractIr>, CliError> {
+fn read_ir_file(file: &Utf8Path) -> Result<ContractIr, Stop> {
     let bytes = fs::read(file).map_err(|error| CliError::io(file, &error))?;
     let text = String::from_utf8_lossy(&bytes);
     let document: JsonValue = match serde_json::from_str(&text) {
         Ok(document) => document,
-        Err(error) => return Ok(refused(format!("'{file}' is not JSON ({error})."))),
+        Err(error) => return Err(refused(format!("'{file}' is not JSON ({error})."))),
     };
     let report = check_open_ir(&document).map_err(|error| InternalError::new(error.to_string()))?;
 
     if !report.valid {
-        return Ok(refused(invalid_message(file, &report)));
+        return Err(refused(invalid_message(file, &report)));
     }
 
     let ir = ContractIr::from_json_text(&stringify_json(&document))
         .map_err(|error| InternalError::new(error.to_string()))?;
 
-    Ok(Step::Done(ir))
+    Ok(ir)
 }
 
 /// What the open IR schema found wrong in `file`: its schema problems, the first few listed.
@@ -150,12 +141,8 @@ fn invalid_message(file: &Utf8Path, report: &IrOpenReport) -> String {
     format!("'{file}' is not valid under the IR JSON Schema: {detail}{rest}.")
 }
 
-fn refused<Value>(message: String) -> Step<Value> {
-    Step::Refused(vec![unlocated_problem(
-        "diff.against.invalid",
-        message,
-        AGAINST_FIX,
-    )])
+fn refused(message: String) -> Stop {
+    Stop::Refused(unlocated_problem("diff.against.invalid", message, AGAINST_FIX).into())
 }
 
 /// The metadata of `path`, `None` when nothing is there.

@@ -29,11 +29,11 @@ src/entry_links.rs#pairing_problems	packages/core/cli/src/commands/entry-links.t
 src/entry_links.rs#unconsumed_kind_problems	packages/core/cli/src/commands/entry-links.ts#unconsumedKindProblems
 src/entry_links.rs#unprovided_kind_problems	packages/core/cli/src/commands/entry-links.ts#unprovidedKindProblems
 src/entry_links.rs#api_pair_problems	packages/core/cli/src/commands/entry-links.ts#apiPairProblems
-src/planned_entry.rs#planned_entry	packages/core/cli/src/commands/app-plan.ts#plannedEntry
+-	packages/core/cli/src/commands/app-plan.ts#plannedEntry	skip: the app plan sorts the planned entries by link order
 src/planned_document.rs#compiled_ir	packages/core/cli/src/commands/app-plan.ts#compiledIr
 src/write_plan.rs#document_write_problems	packages/core/cli/src/commands/write-plan.ts#documentWriteProblems
 src/write_plan.rs#holds_written_documents	packages/core/cli/src/commands/write-plan.ts#holdsWrittenDocuments
-src/entry_generation.rs#entry_artefacts	packages/core/cli/src/commands/entry-generation.ts#entryArtefacts
+-	packages/core/cli/src/commands/entry-generation.ts#entryArtefacts	skip: the planned entry holds its artefacts
 src/drift_level.rs#strictest_level	packages/core/cli/src/commands/drift-level.ts#strictestLevel
 src/write_plan.rs#entry_write_problems	packages/core/cli/src/commands/write-plan.ts#entryWriteProblems
 src/entry_generation.rs#memoized_describe	packages/core/cli/src/commands/entry-generation.ts#memoizedDescribe

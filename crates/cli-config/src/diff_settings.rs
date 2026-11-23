@@ -5,8 +5,6 @@ use seampact_diff_table::{DiffExemption, DiffGateScope, DiffOptions};
 use seampact_json::JsonValue;
 use serde::Deserialize;
 
-use crate::read_app_config::LoadedAppConfig;
-
 /// The `gate` and `exempt` members of an app's `diff` settings; a member the config does not
 /// write is `None`.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
@@ -74,16 +72,5 @@ impl DiffSettings {
             gate: self.gate,
             exempt: self.exempt,
         }
-    }
-}
-
-impl LoadedAppConfig {
-    /// The app's `diff` settings; `None` when the app does not write the key.
-    ///
-    /// # Errors
-    ///
-    /// [`InternalError`] as [`DiffSettings::from_value`].
-    pub fn diff_settings(&self) -> Result<Option<DiffSettings>, InternalError> {
-        self.diff.as_ref().map(DiffSettings::from_value).transpose()
     }
 }

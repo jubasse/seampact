@@ -4,10 +4,9 @@
 use camino::Utf8Path;
 use indexmap::IndexMap;
 use seampact_cli_config::{
-    CheckLevel, CliIo, CliProblem, LoadedAppConfig, LoadedWorkspace, ReadRunConfigOutcome,
-    ResolvedSource, RunConfig, Step, read_run_config, unlocated_problem,
+    CliIo, CliProblem, LoadedAppConfig, LoadedWorkspace, Problems, ReadRunConfigOutcome,
+    ResolvedSource, RunConfig, read_run_config, unlocated_problem,
 };
-use seampact_diagnostics::InternalError;
 use seampact_target::{CompatibilityMatrix, Registry};
 use seampact_writer::HandEditPolicy;
 
@@ -17,6 +16,7 @@ use crate::drift_level::DEFAULT_DRIFT_CHECK_LEVEL;
 use crate::entry_generation::generate_entries;
 use crate::in_app::in_app;
 use crate::merged_documents::emit_merged_documents;
+use crate::stop::{Stop, gather};
 use crate::write_plan::plan_writes;
 use crate::{
     EmittedAppDocument, GenerateError, GeneratedOutput, LocalBundles, PlannedWrites, SweptDirectory,
@@ -68,16 +68,17 @@ struct RunOptions<'run> {
 ///
 /// # Errors
 ///
-/// [`GenerateError`] when a file cannot be read, a step is not ported yet, or for a bug.
+/// [`Stop::Refused`] with the problems of the config or the plan, [`Stop::Failed`] when a file
+/// cannot be read, a step is not ported yet, or for a bug.
 pub fn prepare_run(
     location: &RunConfigLocation<'_>,
     io: &mut dyn CliIo,
     policy: HandEditPolicy,
     inputs: &PlanInputs<'_>,
     registry: &Registry,
-) -> Result<Step<PlannedWrites>, GenerateError> {
+) -> Result<PlannedWrites, Stop> {
     let run = match read_run_config(location.file, location.display_name, location.text_file)? {
-        ReadRunConfigOutcome::Refused(problems) => return Ok(Step::Refused(problems)),
+        ReadRunConfigOutcome::Refused(problems) => return Err(Problems::new(problems).into()),
         ReadRunConfigOutcome::Read(run) => run,
     };
     let configs: Vec<&LoadedAppConfig> = match &run {
@@ -86,9 +87,7 @@ pub fn prepare_run(
     };
     let unknown_bundles = unknown_local_bundle_problems(&configs, *inputs);
 
-    if !unknown_bundles.is_empty() {
-        return Ok(Step::Refused(unknown_bundles));
-    }
+    Problems::refuse_any(unknown_bundles)?;
 
     let matrix = CompatibilityMatrix::parse()?;
     let mut options = RunOptions {
@@ -148,28 +147,31 @@ fn prepare_apps(
     apps: &[RunApp<'_>],
     workspace: Option<&LoadedWorkspace>,
     run: &mut RunOptions<'_>,
-) -> Result<Step<PlannedWrites>, GenerateError> {
-    let plans = match plan_each_app(apps, run)? {
-        Step::Refused(problems) => return Ok(Step::Refused(problems)),
-        Step::Done(plans) => plans,
-    };
+) -> Result<PlannedWrites, Stop> {
+    let plans = plan_each_app(apps, run)?;
     let mut outputs: Vec<GeneratedOutput> = Vec::new();
     let mut documents: Vec<EmittedAppDocument> = Vec::new();
     let mut problems: Vec<CliProblem> = Vec::new();
+    // A step can refuse with no problem to list: its diagnostics were already printed.
+    let mut refused = false;
 
     for PlannedApp { app, plan } in &plans {
-        let generated = generate_entries(plan, app.name)?;
-        let emitted = emit_app_documents(&plan.documents, openapi_level(app.config)?)?;
+        let generated = gather_scoped(generate_entries(plan, app.name), app, &mut problems)?;
+        let emitted = gather_scoped(
+            emit_app_documents(
+                &plan.documents,
+                app.config
+                    .checks
+                    .openapi
+                    .unwrap_or(DEFAULT_DRIFT_CHECK_LEVEL),
+            ),
+            app,
+            &mut problems,
+        )?;
 
-        match generated {
-            Step::Refused(refused) => problems.extend(scoped(app, refused)),
-            Step::Done(done) => outputs.extend(done),
-        }
-
-        match emitted {
-            Step::Refused(refused) => problems.extend(scoped(app, refused)),
-            Step::Done(done) => documents.extend(done),
-        }
+        refused |= generated.is_none() || emitted.is_none();
+        outputs.extend(generated.into_iter().flatten());
+        documents.extend(emitted.into_iter().flatten());
     }
 
     if let Some(workspace) = workspace {
@@ -178,24 +180,31 @@ fn prepare_apps(
             .filter_map(|planned| planned.app.name.map(|name| (name, &planned.plan)))
             .collect();
 
-        match emit_merged_documents(workspace, &named_plans)? {
-            Step::Refused(refused) => problems.extend(refused),
-            Step::Done(done) => documents.extend(done),
-        }
+        let merged = gather(
+            emit_merged_documents(workspace, &named_plans),
+            &mut problems,
+        )?;
+
+        refused |= merged.is_none();
+        documents.extend(merged.into_iter().flatten());
     }
 
-    if !problems.is_empty() {
-        return Ok(Step::Refused(problems));
+    if refused {
+        return Err(Problems::new(problems).into());
     }
 
-    let mut swept: Vec<SweptDirectory> = Vec::new();
-
-    for planned in &plans {
-        swept.push(SweptDirectory {
+    let mut swept: Vec<SweptDirectory> = plans
+        .iter()
+        .map(|planned| SweptDirectory {
             directory: planned.plan.default_document_directory.clone(),
-            level: openapi_level(planned.app.config)?,
-        });
-    }
+            level: planned
+                .app
+                .config
+                .checks
+                .openapi
+                .unwrap_or(DEFAULT_DRIFT_CHECK_LEVEL),
+        })
+        .collect();
 
     // A merged document dropped from the root's `openapi` leaves its file in the root's directory.
     if let Some(workspace) = workspace
@@ -211,47 +220,51 @@ fn prepare_apps(
         });
     }
 
-    let writes = plan_writes(&outputs, &documents, &swept, run.policy)?;
-
-    Ok(Step::Done(writes))
-}
-
-fn openapi_level(config: &LoadedAppConfig) -> Result<CheckLevel, InternalError> {
-    Ok(config
-        .checks()?
-        .openapi
-        .unwrap_or(DEFAULT_DRIFT_CHECK_LEVEL))
+    Ok(plan_writes(&outputs, &documents, &swept, run.policy)?)
 }
 
 fn plan_each_app<'run>(
     apps: &[RunApp<'run>],
     run: &mut RunOptions<'_>,
-) -> Result<Step<Vec<PlannedApp<'run>>>, GenerateError> {
+) -> Result<Vec<PlannedApp<'run>>, Stop> {
     let mut planned = Vec::new();
     let mut problems = Vec::new();
-    let mut any_refused = false;
+    let mut refused = false;
 
     for app in apps {
-        match plan_app(
+        let step = plan_app(
             app.config,
             &mut *run.io,
             run.inputs,
             run.registry,
             run.matrix,
-        )? {
-            Step::Refused(refused) => {
-                any_refused = true;
-                problems.extend(scoped(app, refused));
-            }
-            Step::Done(plan) => planned.push(PlannedApp { app: *app, plan }),
+        );
+
+        match gather_scoped(step, app, &mut problems)? {
+            Some(plan) => planned.push(PlannedApp { app: *app, plan }),
+            None => refused = true,
         }
     }
 
-    if any_refused {
-        Ok(Step::Refused(problems))
-    } else {
-        Ok(Step::Done(planned))
+    if refused {
+        return Err(Problems::new(problems).into());
     }
+
+    Ok(planned)
+}
+
+/// As [`gather`], with the refusals of an app of a root named after the app.
+fn gather_scoped<Value>(
+    step: Result<Value, Stop>,
+    app: &RunApp<'_>,
+    problems: &mut Vec<CliProblem>,
+) -> Result<Option<Value>, GenerateError> {
+    let mut refused = Vec::new();
+    let value = gather(step, &mut refused)?;
+
+    problems.extend(scoped(app, refused));
+
+    Ok(value)
 }
 
 fn scoped(app: &RunApp<'_>, problems: Vec<CliProblem>) -> Vec<CliProblem> {

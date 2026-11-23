@@ -14,8 +14,9 @@ mod support;
 use camino::Utf8PathBuf;
 use indexmap::IndexMap;
 use seampact_cli_config::{
-    AppConfigEntry, CompatibilityInput, CompatibilityOutcome, InstalledVersion, LoadedAppConfig,
-    MatrixCheckLevel, check_app_compatibility, check_compatibility,
+    AppChecksSettings, CompatibilityEntry, CompatibilityInput, CompatibilityOutcome,
+    ConfiguredTargetEntry, EntryTarget, InstalledVersion, InstalledVersions, LoadedAppConfig,
+    MatrixCheckLevel, WarningsSettings, check_app_compatibility, check_compatibility,
 };
 use seampact_json::JsonValue;
 use seampact_target::{
@@ -98,24 +99,24 @@ fn check(case: &Case) -> CompatibilityOutcome {
 
     let entry = entry_of(entry);
     let target = stub_target(BOUNDARY, case.recorded.then_some(SERVER_KEY));
-    let targets = IndexMap::from([("server".to_owned(), target)]);
     let version = case
         .installed_version
         .map_or_else(|| format!("{}.1.0", case.installed_major), str::to_owned);
-    let installed = IndexMap::from([(
-        "server".to_owned(),
-        InstalledVersion {
+    let installed = InstalledVersions {
+        framework: InstalledVersion {
             package_name: "web-framework".to_owned(),
             version,
             major: case.installed_major,
         },
-    )]);
+        libraries: Vec::new(),
+    };
 
     check_compatibility(&CompatibilityInput {
-        entries: &[entry],
-        targets: &targets,
-        installed_versions: &installed,
-        installed_libraries: &IndexMap::new(),
+        entries: &[CompatibilityEntry {
+            settings: &entry,
+            target,
+            installed: Some(installed),
+        }],
         matrix: &case.matrix,
         level: case.level,
     })
@@ -279,16 +280,39 @@ fn app_config(root: &Utf8PathBuf, entry: &Value, matrix_level: &str) -> LoadedAp
         out_dir: root.join("app"),
         allow_local: None,
         sources: IndexMap::new(),
-        entries: vec![AppConfigEntry {
-            entry: JsonValue::try_from(entry.clone()).expect("a JSON value"),
+        entries: vec![ConfiguredTargetEntry {
+            settings: entry_of(entry.clone()),
             root: root.join("app/src/generated"),
         }],
         openapi: None,
-        checks: Some(JsonValue::try_from(json!({ "matrix": matrix_level })).expect("a JSON value")),
+        checks: AppChecksSettings::from_value(Some(
+            &JsonValue::try_from(json!({ "matrix": matrix_level })).expect("a JSON value"),
+        ))
+        .expect("checks"),
         diff: None,
-        warnings: None,
+        warnings: WarningsSettings::default(),
         root_file: None,
+        written: JsonValue::Null,
     }
+}
+
+/// The check of the one entry of `config`, whose target is `target`, at the config's level.
+fn check_app_compatibility_of(
+    config: &LoadedAppConfig,
+    target: &'static dyn seampact_target::Generator,
+    record: TargetCompatibility,
+) -> CompatibilityOutcome {
+    let targets = [EntryTarget {
+        entry: &config.entries[0],
+        target,
+    }];
+
+    check_app_compatibility(
+        &targets,
+        config.checks.matrix.unwrap_or_default(),
+        &matrix_of(record),
+    )
+    .expect("an outcome")
 }
 
 fn app_check(
@@ -298,17 +322,9 @@ fn app_check(
     record: TargetCompatibility,
 ) -> CompatibilityOutcome {
     let (_directory, root) = write_tree(files);
-    let targets = IndexMap::from([(
-        "server".to_owned(),
-        stub_target(artefacts, Some(SERVER_KEY)),
-    )]);
+    let config = app_config(&root, entry, "error");
 
-    check_app_compatibility(
-        &app_config(&root, entry, "error"),
-        &targets,
-        &matrix_of(record),
-    )
-    .expect("an outcome")
+    check_app_compatibility_of(&config, stub_target(artefacts, Some(SERVER_KEY)), record)
 }
 
 fn framework_files<'text>(extra: &[(&'text str, &'text str)]) -> Vec<(&'text str, &'text str)> {
@@ -346,11 +362,12 @@ fn the_framework_is_read_from_the_output_directory_project() {
 
     config.entries[0].root = root.join("server/src/generated");
 
-    let targets = IndexMap::from([("server".to_owned(), stub_target(BOUNDARY, Some(SERVER_KEY)))]);
-
     assert_eq!(
-        check_app_compatibility(&config, &targets, &matrix_of(record(&[4, 5])))
-            .expect("an outcome"),
+        check_app_compatibility_of(
+            &config,
+            stub_target(BOUNDARY, Some(SERVER_KEY)),
+            record(&[4, 5])
+        ),
         CompatibilityOutcome::default()
     );
 }

@@ -1,13 +1,14 @@
 //! The import specifier style each provider entry is asked for by itself and by its consumers.
 
 use indexmap::IndexMap;
-use seampact_cli_config::{CliProblem, Step};
+use seampact_cli_config::{CliProblem, Problems};
 use seampact_target::ImportSpecifierStyle;
 
 use crate::GenerateError;
 use crate::entry_links::links_of;
 use crate::not_ported::not_ported_yet;
 use crate::planned_entry::PlannedEntry;
+use crate::stop::Stop;
 
 /// The entries that asked each provider for a style, in the order they asked.
 pub(crate) type AskedBy = IndexMap<String, IndexMap<ImportSpecifierStyle, Vec<String>>>;
@@ -17,14 +18,15 @@ pub(crate) type AskedBy = IndexMap<String, IndexMap<ImportSpecifierStyle, Vec<St
 ///
 /// # Errors
 ///
+/// [`Stop::Refused`] with one problem per entry the asks disagree on; [`Stop::Failed`] with
 /// [`GenerateError::NotPortedYet`] until `recordAsk` and `mixedStylesProblem` are ported.
 pub fn import_specifier_styles(
     planned: &[PlannedEntry],
-) -> Result<Step<IndexMap<String, ImportSpecifierStyle>>, GenerateError> {
+) -> Result<IndexMap<String, ImportSpecifierStyle>, Stop> {
     let mut asked_by = AskedBy::new();
 
     for each in planned {
-        let entry = &each.entry.settings;
+        let entry = &each.settings;
         let own = each.target.metadata().import_specifiers;
 
         if let Some(own) = own {
@@ -55,11 +57,9 @@ pub fn import_specifier_styles(
         }
     }
 
-    if problems.is_empty() {
-        Ok(Step::Done(styles))
-    } else {
-        Ok(Step::Refused(problems))
-    }
+    Problems::refuse_any(problems)?;
+
+    Ok(styles)
 }
 
 fn record_ask(

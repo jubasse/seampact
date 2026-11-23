@@ -10,7 +10,7 @@ use seampact_cli_config::{
     ReadWorkspaceOutcome, ResolvedSource, RunConfig, WorkspaceApp, read_app_config,
     read_root_config, read_run_config, read_workspace_configs,
 };
-use seampact_json::JsonValue;
+use seampact_json::{JsonValue, items_of, object_of};
 use seampact_oracle::{ROOT_TOKEN, RecordedAnswer, RecordedToolCall, SubjectAnswer};
 
 use super::cli_config_planning as planning;
@@ -246,21 +246,18 @@ fn loaded_app_config_json(config: &LoadedAppConfig) -> JsonValue {
     members.push(("sources", sources_json(&config.sources)));
     members.push((
         "entries",
-        array_of(&config.entries, |each| {
+        array_of(&entries_as_written(config), |(entry, root)| {
             JsonValue::object([
-                ("entry", each.entry.clone()),
-                ("root", JsonValue::text(each.root.as_str())),
+                ("entry", (*entry).clone()),
+                ("root", JsonValue::text(root.as_str())),
             ])
         }),
     ));
 
-    for (name, value) in [
-        ("openapi", &config.openapi),
-        ("checks", &config.checks),
-        ("diff", &config.diff),
-        ("warnings", &config.warnings),
-    ] {
-        if let Some(value) = value {
+    let written = object_of(Some(&config.written));
+
+    for name in ["openapi", "checks", "diff", "warnings"] {
+        if let Some(value) = written.and_then(|object| object.get(name)) {
             members.push((name, value.clone()));
         }
     }
@@ -274,6 +271,18 @@ fn loaded_app_config_json(config: &LoadedAppConfig) -> JsonValue {
     );
 
     JsonValue::object(members)
+}
+
+/// Each target entry as the config wrote it, with its output root; the answer repeats the
+/// TypeScript's raw `entries`, which no planning reads.
+fn entries_as_written(config: &LoadedAppConfig) -> Vec<(&JsonValue, &Utf8PathBuf)> {
+    let targets =
+        items_of(object_of(Some(&config.written)).and_then(|object| object.get("targets")));
+
+    targets
+        .iter()
+        .zip(config.entries.iter().map(|each| &each.root))
+        .collect()
 }
 
 fn sources_json(sources: &IndexMap<String, ResolvedSource>) -> JsonValue {

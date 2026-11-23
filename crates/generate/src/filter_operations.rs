@@ -1,7 +1,7 @@
 //! The operations an entry keeps of an api: its `document`, then `operations.include` and
 //! `operations.exclude`.
 
-use seampact_cli_config::{CliProblem, OperationsFilter, unlocated_problem};
+use seampact_cli_config::{CliProblem, OperationsFilter, Problems, unlocated_problem};
 use seampact_ir::{ContractIr, InternalPolicy, Operation};
 
 const NO_DOCUMENT_DECLARED: &str = "none declared";
@@ -14,15 +14,6 @@ pub struct OperationSelection<'selection> {
     pub document: Option<&'selection str>,
     /// The operation ids and tags kept or dropped.
     pub operations: Option<&'selection OperationsFilter>,
-}
-
-/// The IR the selection leaves, or why it names something the api does not have.
-#[derive(Debug, Clone, PartialEq)]
-pub enum FilterOutcome {
-    /// A copy of the IR holding only the kept operations.
-    Filtered(Box<ContractIr>),
-    /// The problems, none located.
-    Refused(Vec<CliProblem>),
 }
 
 fn matches(operation: &Operation, item: &str) -> bool {
@@ -102,14 +93,17 @@ fn unknown_selection_problems(
     problems
 }
 
-/// The IR with only the operations `selection` keeps, or the problems of what it names.
-#[must_use]
-pub fn filter_operations(ir: &ContractIr, selection: &OperationSelection<'_>) -> FilterOutcome {
-    let problems = unknown_selection_problems(ir, selection);
-
-    if !problems.is_empty() {
-        return FilterOutcome::Refused(problems);
-    }
+/// The IR with only the operations `selection` keeps.
+///
+/// # Errors
+///
+/// [`Problems`], none located, for a document, an operation id or a tag the api does not have,
+/// and for an include item the document leaves nothing of.
+pub fn filter_operations(
+    ir: &ContractIr,
+    selection: &OperationSelection<'_>,
+) -> Result<ContractIr, Problems> {
+    Problems::refuse_any(unknown_selection_problems(ir, selection))?;
 
     let in_document: Vec<&Operation> = ir
         .operations
@@ -125,30 +119,23 @@ pub fn filter_operations(ir: &ContractIr, selection: &OperationSelection<'_>) ->
         .and_then(|filter| filter.exclude.as_deref())
         .unwrap_or_default();
 
-    let removed: Vec<&String> = include
+    let removed_problems: Vec<CliProblem> = include
         .iter()
         .filter(|item| !in_document.iter().any(|operation| matches(operation, item)))
+        .map(|item| {
+            unlocated_problem(
+                "filter.include.removed",
+                format!(
+                    "The api '{}' keeps no operation for the include item '{item}' once the document '{}' has run.",
+                    ir.api.id,
+                    selection.document.unwrap_or(NO_DOCUMENT_SELECTED)
+                ),
+                "Remove the item from `operations.include`, or choose a document that keeps it.",
+            )
+        })
         .collect();
 
-    if !removed.is_empty() {
-        let document = selection.document.unwrap_or(NO_DOCUMENT_SELECTED);
-
-        return FilterOutcome::Refused(
-            removed
-                .into_iter()
-                .map(|item| {
-                    unlocated_problem(
-                        "filter.include.removed",
-                        format!(
-                            "The api '{}' keeps no operation for the include item '{item}' once the document '{document}' has run.",
-                            ir.api.id
-                        ),
-                        "Remove the item from `operations.include`, or choose a document that keeps it.",
-                    )
-                })
-                .collect(),
-        );
-    }
+    Problems::refuse_any(removed_problems)?;
 
     let kept: Vec<Operation> = in_document
         .into_iter()
@@ -158,9 +145,66 @@ pub fn filter_operations(ir: &ContractIr, selection: &OperationSelection<'_>) ->
         })
         .cloned()
         .collect();
-    let mut filtered = ir.clone();
 
-    filtered.operations = kept;
+    Ok(with_operations(ir, kept))
+}
 
-    FilterOutcome::Filtered(Box::new(filtered))
+/// A copy of `ir` that holds `operations` instead of its own, so the dropped ones are never cloned.
+pub(crate) fn with_operations(ir: &ContractIr, operations: Vec<Operation>) -> ContractIr {
+    // Listing every member, with no `..`, makes a member added to the IR break this copy.
+    let ContractIr {
+        ir_version,
+        ir_revision,
+        kinds,
+        features,
+        api,
+        packs,
+        conventions,
+        formats,
+        pagings,
+        schemas,
+        scalars,
+        enums,
+        errors,
+        natures,
+        schemes,
+        headers,
+        identities,
+        rights,
+        rules,
+        scopes,
+        buckets,
+        services,
+        extension_keys,
+        lint,
+        operations: _,
+    } = ir;
+
+    ContractIr {
+        ir_version: *ir_version,
+        ir_revision: *ir_revision,
+        kinds: kinds.clone(),
+        features: features.clone(),
+        api: api.clone(),
+        packs: packs.clone(),
+        conventions: conventions.clone(),
+        formats: formats.clone(),
+        pagings: pagings.clone(),
+        schemas: schemas.clone(),
+        scalars: scalars.clone(),
+        enums: enums.clone(),
+        errors: errors.clone(),
+        natures: natures.clone(),
+        schemes: schemes.clone(),
+        headers: headers.clone(),
+        identities: identities.clone(),
+        rights: rights.clone(),
+        rules: rules.clone(),
+        scopes: scopes.clone(),
+        buckets: buckets.clone(),
+        services: services.clone(),
+        extension_keys: extension_keys.clone(),
+        lint: lint.clone(),
+        operations,
+    }
 }

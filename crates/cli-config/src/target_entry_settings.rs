@@ -9,7 +9,6 @@ use serde::Deserialize;
 use crate::artefact_switch::ArtefactSwitches;
 use crate::framework_route_entry::FrameworkRouteEntry;
 use crate::operations_filter::OperationsFilter;
-use crate::read_app_config::LoadedAppConfig;
 
 /// Whether a server target switches its framework's own OpenAPI document off.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize)]
@@ -75,25 +74,6 @@ pub struct ConfiguredTargetEntry {
     pub settings: TargetEntrySettings,
     /// The absolute output directory.
     pub root: Utf8PathBuf,
-}
-
-impl LoadedAppConfig {
-    /// The target entries in order, each read into its typed members.
-    ///
-    /// # Errors
-    ///
-    /// [`InternalError`] when an entry that passed the config schema does not read.
-    pub fn target_entries(&self) -> Result<Vec<ConfiguredTargetEntry>, InternalError> {
-        self.entries
-            .iter()
-            .map(|each| {
-                Ok(ConfiguredTargetEntry {
-                    settings: TargetEntrySettings::from_json(&each.entry)?,
-                    root: each.root.clone(),
-                })
-            })
-            .collect()
-    }
 }
 
 impl TargetEntrySettings {

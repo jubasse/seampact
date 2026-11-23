@@ -20,7 +20,7 @@ use seampact_generate::LocalBundles;
 use seampact_generate::source_entry_file;
 use seampact_generate::source_reader;
 use seampact_generate::{CompiledApi, compile_sources};
-use seampact_generate::{UsedSources, add_qualify_fix, entry_api_refs, used_sources};
+use seampact_generate::{add_qualify_fix, entry_api_refs, used_sources};
 use seampact_paths::RelativeOutputPath;
 
 use crate::config_location::ConfigLocation;
@@ -68,17 +68,17 @@ pub(crate) fn compile_command(
         ReadAppConfigOutcome::Refused(problems) => return Ok(refuse(io, &problems)),
         ReadAppConfigOutcome::Read(config) => config,
     };
-    let extra_refs = open_api_api_names(&config)?;
-    let used_names = match used_sources(&config, &extra_refs)? {
-        UsedSources::Refused(problems) => return Ok(refuse(io, &problems)),
-        UsedSources::Used(names) => names,
+    let extra_refs = open_api_api_names(&config);
+    let used_names = match used_sources(&config, &extra_refs) {
+        Err(problems) => return Ok(refuse(io, problems.as_slice())),
+        Ok(names) => names,
     };
     let compiled = compile_sources(&config, &used_names, &LocalBundles::new(), io)?;
 
     if compiled.failed {
         let mut refs = entry_api_refs(&config);
 
-        refs.extend(extra_refs.iter().map(String::as_str));
+        refs.extend(extra_refs);
 
         return Ok(refuse(io, &add_qualify_fix(compiled.problems, &refs)));
     }

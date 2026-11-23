@@ -4,10 +4,11 @@
 use camino::{Utf8Path, Utf8PathBuf};
 use indexmap::IndexMap;
 use seampact_cli_config::{
-    ApiDocuments, AppDocumentPlan, ArtefactSelection, LoadedAppConfig, LoadedMergedDocument,
-    LoadedRootConfig, LoadedWorkspace, LoadedWorkspaceApp, MergedContribution, MergedDocumentPlan,
-    OperationsFilter, PlannedAppDocument, PlannedMergedDocument, ResolvedSource,
-    TargetEntrySettings, WorkspaceApp, bundle_source_of, plan_app_documents, plan_merged_documents,
+    ApiDocuments, AppChecksSettings, ConfiguredTargetEntry, DiffSettings, LoadedAppConfig,
+    LoadedMergedDocument, LoadedRootConfig, LoadedWorkspace, LoadedWorkspaceApp, MergedApp,
+    MergedContribution, MergedPlanError, OpenApiSettings, OperationsFilter, PlannedAppDocument,
+    PlannedMergedDocument, Problems, ResolvedSource, TargetEntrySettings, WarningsSettings,
+    WorkspaceApp, bundle_source_of, directory_of, plan_app_documents, plan_merged_documents,
     select_artefacts,
 };
 use seampact_json::{JsonObject, JsonValue, items_of, object_of, text_of};
@@ -17,7 +18,6 @@ use seampact_target::TargetRole;
 use super::cli_config::{answer, malformed_call, refused_json};
 use crate::oracle::generator_registry::oracle_registry;
 use crate::oracle::json::array_of;
-use crate::oracle::stub_answer::failed_answer;
 
 /// The recorded `selectArtefacts(entry, target)`: the target is found by the package name its
 /// recorded metadata carries.
@@ -44,15 +44,14 @@ pub(super) fn select_artefacts_answer(call: &RecordedToolCall) -> SubjectAnswer<
     };
 
     match select_artefacts(&entry, generator) {
-        Ok(ArtefactSelection::Selected(artefacts)) => answer(JsonValue::object([
+        Ok(artefacts) => answer(JsonValue::object([
             ("status", JsonValue::text("selected")),
             (
                 "artefacts",
                 JsonValue::Array(artefacts.iter().map(JsonValue::text).collect()),
             ),
         ])),
-        Ok(ArtefactSelection::Refused(problems)) => answer(refused_json(&problems)),
-        Err(error) => failed_answer(&error),
+        Err(problems) => answer(refused_json(problems.as_slice())),
     }
 }
 
@@ -78,10 +77,20 @@ pub(super) fn plan_app_documents_answer(
         Err(message) => return internal(message),
     };
 
-    match plan_app_documents(&config, &roles, &apis) {
-        Ok(plan) => answer(app_plan_json(&plan)),
-        Err(error) => failed_answer(&error),
-    }
+    // The roles are read only for the default documents, as the TypeScript reads them.
+    let server_entries = match config.openapi {
+        Some(_) => Some(Vec::new()),
+        None => server_entries_of(&config, &roles),
+    };
+    let Some(server_entries) = server_entries else {
+        return internal("a recorded entry has no role".to_owned());
+    };
+
+    answer(app_plan_json(&plan_app_documents(
+        &config,
+        &server_entries,
+        &apis,
+    )))
 }
 
 /// The recorded `planMergedDocuments(workspace, rolesByApp)`.
@@ -106,10 +115,52 @@ pub(super) fn plan_merged_documents_answer(
         Err(message) => return internal(message),
     };
 
-    match plan_merged_documents(&workspace, &roles_by_app) {
-        Ok(plan) => answer(merged_plan_json(&plan)),
-        Err(error) => failed_answer(&error),
+    let mut apps = Vec::new();
+
+    for each in &workspace.apps {
+        let Some(server_entries) = roles_by_app
+            .get(&each.app.name)
+            .or_else(|| each.config.entries.is_empty().then_some(&NO_ROLES))
+            .and_then(|roles| server_entries_of(&each.config, roles))
+        else {
+            return internal(format!(
+                "no recorded entry roles for the app {}",
+                each.app.name
+            ));
+        };
+
+        apps.push(MergedApp {
+            name: each.app.name.as_str(),
+            config: &each.config,
+            server_entries,
+        });
     }
+
+    match plan_merged_documents(&workspace.root, &apps) {
+        Ok(plan) => answer(merged_plan_json(&plan)),
+        Err(MergedPlanError::Refused(problems)) => answer(refused_json(problems.as_slice())),
+        Err(MergedPlanError::Internal(error)) => internal(error.to_string()),
+    }
+}
+
+/// The recorded roles of an app that has no entry.
+static NO_ROLES: std::sync::LazyLock<IndexMap<String, TargetRole>> =
+    std::sync::LazyLock::new(IndexMap::new);
+
+/// The entries of `config` whose recorded role is `server`; none when an entry has no role.
+fn server_entries_of<'config>(
+    config: &'config LoadedAppConfig,
+    roles: &IndexMap<String, TargetRole>,
+) -> Option<Vec<&'config TargetEntrySettings>> {
+    let mut server_entries = Vec::new();
+
+    for each in &config.entries {
+        if *roles.get(&each.settings.id)? == TargetRole::Server {
+            server_entries.push(&each.settings);
+        }
+    }
+
+    Some(server_entries)
 }
 
 fn internal(message: String) -> SubjectAnswer<RecordedAnswer> {
@@ -213,20 +264,24 @@ fn sources_of(value: Option<&JsonValue>) -> Result<IndexMap<String, ResolvedSour
 
 fn app_config_of(value: &JsonValue) -> Result<LoadedAppConfig, String> {
     let object = members_of(value)?;
+    let file = path_member(object, "file")?;
+    let directory = directory_of(&file);
     let entries = items_of(object.get("entries"))
         .iter()
         .map(|each| {
             let each = members_of(each)?;
 
-            Ok(seampact_cli_config::AppConfigEntry {
-                entry: member_value(each, "entry")?,
+            Ok(ConfiguredTargetEntry {
+                settings: TargetEntrySettings::from_json(&member_value(each, "entry")?)
+                    .map_err(|error| error.to_string())?,
                 root: path_member(each, "root")?,
             })
         })
         .collect::<Result<Vec<_>, String>>()?;
+    let internal_text = |error: seampact_diagnostics::InternalError| error.to_string();
 
     Ok(LoadedAppConfig {
-        file: path_member(object, "file")?,
+        file,
         out_dir: path_member(object, "outDir")?,
         allow_local: match object.get("allowLocal") {
             Some(JsonValue::Bool(flag)) => Some(*flag),
@@ -234,11 +289,20 @@ fn app_config_of(value: &JsonValue) -> Result<LoadedAppConfig, String> {
         },
         sources: sources_of(object.get("sources"))?,
         entries,
-        openapi: object.get("openapi").cloned(),
-        checks: object.get("checks").cloned(),
-        diff: object.get("diff").cloned(),
-        warnings: object.get("warnings").cloned(),
+        openapi: object
+            .get("openapi")
+            .map(|openapi| OpenApiSettings::from_value(openapi, &directory))
+            .transpose()
+            .map_err(internal_text)?,
+        checks: AppChecksSettings::from_value(object.get("checks")).map_err(internal_text)?,
+        diff: object
+            .get("diff")
+            .map(DiffSettings::from_value)
+            .transpose()
+            .map_err(internal_text)?,
+        warnings: WarningsSettings::from_value(object.get("warnings")).map_err(internal_text)?,
         root_file: object.text_member("rootFile").map(Utf8PathBuf::from),
+        written: JsonValue::Null,
     })
 }
 
@@ -337,13 +401,13 @@ fn app_document_json(document: &PlannedAppDocument) -> JsonValue {
     JsonValue::object(members)
 }
 
-fn app_plan_json(plan: &AppDocumentPlan) -> JsonValue {
+fn app_plan_json(plan: &Result<Vec<PlannedAppDocument>, Problems>) -> JsonValue {
     match plan {
-        AppDocumentPlan::Planned(documents) => JsonValue::object([
+        Ok(documents) => JsonValue::object([
             ("status", JsonValue::text("planned")),
             ("documents", array_of(documents, app_document_json)),
         ]),
-        AppDocumentPlan::Refused(problems) => refused_json(problems),
+        Err(problems) => refused_json(problems.as_slice()),
     }
 }
 
@@ -381,12 +445,9 @@ fn merged_document_json(document: &PlannedMergedDocument) -> JsonValue {
     ])
 }
 
-fn merged_plan_json(plan: &MergedDocumentPlan) -> JsonValue {
-    match plan {
-        MergedDocumentPlan::Planned(documents) => JsonValue::object([
-            ("status", JsonValue::text("planned")),
-            ("documents", array_of(documents, merged_document_json)),
-        ]),
-        MergedDocumentPlan::Refused(problems) => refused_json(problems),
-    }
+fn merged_plan_json(documents: &[PlannedMergedDocument]) -> JsonValue {
+    JsonValue::object([
+        ("status", JsonValue::text("planned")),
+        ("documents", array_of(documents, merged_document_json)),
+    ])
 }
