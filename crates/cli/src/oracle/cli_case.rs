@@ -9,8 +9,10 @@ use seampact_oracle::{
     CASE_TODAY, CliCase, CliCommand, GIT_SOURCE_REPOSITORY, ROOT_TOKEN, SubjectAnswer, Transcript,
 };
 
+use crate::oracle::generator_registry::oracle_registry;
 use crate::oracle::stub_answer::{StubError, failed_answer};
-use crate::{CliError, CliIo, run_command};
+use crate::run_cli::run_command_with;
+use crate::{CliError, CliIo};
 
 impl StubError for CliError {
     fn is_not_ported(&self) -> bool {
@@ -92,7 +94,7 @@ pub(crate) fn cli_answer(
         .map(|argument| OsString::from(argument.replace(ROOT_TOKEN, root.as_str())))
         .collect();
 
-    let exit = match run_command(&argv, &mut io) {
+    let exit = match run_command_with(&argv, &mut io, &oracle_registry()) {
         Ok(exit) => exit,
         Err(error) => return failed_answer(&error),
     };

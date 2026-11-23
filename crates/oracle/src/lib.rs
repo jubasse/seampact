@@ -11,6 +11,7 @@ mod differences;
 mod error;
 mod expected;
 mod fixtures;
+mod generated_compare;
 mod glob;
 mod matcher;
 mod raw_text;
@@ -44,6 +45,10 @@ pub use expected::{
 pub use fixtures::{
     EXPECTED_DIRECTORY, ExcludedFixtures, FIXTURES_DIRECTORY, Fixture, discover_fixtures,
     read_excluded,
+};
+pub use generated_compare::{
+    GENERATED_MANIFEST_FILE, generated_file_mismatch, generated_file_pointer,
+    manifest_v2_mismatches,
 };
 pub use glob::{FixtureGlob, entry_glob_matches};
 pub use matcher::{ComparedFile, DifferenceLedger, MatchOutcome, entry_matches};

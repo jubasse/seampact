@@ -1,8 +1,9 @@
 //! Matching mismatches against the entries of `differences.yaml`, and the entries left stale.
 
 use crate::compare::{Mismatch, MismatchKind, pointer_segments};
+use crate::generated_compare::generated_file_pointer;
 use crate::glob::entry_glob_matches;
-use crate::{Difference, DifferenceChange, OutputFile};
+use crate::{Difference, DifferenceChange, OutputFile, OutputKind};
 
 /// The pointer segment of an entry that matches any one segment.
 const ANY_SEGMENT: &str = "*";
@@ -122,9 +123,7 @@ pub fn entry_matches(
     compared: ComparedFile<'_>,
     mismatch: &Mismatch,
 ) -> bool {
-    let (Some(entry_pointer), Some(mismatch_pointer)) =
-        (&difference.applies.pointer, &mismatch.pointer)
-    else {
+    let Some(mismatch_pointer) = &mismatch.pointer else {
         return false;
     };
 
@@ -132,11 +131,19 @@ pub fn entry_matches(
         return false;
     }
 
+    let applies = &difference.applies;
+    let location_matches = match (&applies.path, &applies.pointer) {
+        (Some(path), _) if applies.output == OutputKind::Generated => {
+            *mismatch_pointer == generated_file_pointer(path)
+        }
+        (_, Some(entry_pointer)) => pointer_matches(entry_pointer, mismatch_pointer),
+        _ => false,
+    };
     let from_matches = difference.from.is_none() || difference.from == mismatch.expected;
     let to_matches = difference.to.is_none() || difference.to == mismatch.actual;
 
     is_in_scope(difference, compared)
-        && pointer_matches(entry_pointer, mismatch_pointer)
+        && location_matches
         && change_matches(difference.change, mismatch)
         && from_matches
         && to_matches
@@ -175,7 +182,8 @@ fn change_matches(change: DifferenceChange, mismatch: &Mismatch) -> bool {
     };
 
     match change {
-        DifferenceChange::Value => mismatch.kind == MismatchKind::Value,
+        // A generated file's mismatch is its differing tokens, a value; its output scopes it.
+        DifferenceChange::Value | DifferenceChange::Format => mismatch.kind == MismatchKind::Value,
         DifferenceChange::Added => mismatch.kind == MismatchKind::Added,
         DifferenceChange::Removed => mismatch.kind == MismatchKind::Removed,
         DifferenceChange::Message => {
@@ -185,6 +193,5 @@ fn change_matches(change: DifferenceChange, mismatch: &Mismatch) -> bool {
             mismatch.kind == MismatchKind::Value && last_segment_is(&CODE_SEGMENTS)
         }
         DifferenceChange::MemberOrder => mismatch.kind == MismatchKind::MemberOrder,
-        DifferenceChange::Format => false,
     }
 }

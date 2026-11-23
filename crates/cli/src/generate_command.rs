@@ -1,5 +1,6 @@
 //! `seampact generate`: writes every entry's files and documents of the run.
 
+use seampact_target::Registry;
 use seampact_writer::HandEditPolicy;
 
 use crate::not_ported::not_ported_yet;
@@ -16,6 +17,7 @@ pub(crate) struct GenerateOptions {
 /// Plans the run, generates every entry and document, writes them and reports.
 pub(crate) fn generate_command(
     _run: &PluginRun,
+    _registry: &Registry,
     _io: &mut dyn CliIo,
     _options: GenerateOptions,
 ) -> Result<i32, CliError> {

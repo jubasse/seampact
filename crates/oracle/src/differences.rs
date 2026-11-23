@@ -56,7 +56,7 @@ pub struct Applies {
     pub half: Option<String>,
     /// A JSON Pointer, a segment `*` matching any one segment; every output but generated.
     pub pointer: Option<String>,
-    /// A glob over a generated file's path.
+    /// The literal path of a generated file, relative to the run root; generated output only.
     pub path: Option<String>,
 }
 

@@ -63,3 +63,15 @@ fn every_first_party_provider_describes_each_kind_it_provides() {
         }
     }
 }
+
+#[test]
+fn the_build_registry_resolves_no_probe() {
+    for probe in PROBES {
+        let probe_id = probe.metadata().id.as_str();
+
+        assert!(
+            registry().lookup(probe_id).is_err(),
+            "the build registry resolves the probe {probe_id}"
+        );
+    }
+}

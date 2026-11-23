@@ -6,6 +6,7 @@ use std::ffi::OsString;
 use camino::Utf8PathBuf;
 use seampact_bundle::BundleNamedVersionOverride;
 use seampact_cli_config::{CliProblem, resolved_path};
+use seampact_target::Registry;
 use seampact_writer::HandEditPolicy;
 
 use crate::bundle_command::{BundleCommandOptions, BundleOutputFlag, bundle_command};
@@ -40,6 +41,15 @@ const HELP_ARGUMENTS: [&str; 3] = ["help", "--help", "-h"];
 ///
 /// [`CliError::NotPortedYet`] when the command reaches a stub, [`CliError::Internal`] on a bug.
 pub fn run_command(argv: &[OsString], io: &mut dyn CliIo) -> Result<i32, CliError> {
+    run_command_with(argv, io, &seampact_generators::registry())
+}
+
+/// [`run_command`] with the generators of `registry`, as the oracle adds the probes.
+pub(crate) fn run_command_with(
+    argv: &[OsString],
+    io: &mut dyn CliIo,
+    registry: &Registry,
+) -> Result<i32, CliError> {
     let arguments: Vec<String> = argv
         .iter()
         .map(|argument| argument.to_string_lossy().into_owned())
@@ -78,8 +88,8 @@ pub fn run_command(argv: &[OsString], io: &mut dyn CliIo) -> Result<i32, CliErro
     match command {
         Command::Init => run_init(rest, io),
         Command::Compile => run_compile(rest, io),
-        Command::Generate => run_generate(rest, io),
-        Command::Check => run_check(rest, io),
+        Command::Generate => run_generate(rest, registry, io),
+        Command::Check => run_check(rest, registry, io),
         Command::Lint => run_lint(rest, io),
         Command::Diff => run_diff(rest, io),
         Command::Explain => run_explain(rest, io),
@@ -352,7 +362,7 @@ pub(crate) struct PluginRun {
     pub(crate) local_bundles: LocalBundles,
 }
 
-fn run_generate(args: &[String], io: &mut dyn CliIo) -> Result<i32, CliError> {
+fn run_generate(args: &[String], registry: &Registry, io: &mut dyn CliIo) -> Result<i32, CliError> {
     let mut options = PLUGIN_RUN_OPTIONS.to_vec();
 
     options.push(flag_option("force"));
@@ -371,10 +381,10 @@ fn run_generate(args: &[String], io: &mut dyn CliIo) -> Result<i32, CliError> {
         HandEditPolicy::Refuse
     };
 
-    generate_command(&run, io, GenerateOptions { on_hand_edit })
+    generate_command(&run, registry, io, GenerateOptions { on_hand_edit })
 }
 
-fn run_check(args: &[String], io: &mut dyn CliIo) -> Result<i32, CliError> {
+fn run_check(args: &[String], registry: &Registry, io: &mut dyn CliIo) -> Result<i32, CliError> {
     let parsed = match parse_command_args(args, &PLUGIN_RUN_OPTIONS, Positionals::Refused) {
         Ok(parsed) => parsed,
         Err(error) => return Ok(usage_error(io, error.message())),
@@ -384,7 +394,7 @@ fn run_check(args: &[String], io: &mut dyn CliIo) -> Result<i32, CliError> {
         Err(message) => return Ok(usage_error(io, &message)),
     };
 
-    check_command(&run, io)
+    check_command(&run, registry, io)
 }
 
 /// The run `generate` or `check` reads, or the usage message refusing its flags.

@@ -148,6 +148,10 @@ pub trait ToolSubject {
         root: &Utf8Path,
     ) -> SubjectAnswer<Transcript>;
 
+    /// The short id of the target a TypeScript package name names (its `legacy_names`), `None`
+    /// when no generator of the subject's registry has it.
+    fn target_short_id(&self, package_name: &str) -> Option<String>;
+
     /// The rule ids each tool crate declares.
     fn rule_id_registry(&self) -> RuleIdRegistry;
 }

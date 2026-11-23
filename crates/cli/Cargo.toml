@@ -13,7 +13,7 @@ path = "src/main.rs"
 
 [features]
 # The oracle's tool subject, `seampact_cli::oracle`, for xtask only.
-oracle = ["dep:seampact-oracle"]
+oracle = ["dep:seampact-oracle", "dep:seampact-gen-probe"]
 
 [dependencies]
 anyhow.workspace = true
@@ -30,7 +30,9 @@ seampact-diff.workspace = true
 seampact-diff-table.workspace = true
 seampact-editor-schemas.workspace = true
 seampact-finalize.workspace = true
+seampact-gen-probe = { workspace = true, optional = true }
 seampact-generate.workspace = true
+seampact-generators.workspace = true
 seampact-ir.workspace = true
 seampact-ir-check.workspace = true
 seampact-js.workspace = true

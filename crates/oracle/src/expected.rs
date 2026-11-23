@@ -79,7 +79,7 @@ pub enum OutputKind {
     CliStderr,
     /// The `written` and `removed` files of `cli/transcript.json`.
     CliFiles,
-    /// Generated files, not compared yet.
+    /// Generated files, compared as token streams with the header normalised.
     Generated,
 }
 
