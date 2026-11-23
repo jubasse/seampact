@@ -3,10 +3,10 @@ src/cli_problem.rs#printable_field	packages/core/cli/src/cli-problem.ts#printabl
 src/cli_io.rs#print_problems	packages/core/cli/src/cli-io.ts#printProblems
 src/cli_io.rs#print_warnings	packages/core/cli/src/cli-io.ts#printWarnings
 src/cli_problem.rs#entry_where	packages/core/cli/src/cli-problem.ts#entryWhere
-src/cli_problem.rs#names_pointer	packages/core/cli/src/cli-problem.ts#namesPointer
-src/cli_problem.rs#in_app	packages/core/cli/src/cli-problem.ts#inApp
+-	packages/core/cli/src/cli-problem.ts#namesPointer	merged: ../generate/src/refusal_problem.rs#names_pointer
+-	packages/core/cli/src/cli-problem.ts#inApp	merged: ../generate/src/in_app.rs#in_app
 src/cli_problem.rs#app_entry_where	packages/core/cli/src/cli-problem.ts#appEntryWhere
-src/cli_problem.rs#problem_from_refusal	packages/core/cli/src/cli-problem.ts#problemFromRefusal
+-	packages/core/cli/src/cli-problem.ts#problemFromRefusal	merged: ../generate/src/refusal_problem.rs#problem_from_refusal
 src/run_cli.rs#run_command	packages/core/cli/src/run-cli.ts#runCli
 src/run_cli.rs#run_init	packages/core/cli/src/run-cli.ts#runInit
 src/run_cli.rs#run_compile	packages/core/cli/src/run-cli.ts#runCompile
@@ -134,11 +134,11 @@ src/explain_values.rs#without_provenance	packages/core/cli/src/commands/explain-
 src/explain_origin.rs#provenance	packages/core/cli/src/commands/explain-view.ts#provenance
 src/explain_origin.rs#origin_text	packages/core/cli/src/commands/explain-view.ts#originText
 src/explain_flow.rs#flow	packages/core/cli/src/commands/explain-view.ts#flow
-src/contract_position.rs#contract_position	packages/core/cli/src/commands/contract-position.ts#contractPosition
-src/contract_position.rs#nodes_along	packages/core/cli/src/commands/contract-position.ts#nodesAlong
-src/contract_position.rs#child_of	packages/core/cli/src/commands/contract-position.ts#childOf
-src/contract_position.rs#located_origin	packages/core/cli/src/commands/contract-position.ts#locatedOrigin
-src/contract_position.rs#origin_position	packages/core/cli/src/commands/contract-position.ts#originPosition
 src/local_bundle.rs#verify_local_bundle	packages/core/cli/src/commands/local-bundle.ts#verifyLocalBundle
 src/generate_command.rs#generate_command	packages/core/cli/src/commands/generate-command.ts#generateCommand	pending: brief 1
 src/check_command.rs#check_command	packages/core/cli/src/commands/check-command.ts#checkCommand	pending: brief 1
+-	packages/core/cli/src/commands/contract-position.ts#contractPosition	merged: ../generate/src/contract_position.rs#contract_position
+-	packages/core/cli/src/commands/contract-position.ts#nodesAlong	merged: ../generate/src/contract_position.rs#nodes_along
+-	packages/core/cli/src/commands/contract-position.ts#childOf	merged: ../generate/src/contract_position.rs#child_of
+-	packages/core/cli/src/commands/contract-position.ts#locatedOrigin	merged: ../generate/src/contract_position.rs#located_origin
+-	packages/core/cli/src/commands/contract-position.ts#originPosition	merged: ../generate/src/contract_position.rs#origin_position

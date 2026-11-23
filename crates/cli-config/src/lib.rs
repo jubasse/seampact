@@ -4,6 +4,7 @@
 mod api_refs;
 mod artefact_switches;
 mod bundle_source;
+mod check_level;
 mod cli_problem;
 mod compatibility_check;
 mod config_file;
@@ -32,12 +33,14 @@ mod resolved_source;
 mod schema_failure;
 mod schema_order;
 mod schema_problems;
+mod step;
 mod symbolic_link;
 
 use seampact_diagnostics::RuleId;
 
 pub use api_refs::{ApiRef, api_refs_of, parse_api_ref};
 pub use bundle_source::bundle_source_of;
+pub use check_level::{CheckLevel, MatrixCheckLevel};
 pub use cli_problem::CliProblem;
 pub use compatibility_check::{CompatibilityOutcome, check_app_compatibility};
 pub use document_plan::open_api_api_names;
@@ -62,6 +65,7 @@ pub use read_workspace_configs::{
     LoadedWorkspace, LoadedWorkspaceApp, ReadWorkspaceOutcome, read_workspace_configs,
 };
 pub use resolved_source::ResolvedSource;
+pub use step::Step;
 pub use symbolic_link::{is_path_taken, is_symbolic_link};
 
 /// Every rule id the crate reports, read by the oracle's rule id registry.

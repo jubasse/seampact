@@ -1,0 +1,27 @@
+[package]
+name = "seampact-generate"
+description = "The run planning of generate and check: entries, documents, writes and drift."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+camino.workspace = true
+indexmap.workspace = true
+seampact-cli-config.workspace = true
+seampact-diagnostics.workspace = true
+seampact-ir.workspace = true
+seampact-js.workspace = true
+seampact-json.workspace = true
+seampact-span.workspace = true
+seampact-target.workspace = true
+seampact-writer.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true
+
+[lints]
+workspace = true

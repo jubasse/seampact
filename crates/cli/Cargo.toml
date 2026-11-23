@@ -30,6 +30,7 @@ seampact-diff.workspace = true
 seampact-diff-table.workspace = true
 seampact-editor-schemas.workspace = true
 seampact-finalize.workspace = true
+seampact-generate.workspace = true
 seampact-ir.workspace = true
 seampact-ir-check.workspace = true
 seampact-js.workspace = true

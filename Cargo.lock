@@ -1802,6 +1802,7 @@ dependencies = [
  "seampact-diff-table",
  "seampact-editor-schemas",
  "seampact-finalize",
+ "seampact-generate",
  "seampact-ir",
  "seampact-ir-check",
  "seampact-js",
@@ -1966,6 +1967,24 @@ dependencies = [
  "seampact-target",
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "seampact-generate"
+version = "2.0.0"
+dependencies = [
+ "camino",
+ "indexmap",
+ "seampact-cli-config",
+ "seampact-diagnostics",
+ "seampact-ir",
+ "seampact-js",
+ "seampact-json",
+ "seampact-span",
+ "seampact-target",
+ "seampact-writer",
+ "serde_json",
+ "thiserror",
 ]
 
 [[package]]

@@ -11,14 +11,17 @@ const CORE_LAYER: &str = "core";
 /// The IR an api's targets read, with the file and line of each declaration; a bundle source has
 /// no table, so its refusals keep the IR pointer only.
 #[derive(Debug, Clone, Copy)]
-pub(crate) struct ContractPositions<'ir> {
-    pub(crate) ir: &'ir JsonValue,
-    pub(crate) locations: Option<&'ir IndexMap<String, Location>>,
+pub struct ContractPositions<'ir> {
+    /// The IR, as JSON.
+    pub ir: &'ir JsonValue,
+    /// The file and line of each declaration, by `<layer>#<pointer>`.
+    pub locations: Option<&'ir IndexMap<String, Location>>,
 }
 
 /// The contract `file:line` of an IR member: the deepest node on its pointer whose origin the side
 /// table locates, else the operation's own declaration.
-pub(crate) fn contract_position(
+#[must_use]
+pub fn contract_position(
     positions: &ContractPositions<'_>,
     member: Option<&str>,
     operation_id: Option<&str>,
@@ -100,7 +103,8 @@ fn located_origin(node: &JsonValue, locations: &IndexMap<String, Location>) -> O
 
 /// The `file:line` of `origin` through the side table; a core declaration has no file, and an
 /// element of another api is located in that api's table.
-pub(crate) fn origin_position(
+#[must_use]
+pub fn origin_position(
     origin: &JsonValue,
     locations: &IndexMap<String, Location>,
 ) -> Option<String> {

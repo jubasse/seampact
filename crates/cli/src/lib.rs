@@ -12,11 +12,6 @@ mod command;
 mod compile_command;
 mod compile_sources;
 mod config_location;
-#[cfg_attr(
-    not(test),
-    expect(dead_code, reason = "reached only by generate and check, layer 3.3")
-)]
-mod contract_position;
 mod diff_baseline;
 mod diff_command;
 mod document_order;
