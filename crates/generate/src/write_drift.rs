@@ -7,7 +7,6 @@ use seampact_target::{Refusal, Refused, refusal_code};
 use seampact_writer::{PlannedWrite, read_file_if_present};
 
 use crate::app_entry_where::app_entry_where;
-use crate::not_ported::not_ported_yet;
 use crate::{GenerateError, PlannedWrites};
 
 /// A drift at `error` fails, at `warning` is reported, `disabled` is not looked for.
@@ -168,14 +167,32 @@ fn refusal_problem(refusal: &Refusal, location: &str) -> CliProblem {
 }
 
 /// The files a planned write would change, each with how it differs, then the stale ones.
-fn planned_drift(_write: &PlannedWrite) -> Result<Vec<String>, GenerateError> {
-    Err(not_ported_yet("plannedDrift"))
+fn planned_drift(write: &PlannedWrite) -> Result<Vec<String>, GenerateError> {
+    let mut items = Vec::new();
+
+    for (path, bytes) in write.files() {
+        if write.unchanged().iter().any(|unchanged| unchanged == path) {
+            continue;
+        }
+
+        let location = write.root_directory().join(path);
+
+        items.push(file_drift(
+            &location,
+            path,
+            &String::from_utf8_lossy(bytes),
+        )?);
+    }
+
+    for path in write.removable() {
+        items.push(format!(
+            "{path} (stale: generated earlier, no longer produced)"
+        ));
+    }
+
+    Ok(items)
 }
 
-#[expect(
-    dead_code,
-    reason = "called by planned_drift once the writer exposes the files of a planned write"
-)]
 fn file_drift(location: &Utf8Path, path: &str, generated: &str) -> Result<String, GenerateError> {
     let Some(committed) = read_file_if_present(location)? else {
         return Ok(format!("{path} (missing)"));

@@ -71,3 +71,30 @@ fn a_hand_edited_document_is_a_drift_at_the_level_of_its_directory() -> TestResu
 
     Ok(())
 }
+
+#[test]
+fn a_document_not_yet_committed_is_listed_as_missing() -> TestResult<()> {
+    let temporary = tempfile::tempdir()?;
+    let directory = Utf8PathBuf::from_path_buf(temporary.path().join("docs"))
+        .map_err(|path| format!("not UTF-8: {}", path.display()))?;
+    let document = EmittedAppDocument {
+        name: "tasks".to_owned(),
+        file: directory.join("tasks.yaml"),
+        text: "openapi: 3.1.0\n".to_owned(),
+        level: CheckLevel::Error,
+    };
+    let planned = plan_writes(&[], &[document], &[], HandEditPolicy::Refuse)?;
+    let drift = find_write_drift(&planned)?;
+
+    let [problem] = drift.errors.as_slice() else {
+        return Err(format!("errors: {:?}", drift.errors).into());
+    };
+
+    assert!(
+        problem.message.contains("tasks.yaml (missing)"),
+        "{}",
+        problem.message
+    );
+
+    Ok(())
+}
