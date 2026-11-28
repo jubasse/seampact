@@ -262,7 +262,7 @@ At most four cargo lanes at once; one PR per brief; port lanes N2 (orchestrator.
 
 ## 10. PORTING.md and docs
 
-- PORTING.md section 4: the family cases and the `use` rewrite. Section 8: a family brief's gate adds the `deps` step and the unified-list test (this PR).
+- PORTING.md section 4: the family cases and the `use` rewrite. Section 8: the gate's `deps` and `release` steps, which it ran already and the section did not list (this PR).
 - [generators](generators.md) section 9: its checklist is decided here (this PR).
 - [rust-rewrite.md](../rust-rewrite.md) "Generators": `seampact-plan` holds the planning data's functions; its types live in `seampact-target` (this PR).
 - ADR 0031 "External generators" (lead change): one sentence. A link location path is free text from the app config, and a generator writes it only as an escaped string literal.
