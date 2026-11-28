@@ -101,7 +101,8 @@ pub fn manifest_mismatches(
     Ok(line_mismatches(&expected, &actual))
 }
 
-/// The lowercase hexadecimal SHA-256 of `bytes`, as the expected files write it.
+/// The lowercase hexadecimal SHA-256 of `bytes`, as the expected files write it; a deliberate
+/// copy of the writer's, so the oracle stays independent of the code under test.
 #[must_use]
 pub fn sha256_hex(bytes: &[u8]) -> String {
     Sha256::digest(bytes)

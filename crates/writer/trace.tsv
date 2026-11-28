@@ -1,10 +1,10 @@
 src/generated_paths.rs#check_generated_paths	packages/core/codegen-core/src/generated-paths.ts#checkGeneratedPaths
 src/finish_files.rs#finish_files	packages/core/codegen-core/src/finish-files.ts#finishFiles
--	packages/core/codegen-core/src/file-presence.ts#isMissingFileError	merged: src/file_presence.rs#lstat_if_present
+-	packages/core/codegen-core/src/file-presence.ts#isMissingFileError	merged: ../paths/src/file_entry.rs#lstat_if_present
 -	packages/core/codegen-core/src/generated-paths.ts#directoryPrefixes	merged: ../paths/src/relative_output_path.rs#directories
 src/finish_files.rs#generated_header	packages/core/codegen-core/src/finish-files.ts#generatedHeader
 src/generated_paths.rs#remembered_path_problem	packages/core/codegen-core/src/generated-paths.ts#manifestRefusalReason
-src/sha256.rs#sha256_hex	packages/core/codegen-core/src/writer.ts#sha256Of
+src/sha256.rs#sha256_hex_of_file	packages/core/codegen-core/src/writer.ts#sha256Of
 -	packages/core/codegen-core/src/generated-paths.ts#rememberPath	merged: ../paths/src/output_path_set.rs#remember
 -	packages/core/codegen-core/src/generated-paths.ts#pathRefusalReason	merged: ../paths/src/output_path_set.rs#file_clash
 -	packages/core/codegen-core/src/generated-paths.ts#directoryRefusalReason	merged: ../paths/src/output_path_set.rs#directory_clash
@@ -12,13 +12,13 @@ src/finish_files.rs#finishing_of	packages/core/codegen-core/src/finish-files.ts#
 src/finish_files.rs#finish_file	packages/core/codegen-core/src/finish-files.ts#finishFile
 src/manifest.rs#serialize_manifest	packages/core/codegen-core/src/manifest.ts#serializeManifest
 src/file_presence.rs#read_file_if_present	packages/core/codegen-core/src/file-presence.ts#readFileIfPresent
-src/file_presence.rs#lstat_if_present	packages/core/codegen-core/src/file-presence.ts#lstatIfPresent
+src/file_presence.rs#lstat_entry	packages/core/codegen-core/src/file-presence.ts#lstatIfPresent
 src/root_directory.rs#real_path_of_missing	packages/core/codegen-core/src/writer.ts#realpathOfMissing
 src/generated_write.rs#manifest_file_refusal	packages/core/codegen-core/src/writer.ts#manifestFileRefusal
 src/generated_write.rs#planned_file	packages/core/codegen-core/src/writer.ts#planFile
 src/manifest.rs#read_manifest	packages/core/codegen-core/src/manifest.ts#readManifest
 src/root_directory.rs#leaves_root	packages/core/codegen-core/src/writer.ts#leavesRoot
-src/root_directory.rs#is_outside	packages/core/codegen-core/src/writer.ts#isOutside
+-	packages/core/codegen-core/src/writer.ts#isOutside	merged: ../paths/src/file_entry.rs#is_inside_or_equal
 -	packages/core/codegen-core/src/writer.ts#refusedState	merged: src/existing_file.rs#refused
 src/generated_write.rs#commit_generated_write	packages/core/codegen-core/src/writer.ts#commitGeneratedWrite
 src/generated_write.rs#plan_generated_write	packages/core/codegen-core/src/writer.ts#planGeneratedWrite
@@ -27,6 +27,6 @@ src/manifest.rs#entry_with_shape	packages/core/codegen-core/src/manifest.ts#isEn
 src/manifest.rs#entry_of	packages/core/codegen-core/src/manifest.ts#invalidEntryReason
 src/manifest.rs#entries_of	packages/core/codegen-core/src/manifest.ts#entriesOf
 src/root_directory.rs#remove_empty_directories	packages/core/codegen-core/src/writer.ts#removeEmptyDirectories
-src/generated_write.rs#write_generated_files	packages/core/codegen-core/src/writer.ts#writeGeneratedFiles
+src/generated_write.rs#commit_generated_write	packages/core/codegen-core/src/writer.ts#writeGeneratedFiles
 -	packages/core/codegen-core/src/generated-paths.ts#unsafePathReason	merged: ../paths/src/unsafe_path_reason.rs#output_path_problem
 -	packages/core/codegen-core/src/generated-paths.ts#caseFolded	merged: ../paths/src/case_folded.rs#case_folded

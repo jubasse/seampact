@@ -10,8 +10,8 @@ src/schema_problems.rs#schema_error_problems	packages/core/cli/src/config/config
 src/config_waits.rs#find_config_waits	packages/core/cli/src/config/config-waits.ts#findConfigWaits
 src/config_waits.rs#target_entry_waits	packages/core/cli/src/config/config-waits.ts#targetEntryWaits
 src/config_waits.rs#waiting_keys_of	packages/core/cli/src/config/config-waits.ts#waitingKeysOf
-src/path_containment.rs#is_strictly_inside	packages/core/cli/src/config/path-containment.ts#isStrictlyInside
-src/path_containment.rs#is_inside_or_equal	packages/core/cli/src/config/path-containment.ts#isInsideOrEqual
+-	packages/core/cli/src/config/path-containment.ts#isStrictlyInside	merged: ../paths/src/file_entry.rs#is_strictly_inside
+-	packages/core/cli/src/config/path-containment.ts#isInsideOrEqual	merged: ../paths/src/file_entry.rs#is_inside_or_equal
 src/find_root_config.rs#find_root_config	packages/core/cli/src/config/find-root-config.ts#findRootConfig
 src/find_root_config.rs#root_config_at	packages/core/cli/src/config/find-root-config.ts#rootConfigAt
 src/resolved_source.rs#resolved_source	packages/core/cli/src/config/resolved-source.ts#resolvedSource
