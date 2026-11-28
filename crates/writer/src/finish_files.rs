@@ -4,6 +4,8 @@ use seampact_format::{SourceKind, format_source};
 use seampact_json::{JsonValue, indented_json, write_json_string};
 use seampact_target::{GeneratedFile, Refusal, Refused, refusal_code};
 
+use crate::repeated_json_key::first_repeated_key;
+
 const PHP_OPEN_TAG_LINE: &str = "<?php\n";
 const PHP_CLOSE_TAG: &str = "?>";
 const REPORT_FIX: &str = "Report this to the target's maintainers: the writer must learn the extension before a target emits it.";
@@ -184,8 +186,18 @@ fn format_failed(path: &str, reason: &dyn std::fmt::Display) -> Refusal {
     )
 }
 
-fn json_rewritten(contents: &str) -> Result<String, serde_json::Error> {
-    serde_json::from_str::<JsonValue>(contents).map(|value| indented_json(&value))
+fn json_rewritten(contents: &str) -> Result<String, String> {
+    let value = serde_json::from_str::<JsonValue>(contents).map_err(|error| error.to_string())?;
+
+    if let Some(key) = first_repeated_key(contents) {
+        let mut quoted = String::new();
+
+        write_json_string(&mut quoted, &key);
+
+        return Err(format!("the key {quoted} is repeated in one object."));
+    }
+
+    Ok(indented_json(&value))
 }
 
 /// The file with the header on the line after its `<?php` open tag; CRLF is read as LF.

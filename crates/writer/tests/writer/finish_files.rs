@@ -68,6 +68,32 @@ fn a_json_file_has_no_header_and_is_rewritten_with_two_space_indents() {
 }
 
 #[test]
+fn a_repeated_key_in_a_json_file_is_refused_naming_it_at_any_depth() {
+    for contents in [r#"{"a":1,"a":2}"#, r#"{"outer":[{"b":1,"c":2,"b":3}]}"#] {
+        let refusals = refused(&[file("a.json", contents)], &header_source());
+
+        assert_eq!(refusals.len(), 1, "{contents}");
+        assert_eq!(refusals[0].0, "file.format.failed", "{contents}");
+        assert!(
+            refusals[0]
+                .1
+                .starts_with("The writer could not format 'a.json': the key \""),
+            "{}",
+            refusals[0].1
+        );
+        assert!(
+            refusals[0].1.ends_with("\" is repeated in one object."),
+            "{}",
+            refusals[0].1
+        );
+    }
+
+    let done = finished(&[file("a.json", r#"{"a":{"a":1},"b":[{"a":2}]}"#)]);
+
+    assert!(done[0].contents.contains("\"b\": ["));
+}
+
+#[test]
 fn a_php_file_gets_the_header_after_its_open_tag_and_crlf_is_read_as_lf() {
     let done = finished(&[file("a.php", "<?php\r\ndeclare(strict_types=1);\r\n")]);
 

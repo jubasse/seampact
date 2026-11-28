@@ -8,6 +8,7 @@ mod generated_paths;
 mod generated_write;
 mod hand_edit_policy;
 mod manifest;
+mod repeated_json_key;
 mod root_directory;
 mod sha256;
 mod write_stop;
