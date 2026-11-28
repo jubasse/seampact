@@ -84,8 +84,10 @@ pub fn format_problem(problem: &CliProblem) -> String {
     )
 }
 
-/// `text` cut past [`PROBLEM_FIELD_LIMIT`] characters, then written inert.
-fn printable_field(text: &str) -> String {
+/// `text` cut past [`PROBLEM_FIELD_LIMIT`] characters, then written inert: what a printed field
+/// of authored or on-disk text goes through.
+#[must_use]
+pub fn printable_field(text: &str) -> String {
     let mut kept: String = text.chars().take(PROBLEM_FIELD_LIMIT).collect();
 
     if text.chars().nth(PROBLEM_FIELD_LIMIT).is_some() {

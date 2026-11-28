@@ -190,3 +190,51 @@ fn a_file_seampact_did_not_write_in_a_document_directory_is_refused_as_a_documen
 
     Ok(())
 }
+
+#[test]
+fn a_printed_path_never_carries_a_raw_escape() -> TestResult<()> {
+    let temporary = tempfile::tempdir()?;
+    let directory = directory_of(&temporary)?.join("docs");
+    let stale_name = "x\u{1b}[2J.yaml";
+    let stale_hash = "37b128c59f1f5097f73f82691cb519f1f568667faab5ced1b4ab979d36837eae";
+    let swept = SweptDirectory {
+        directory: directory.clone(),
+        level: CheckLevel::Warning,
+    };
+    let mut removal = RecordingIo::default();
+    let mut entry = RecordingIo::default();
+
+    fs::create_dir_all(&directory)?;
+    fs::write(directory.join(stale_name), "a: 1\n")?;
+    fs::write(
+        directory.join(".seampact-manifest.json"),
+        format!(
+            "{{\"owner\":\"openapi\",\"files\":[{{\"path\":\"x\\u001b[2J.yaml\",\"sha256\":\"{stale_hash}\"}}]}}"
+        ),
+    )?;
+
+    committed(Vec::new(), &[], std::slice::from_ref(&swept), &mut removal)?;
+
+    let root = directory_of(&temporary)?.join("out\u{1b}[2J");
+    let output = output_in(&root, "{\"a\":1}", Vec::new());
+
+    committed(vec![output], &[], &[], &mut entry)?;
+
+    assert!(
+        !directory.join(stale_name).exists(),
+        "the stale file stayed"
+    );
+    assert!(
+        removal.stdout.contains("x\\u001B[2J.yaml"),
+        "stdout: {:?}",
+        removal.stdout
+    );
+    assert!(
+        !removal.stdout.contains('\u{1b}') && !entry.stdout.contains('\u{1b}'),
+        "stdout: {:?} and {:?}",
+        removal.stdout,
+        entry.stdout
+    );
+
+    Ok(())
+}

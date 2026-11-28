@@ -62,7 +62,7 @@ pub use bundle_source::bundle_source_of;
 pub use check_level::{CheckLevel, MatrixCheckLevel};
 pub use cli_io::{CliIo, print_problems, print_warnings};
 pub use cli_problem::{
-    CliProblem, PROBLEM_FIELD_LIMIT, entry_where, format_problem, located_problem,
+    CliProblem, PROBLEM_FIELD_LIMIT, entry_where, format_problem, located_problem, printable_field,
     unlocated_problem,
 };
 pub use compatibility_check::{

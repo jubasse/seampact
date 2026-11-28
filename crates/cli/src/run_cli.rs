@@ -6,7 +6,7 @@ use std::ffi::OsString;
 use camino::Utf8PathBuf;
 use seampact_bundle::BundleNamedVersionOverride;
 use seampact_cli_config::unlocated_problem;
-use seampact_cli_config::{CliIo, print_problems};
+use seampact_cli_config::{CliIo, print_problems, printable_field};
 use seampact_generate::LocalBundles;
 use seampact_paths::node_path;
 use seampact_target::Registry;
@@ -104,7 +104,10 @@ pub fn run_cli(argv: &[OsString], io: &mut dyn CliIo) -> i32 {
     match run_command(argv, io) {
         Ok(exit_code) => exit_code,
         Err(error) => {
-            io.stderr(&format!("{error}\n"));
+            let message = error.to_string();
+            let lines: Vec<String> = message.lines().map(printable_field).collect();
+
+            io.stderr(&format!("{}\n", lines.join("\n")));
 
             EXIT_REFUSED
         }
