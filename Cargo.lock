@@ -3049,6 +3049,7 @@ dependencies = [
  "seampact-compiler",
  "seampact-json",
  "seampact-oracle",
+ "tempfile",
 ]
 
 [[package]]
