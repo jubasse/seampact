@@ -51,7 +51,6 @@ pub use error::GenerateError;
 pub use framework_route_check::unread_framework_route_key_problems;
 pub use generated_output::GeneratedOutput;
 pub use local_bundle::LocalBundles;
-pub use planned_entry::{PlannedApi, PlannedEntry};
 pub use run_preparation::{PlanInputs, RunConfigLocation, prepare_run};
 pub use source_reader::source_reader;
 pub use stop::Stop;

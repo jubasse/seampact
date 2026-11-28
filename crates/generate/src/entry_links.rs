@@ -7,9 +7,8 @@ use seampact_cli_config::{
 use seampact_js::js_key_order;
 use seampact_target::LinkKind;
 
-use crate::PlannedApi;
 use crate::link_set::is_link_kind;
-use crate::planned_entry::PlannedEntry;
+use crate::planned_entry::{PlannedApi, PlannedEntry};
 
 /// The links of `entry` as kind and provider id, in the order JavaScript lists object keys.
 #[must_use]
