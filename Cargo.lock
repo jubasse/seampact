@@ -2360,6 +2360,7 @@ dependencies = [
  "seampact-json",
  "seampact-paths",
  "seampact-target",
+ "serde",
  "serde_json",
  "sha2",
  "tempfile",
