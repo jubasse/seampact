@@ -61,7 +61,7 @@ src/exclusive_base_paths.rs#overlaps	packages/core/cli/src/commands/exclusive-ba
 src/write_drift.rs#drift_items	packages/core/cli/src/commands/write-drift.ts#driftItems
 src/write_drift.rs#find_write_drift	packages/core/cli/src/commands/write-drift.ts#findWriteDrift
 src/write_drift.rs#add_drift	packages/core/cli/src/commands/write-drift.ts#addDrift
-src/write_drift.rs#planned_drift	packages/core/cli/src/commands/write-drift.ts#plannedDrift	pending: writer accessors
+src/write_drift.rs#planned_drift	packages/core/cli/src/commands/write-drift.ts#plannedDrift	pending: brief 3
 src/write_drift.rs#refusal_problem	packages/core/cli/src/commands/write-drift.ts#refusalProblem
 src/write_drift.rs#file_drift	packages/core/cli/src/commands/write-drift.ts#fileDrift
 -	packages/core/cli/src/commands/write-drift.ts#readCommitted	merged: ../writer/src/file_presence.rs#read_file_if_present
