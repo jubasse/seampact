@@ -65,7 +65,6 @@ gen-symfony	php/symfony/src/NumberBounds.php	59
 gen-symfony	php/symfony/src/PlainSymfony.php	42
 gen-symfony	php/symfony/src/RouteLoaderFile.php	139
 gen-symfony	php/symfony/src/SchemaConstraints.php	185
-gen-symfony	php/symfony/src/SeampactCommandsBundle.php	19
 gen-symfony	php/symfony/src/SymfonyFlavour.php	34
 gen-symfony	php/symfony/src/SymfonyGenerator.php	108
 gen-symfony	php/symfony/src/SymfonyPlacement.php	162

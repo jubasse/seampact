@@ -106,6 +106,7 @@ const NOT_GENERATOR_PATHS = [
   "/runtime/",
   "GenerateCommand.php",
   "SeampactCommandsProvider.php",
+  "SeampactCommandsBundle.php",
   "/management/commands/",
 ];
 
