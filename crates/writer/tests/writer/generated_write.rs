@@ -3,13 +3,25 @@
 use std::fs;
 
 use camino::Utf8Path;
+use seampact_target::GeneratedFile;
 use seampact_writer::{
-    HandEditPolicy, WriteStop, WrittenFiles, plan_generated_write, write_generated_files,
+    HandEditPolicy, WriteStop, WrittenFiles, commit_generated_write, plan_generated_write,
 };
 
 use crate::support::{file, read, temporary_directory};
 
 const MANIFEST: &str = ".seampact-manifest.json";
+
+fn write_generated_files(
+    out: &Utf8Path,
+    owner: &str,
+    files: Vec<GeneratedFile>,
+    policy: HandEditPolicy,
+) -> Result<WrittenFiles, WriteStop> {
+    let write = plan_generated_write(out, owner, files, policy)?;
+
+    Ok(commit_generated_write(write)?)
+}
 
 fn written(
     out: &Utf8Path,

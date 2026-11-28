@@ -76,23 +76,6 @@ impl PlannedWrite {
     }
 }
 
-/// Plans then commits the write of `files` into `out_directory` under `owner`.
-///
-/// # Errors
-///
-/// [`WriteStop::Refused`] when a check refuses, nothing written; [`WriteStop::Failed`] when a
-/// file or directory cannot be read or written.
-pub fn write_generated_files(
-    out_directory: &Utf8Path,
-    owner: &str,
-    files: Vec<GeneratedFile>,
-    policy: HandEditPolicy,
-) -> Result<WrittenFiles, WriteStop> {
-    let write = plan_generated_write(out_directory, owner, files, policy)?;
-
-    Ok(commit_generated_write(write)?)
-}
-
 /// Every check of a write with nothing written: the manifest, unsafe and duplicate paths, files the
 /// writer did not generate, hand edits and paths leaving `out_directory`.
 ///

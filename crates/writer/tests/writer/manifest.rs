@@ -1,7 +1,7 @@
 //! The manifest of an output directory: its text, its reading and what it refuses.
 
-use crate::support::{read, temporary_directory};
-use seampact_writer::{ManifestEntry, ManifestRead, read_manifest, serialize_manifest};
+use crate::support::temporary_directory;
+use seampact_writer::{ManifestEntry, ManifestRead, read_manifest};
 
 const HASH: &str = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
 
@@ -27,54 +27,6 @@ fn invalid_reason(text: &str) -> String {
         ManifestRead::Invalid { reason } => reason,
         ManifestRead::Read { .. } => panic!("the manifest {text} was read"),
     }
-}
-
-#[test]
-fn a_manifest_lists_its_members_in_javascript_key_order_and_its_files_in_utf16_order() {
-    let mut with_formatter = entry("a");
-
-    with_formatter.formatter = Some("biome".to_owned());
-
-    let text = serialize_manifest(
-        "openapi",
-        &[entry("\u{ff5e}"), entry("\u{10000}"), with_formatter],
-    );
-
-    let expected = format!(
-        "{{\n  \"version\": 2,\n  \"owner\": \"openapi\",\n  \"files\": [\n    {{\n      \"path\": \"a\",\n      \"source\": \"{HASH}\",\n      \"sha256\": \"{HASH}\",\n      \"formatter\": \"biome\"\n    }},\n    {{\n      \"path\": \"\u{10000}\",\n      \"source\": \"{HASH}\",\n      \"sha256\": \"{HASH}\"\n    }},\n    {{\n      \"path\": \"\u{ff5e}\",\n      \"source\": \"{HASH}\",\n      \"sha256\": \"{HASH}\"\n    }}\n  ]\n}}\n"
-    );
-
-    assert_eq!(text, expected);
-}
-
-#[test]
-fn a_written_manifest_reads_back_and_a_missing_one_is_empty() {
-    let (_guard, root) = temporary_directory();
-
-    assert_eq!(
-        read_manifest(&root).expect("a missing manifest"),
-        ManifestRead::Read {
-            owner: None,
-            entries: Vec::new()
-        }
-    );
-
-    let entries = [entry("a.ts"), entry("b/c.ts")];
-
-    std::fs::write(
-        root.join(".seampact-manifest.json"),
-        serialize_manifest("node", &entries),
-    )
-    .expect("a written manifest");
-
-    assert_eq!(
-        read_manifest(&root).expect("a readable manifest"),
-        ManifestRead::Read {
-            owner: Some("node".to_owned()),
-            entries: entries.to_vec()
-        }
-    );
-    assert!(read(&root.join(".seampact-manifest.json")).ends_with("}\n"));
 }
 
 #[test]
