@@ -212,7 +212,10 @@ mod tests {
                 "Link `@seampact/codegen-zod` in the target's `link` entry."
             )]
         );
-        assert!(refuse_unmet_links(&validators_need(Some(OWN_AJV)), &LinkSet::NONE).is_empty());
+        assert_eq!(
+            refuse_unmet_links(&validators_need(Some(OWN_AJV)), &LinkSet::NONE),
+            []
+        );
     }
 
     #[test]

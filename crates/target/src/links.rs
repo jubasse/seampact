@@ -220,7 +220,7 @@ mod tests {
         assert_eq!(needs.kinds(), [LinkKind::Client, LinkKind::Types]);
         assert!(needs.of(LinkKind::Types).is_some());
         assert!(needs.of(LinkKind::Validators).is_none());
-        assert!(LinkNeeds::NONE.kinds().is_empty());
+        assert_eq!(LinkNeeds::NONE.kinds(), []);
     }
 
     #[test]
