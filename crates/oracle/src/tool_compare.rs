@@ -2,6 +2,7 @@
 //! normalised, written files by hash and text.
 
 use std::fmt::Write as _;
+use std::path::Path;
 
 use indexmap::IndexMap;
 use seampact_json::{JsonValue, canonical_document, escape_pointer};
@@ -193,7 +194,10 @@ const OPENAPI_DOCUMENT_START: &str = "openapi: ";
 
 /// Whether the written file is an OpenAPI YAML document, which compares parsed.
 fn is_openapi_document(path: &str, text: &str) -> bool {
-    path.ends_with(".yaml") && text.starts_with(OPENAPI_DOCUMENT_START)
+    Path::new(path)
+        .extension()
+        .is_some_and(|extension| extension == "yaml")
+        && text.starts_with(OPENAPI_DOCUMENT_START)
 }
 
 /// The mismatches of two OpenAPI documents, parsed, each below `pointer`.
