@@ -1,10 +1,11 @@
 //! The entry file of a contract directory and the api names its workspace file declares.
 
-use std::fs;
+use std::collections::HashSet;
 
 use camino::Utf8Path;
-use seampact_load::ResolvedScalar;
+use seampact_json::JsonNumber;
 use seampact_load::yaml::{YamlKind, YamlNode, parse_yaml};
+use seampact_load::{FsReader, LOAD_MAX_FILE_BYTES, LoadReader, LoadText, ResolvedScalar};
 use seampact_span::SourceFiles;
 
 /// The workspace file of a contract directory.
@@ -27,9 +28,13 @@ pub fn source_entry_file(directory: &Utf8Path) -> Option<&'static str> {
 #[must_use]
 pub fn workspace_api_names(directory: &Utf8Path) -> Option<Vec<String>> {
     let entry = source_entry_file(directory)?;
-    // An unreadable file leaves the answer open, as the TypeScript's read that falls back to none.
-    let bytes = fs::read(directory.join(entry)).ok()?;
-    let root = parsed_root(&String::from_utf8_lossy(&bytes))?;
+    // An unreadable or oversized file leaves the answer open, as the TypeScript's read that falls
+    // back to none; the loader then reports the file.
+    let reader = FsReader::new(directory).ok()?;
+    let LoadText::Text(text) = reader.read_text(entry, LOAD_MAX_FILE_BYTES)? else {
+        return None;
+    };
+    let root = parsed_root(&text)?;
 
     if entry == SINGLE_API_ENTRY {
         return single_api_name(&root);
@@ -74,19 +79,40 @@ fn parsed_root(text: &str) -> Option<YamlNode> {
     (!has_repeated_key(&root)).then_some(root)
 }
 
+/// A resolved plain key, comparable and hashable: two keys are one when the `yaml` package's
+/// values are equal.
+#[derive(PartialEq, Eq, Hash)]
+enum KeyIdentity {
+    Null,
+    Bool(bool),
+    Number(JsonNumber),
+    NonFinite,
+    String(String),
+}
+
+impl KeyIdentity {
+    fn of(scalar: ResolvedScalar) -> Self {
+        match scalar {
+            ResolvedScalar::Null => Self::Null,
+            ResolvedScalar::Bool(value) => Self::Bool(value),
+            ResolvedScalar::Number(number) => Self::Number(number),
+            ResolvedScalar::NonFinite => Self::NonFinite,
+            ResolvedScalar::String(text) => Self::String(text),
+        }
+    }
+}
+
 fn has_repeated_key(node: &YamlNode) -> bool {
     match &node.kind {
         YamlKind::Mapping(pairs) => {
-            let mut seen: Vec<Option<ResolvedScalar>> = Vec::with_capacity(pairs.len());
+            let mut seen: HashSet<KeyIdentity> = HashSet::with_capacity(pairs.len());
 
             for pair in pairs {
-                let key = pair.key.resolved_scalar();
-
-                if key.is_some() && seen.contains(&key) {
+                if let Some(key) = pair.key.resolved_scalar()
+                    && !seen.insert(KeyIdentity::of(key))
+                {
                     return true;
                 }
-
-                seen.push(key);
 
                 if has_repeated_key(&pair.key) || pair.value.as_ref().is_some_and(has_repeated_key)
                 {

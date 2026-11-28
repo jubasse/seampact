@@ -8,11 +8,14 @@ use seampact_json::{JsonNumber, JsonObject, JsonValue, indented_json, js_text_of
 use seampact_paths::RelativeOutputPath;
 
 use crate::WriterError;
-use crate::file_presence::read_file_if_present;
+use crate::file_presence::{CappedRead, read_regular_file_capped};
 use crate::generated_paths::MANIFEST_FILE_NAME;
 
 /// The version the writer writes and reads besides the 1.x manifest, which has none.
 const MANIFEST_VERSION: i64 = 2;
+
+/// The largest manifest read, the loader's file size limit (4 MiB).
+const MANIFEST_MAX_BYTES: u64 = 4 * 1024 * 1024;
 
 /// One file of a manifest.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -52,14 +55,26 @@ pub enum ManifestRead {
 ///
 /// # Errors
 ///
-/// [`WriterError::Io`] when the manifest exists and cannot be read.
+/// [`WriterError::Io`] when the manifest exists and cannot be read. A link, a directory or a file
+/// above 4 MiB is [`ManifestRead::Invalid`], never followed or read whole.
 pub fn read_manifest(root_directory: &Utf8Path) -> Result<ManifestRead, WriterError> {
     let manifest_path = root_directory.join(MANIFEST_FILE_NAME);
-    let Some(text) = read_file_if_present(&manifest_path)? else {
-        return Ok(ManifestRead::Read {
-            owner: None,
-            entries: Vec::new(),
-        });
+    let text = match read_regular_file_capped(&manifest_path, MANIFEST_MAX_BYTES)? {
+        None => {
+            return Ok(ManifestRead::Read {
+                owner: None,
+                entries: Vec::new(),
+            });
+        }
+        Some(CappedRead::Text(text)) => text,
+        Some(CappedRead::NotRegularFile) => {
+            return Ok(invalid("it is not a regular file".to_owned()));
+        }
+        Some(CappedRead::TooLarge) => {
+            return Ok(invalid(format!(
+                "it is larger than {MANIFEST_MAX_BYTES} bytes"
+            )));
+        }
     };
 
     Ok(match serde_json::from_str::<JsonValue>(&text) {

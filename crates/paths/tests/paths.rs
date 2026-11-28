@@ -1,8 +1,8 @@
 //! The public API of `seampact-paths`: output path checks, clashes and untrusted entries.
 
 use seampact_paths::{
-    OutputPathClash, OutputPathSet, ParseOutputPathError, RelativeOutputPath, SpellingDifference,
-    UnsafePathReason, untrusted_entry_problem,
+    OutputPathSet, ParseOutputPathError, RelativeOutputPath, UnsafePathReason,
+    untrusted_entry_problem,
 };
 
 type TestResult = Result<(), ParseOutputPathError>;
@@ -153,19 +153,13 @@ fn each_clash_is_worded_as_the_writer_words_it() -> TestResult {
 }
 
 #[test]
-fn spellings_equal_once_nfc_normalised_clash() -> TestResult {
+fn composed_and_decomposed_spellings_are_two_paths() -> TestResult {
     let mut set = OutputPathSet::new();
     let composed = path("caf\u{E9}/a.ts")?;
     let decomposed_file = path("cafe\u{301}/a.ts")?;
 
     assert_eq!(set.insert(&composed), None);
-    assert_eq!(
-        set.insert(&decomposed_file),
-        Some(OutputPathClash::FileSpelling {
-            earlier_file: composed.as_str().to_owned(),
-            difference: SpellingDifference::UnicodeNormalisation,
-        })
-    );
+    assert_eq!(set.insert(&decomposed_file), None);
 
     Ok(())
 }
