@@ -1,13 +1,11 @@
 //! What is already at a path the writer is about to write or remove.
 
-use std::fs;
-
 use camino::Utf8Path;
 use seampact_target::{Refusal, refusal_code};
 
 use crate::file_presence::lstat_entry;
 use crate::root_directory::leaves_root;
-use crate::sha256::sha256_hex;
+use crate::sha256::sha256_hex_of_file;
 use crate::{HandEditPolicy, WriterError};
 
 const HAND_EDIT_FIX: &str = "Move the hand-written code next to the generated files, then delete the edited file and generate again, or run `seampact generate --force` to overwrite it.";
@@ -61,8 +59,8 @@ pub(crate) fn existing_file_state(
         return Ok(unrecorded_file_refusal(root, &file_path, case_renamed_from));
     };
 
-    let bytes = fs::read(&file_path).map_err(|error| WriterError::io(&file_path, &error))?;
-    let sha256 = sha256_hex(&bytes);
+    let sha256 =
+        sha256_hex_of_file(&file_path).map_err(|error| WriterError::io(&file_path, &error))?;
 
     if sha256 != recorded && policy == HandEditPolicy::Refuse {
         return Ok(refused(
