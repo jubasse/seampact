@@ -14,6 +14,6 @@ mod relative_output_path;
 mod unsafe_path_reason;
 
 pub use case_folded::{case_folded, nfc_case_folded};
-pub use output_path_set::{OutputPathClash, OutputPathSet, SpellingDifference};
+pub use output_path_set::{OutputPathClash, OutputPathSet};
 pub use relative_output_path::{ParseOutputPathError, RelativeOutputPath};
 pub use unsafe_path_reason::{UnsafePathReason, untrusted_entry_problem};

@@ -3,34 +3,8 @@
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 
-use crate::case_folded::{case_folded, nfc_case_folded};
+use crate::case_folded::case_folded;
 use crate::relative_output_path::RelativeOutputPath;
-
-/// What two spellings of one name differ by.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum SpellingDifference {
-    /// Equal once [`case_folded`].
-    LetterCase,
-    /// Equal only once NFC-normalised, then case-folded.
-    UnicodeNormalisation,
-}
-
-impl SpellingDifference {
-    fn between(path: &str, earlier: &str) -> Self {
-        if case_folded(path) == case_folded(earlier) {
-            Self::LetterCase
-        } else {
-            Self::UnicodeNormalisation
-        }
-    }
-
-    fn as_str(self) -> &'static str {
-        match self {
-            Self::LetterCase => "letter case",
-            Self::UnicodeNormalisation => "Unicode normalisation or letter case",
-        }
-    }
-}
 
 /// Why a path clashes with an earlier path of the same [`OutputPathSet`].
 ///
@@ -43,8 +17,6 @@ pub enum OutputPathClash {
     FileSpelling {
         /// The earlier file, as spelled.
         earlier_file: String,
-        /// What the two spellings differ by.
-        difference: SpellingDifference,
     },
     /// An earlier path uses this file's name as a directory.
     FileOverDirectory {
@@ -64,8 +36,6 @@ pub enum OutputPathClash {
         directory: String,
         /// The earlier path's directory, as spelled.
         earlier_directory: String,
-        /// What the two spellings differ by.
-        difference: SpellingDifference,
     },
 }
 
@@ -73,14 +43,12 @@ impl fmt::Display for OutputPathClash {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::GeneratedTwice => formatter.write_str("it is generated twice"),
-            Self::FileSpelling {
-                earlier_file,
-                difference,
-            } => write!(
-                formatter,
-                "it differs only by {} from '{earlier_file}'",
-                difference.as_str()
-            ),
+            Self::FileSpelling { earlier_file } => {
+                write!(
+                    formatter,
+                    "it differs only by letter case from '{earlier_file}'"
+                )
+            }
             Self::FileOverDirectory { earlier_directory } => write!(
                 formatter,
                 "it is a file, and an earlier path uses '{earlier_directory}' as a directory"
@@ -92,17 +60,15 @@ impl fmt::Display for OutputPathClash {
             Self::DirectorySpelling {
                 directory,
                 earlier_directory,
-                difference,
             } => write!(
                 formatter,
-                "its directory '{directory}' differs only by {} from the directory '{earlier_directory}' of an earlier path",
-                difference.as_str()
+                "its directory '{directory}' differs only by letter case from the directory '{earlier_directory}' of an earlier path"
             ),
         }
     }
 }
 
-/// The paths written below one root so far, by exact spelling and by [`nfc_case_folded`] key.
+/// The paths written below one root so far, by exact spelling and by [`case_folded`] key.
 ///
 /// The first spelling of a folded name is the one later clashes name.
 #[derive(Debug, Clone, Default)]
@@ -137,12 +103,11 @@ impl OutputPathSet {
             return Some(OutputPathClash::GeneratedTwice);
         }
 
-        let folded_path = nfc_case_folded(path.as_str());
+        let folded_path = case_folded(path.as_str());
 
         if let Some(earlier_file) = self.file_by_folded_path.get(&folded_path) {
             return Some(OutputPathClash::FileSpelling {
                 earlier_file: earlier_file.clone(),
-                difference: SpellingDifference::between(path.as_str(), earlier_file),
             });
         }
 
@@ -157,7 +122,7 @@ impl OutputPathSet {
 
     fn directory_clash(&self, path: &RelativeOutputPath) -> Option<OutputPathClash> {
         for directory in path.directories() {
-            let folded_directory = nfc_case_folded(directory);
+            let folded_directory = case_folded(directory);
 
             if let Some(file) = self.file_by_folded_path.get(&folded_directory) {
                 return Some(OutputPathClash::DirectoryIsFile {
@@ -174,7 +139,6 @@ impl OutputPathSet {
                 return Some(OutputPathClash::DirectorySpelling {
                     directory: directory.to_owned(),
                     earlier_directory: earlier_directory.clone(),
-                    difference: SpellingDifference::between(directory, earlier_directory),
                 });
             }
         }
@@ -185,12 +149,12 @@ impl OutputPathSet {
     fn remember(&mut self, path: &RelativeOutputPath) {
         self.exact_paths.insert(path.as_str().to_owned());
         self.file_by_folded_path
-            .entry(nfc_case_folded(path.as_str()))
+            .entry(case_folded(path.as_str()))
             .or_insert_with(|| path.as_str().to_owned());
 
         for directory in path.directories() {
             self.directory_by_folded_path
-                .entry(nfc_case_folded(directory))
+                .entry(case_folded(directory))
                 .or_insert_with(|| directory.to_owned());
         }
     }
