@@ -25,7 +25,7 @@ struct RequestEcho<'run> {
     hook_check: HookBootCheck,
     mount: &'run str,
     import_specifiers: ImportSpecifierStyle,
-    installed_runtimes: BTreeMap<&'run str, Option<&'run str>>,
+    installed_runtimes: BTreeMap<&'run str, &'run JsonValue>,
     #[serde(skip_serializing_if = "Option::is_none")]
     native_docs_document: Option<&'run NativeDocsDocument>,
 }
@@ -46,7 +46,10 @@ pub(crate) fn request_text(
         .map(|package| {
             (
                 *package,
-                input.installed_runtimes.version(package).flatten(),
+                input
+                    .installed_runtimes
+                    .written(package)
+                    .unwrap_or(&JsonValue::Null),
             )
         })
         .collect();

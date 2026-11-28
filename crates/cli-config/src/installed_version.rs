@@ -113,20 +113,19 @@ pub fn read_installed_version(
 }
 
 /// The `version` the `package.json` of `package_name` declares, from `lookup_directory` up, as the
-/// file writes it: no shape is required, since a generator compares the text itself. `None` when
-/// the package is not installed or declares no `version`.
+/// file writes it, whatever its JSON type: a generator compares it itself. `null` when the
+/// package is not installed or declares no `version`.
 ///
 /// # Errors
 ///
-/// [`CliConfigError::Io`] when the `package.json` cannot be read, is not JSON, or declares a
-/// `version` that is not text.
+/// [`CliConfigError::Io`] when the `package.json` cannot be read or is not JSON.
 pub fn read_runtime_version(
     lookup_directory: &Utf8Path,
     package_name: &str,
-) -> Result<Option<String>, CliConfigError> {
+) -> Result<JsonValue, CliConfigError> {
     let Some(package_directory) = node_path::node_modules_lookup(lookup_directory, package_name)
     else {
-        return Ok(None);
+        return Ok(JsonValue::Null);
     };
     let package_json_file = package_directory.join(PACKAGE_MANIFEST);
 
@@ -140,14 +139,10 @@ pub fn read_runtime_version(
         }
     };
 
-    match object_of(Some(&value)).and_then(|object| object.get("version")) {
-        None | Some(JsonValue::Null) => Ok(None),
-        Some(JsonValue::String(version)) => Ok(Some(version.clone())),
-        Some(_) => Err(CliConfigError::Io {
-            path: package_json_file.to_string(),
-            message: "its `version` is not text".to_owned(),
-        }),
-    }
+    Ok(object_of(Some(&value))
+        .and_then(|object| object.get("version"))
+        .cloned()
+        .unwrap_or(JsonValue::Null))
 }
 
 fn missing_package_problem(
