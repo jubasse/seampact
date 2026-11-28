@@ -1,0 +1,7 @@
+{
+  "exit": 1,
+  "stdout": "",
+  "stderr": "config.openapi.document-needed: openapi.tasks: The api 'tasks' declares the documents full, public, and 'openapi.tasks' gives one path. Fix: Map each document to its path: 'tasks: { full: openapi/tasks.full.yaml }'.\n",
+  "written": {},
+  "removed": []
+}

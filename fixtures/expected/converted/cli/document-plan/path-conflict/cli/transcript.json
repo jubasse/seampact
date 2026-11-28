@@ -1,0 +1,7 @@
+{
+  "exit": 1,
+  "stdout": "",
+  "stderr": "config.openapi.path-conflict: openapi.tasks.full: The documents 'tasks.public' and 'tasks.full' are both written to <root>/docs/same.yaml. Fix: Give each document its own path.\n",
+  "written": {},
+  "removed": []
+}

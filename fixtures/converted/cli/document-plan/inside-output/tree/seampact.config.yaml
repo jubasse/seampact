@@ -1,0 +1,8 @@
+sources:
+  a: { path: ./a }
+targets:
+  - { id: server, use: probe-server, api: tasks }
+openapi:
+  tasks:
+    public: __generated__/server/tasks.public.yaml
+    full: docs/tasks.full.yaml

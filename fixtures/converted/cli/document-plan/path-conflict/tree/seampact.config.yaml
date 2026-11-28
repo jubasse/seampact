@@ -1,0 +1,6 @@
+sources:
+  a: { path: ./a }
+openapi:
+  tasks:
+    public: docs/same.yaml
+    full: docs/same.yaml

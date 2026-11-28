@@ -1,0 +1,70 @@
+{
+  "function": "readRunConfig",
+  "args": [
+    "<root>/seampact.config.yaml",
+    "seampact.config.yaml",
+    null
+  ],
+  "result": {
+    "status": "read",
+    "run": {
+      "kind": "root",
+      "workspace": {
+        "root": {
+          "file": "<root>/seampact.config.yaml",
+          "displayName": "seampact.config.yaml",
+          "apps": [
+            {
+              "name": "apps/api",
+              "directory": "<root>/apps/api",
+              "file": "<root>/apps/api/seampact.config.yaml"
+            }
+          ],
+          "sources": {},
+          "openapi": [
+            {
+              "name": "first",
+              "file": "<root>/all.yaml",
+              "apps": [
+                "apps/api"
+              ],
+              "prefix": {},
+              "options": {}
+            },
+            {
+              "name": "second",
+              "file": "<root>/all.yaml",
+              "apps": [
+                "apps/api"
+              ],
+              "prefix": {},
+              "options": {}
+            }
+          ],
+          "checks": {}
+        },
+        "apps": [
+          {
+            "app": {
+              "name": "apps/api",
+              "directory": "<root>/apps/api",
+              "file": "<root>/apps/api/seampact.config.yaml"
+            },
+            "config": {
+              "file": "<root>/apps/api/seampact.config.yaml",
+              "outDir": "<root>/apps/api/__generated__",
+              "sources": {
+                "a": {
+                  "kind": "path",
+                  "directory": "<root>/a"
+                }
+              },
+              "entries": [],
+              "rootFile": "<root>/seampact.config.yaml"
+            }
+          }
+        ]
+      }
+    }
+  }
+}

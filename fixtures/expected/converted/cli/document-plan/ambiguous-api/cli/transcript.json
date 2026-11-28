@@ -1,0 +1,7 @@
+{
+  "exit": 1,
+  "stdout": "",
+  "stderr": "config.openapi.ambiguous-api: openapi.tasks: The api 'tasks' exists in the sources 'a', 'b', and 'openapi' names an api alone. Fix: An `openapi` key names an api alone: rename the api in the `workspace.yaml` of one of these sources, or remove one of them from the config that defines it (this app config or its root config).\n",
+  "written": {},
+  "removed": []
+}

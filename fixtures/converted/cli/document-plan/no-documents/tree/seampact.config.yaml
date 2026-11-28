@@ -1,0 +1,5 @@
+sources:
+  a: { path: ./a }
+openapi:
+  tasks:
+    full: docs/tasks.full.yaml

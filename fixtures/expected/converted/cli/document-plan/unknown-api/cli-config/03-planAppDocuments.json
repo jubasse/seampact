@@ -1,0 +1,32 @@
+{
+  "function": "planAppDocuments",
+  "args": [
+    {
+      "file": "<root>/seampact.config.yaml",
+      "outDir": "<root>/__generated__",
+      "sources": {
+        "a": {
+          "kind": "path",
+          "directory": "<root>/a"
+        }
+      },
+      "entries": [],
+      "openapi": {
+        "orders": "docs/orders.yaml"
+      }
+    },
+    {},
+    []
+  ],
+  "result": {
+    "status": "refused",
+    "problems": [
+      {
+        "code": "config.openapi.unknown-api",
+        "message": "No source of the app config holds an api 'orders'.",
+        "fix": "Name an api of a source's `workspace.yaml`.",
+        "where": "openapi.orders"
+      }
+    ]
+  }
+}

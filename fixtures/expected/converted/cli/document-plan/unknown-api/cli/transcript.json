@@ -1,0 +1,7 @@
+{
+  "exit": 1,
+  "stdout": "",
+  "stderr": "config.openapi.unknown-api: openapi.orders: No source of the app config holds an api 'orders'. Fix: Name an api of a source's `workspace.yaml`.\n",
+  "written": {},
+  "removed": []
+}

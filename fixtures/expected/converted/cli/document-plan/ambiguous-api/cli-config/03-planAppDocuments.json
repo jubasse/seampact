@@ -1,0 +1,47 @@
+{
+  "function": "planAppDocuments",
+  "args": [
+    {
+      "file": "<root>/seampact.config.yaml",
+      "outDir": "<root>/__generated__",
+      "sources": {
+        "a": {
+          "kind": "path",
+          "directory": "<root>/a"
+        },
+        "b": {
+          "kind": "path",
+          "directory": "<root>/b"
+        }
+      },
+      "entries": [],
+      "openapi": {
+        "tasks": "docs/tasks.yaml"
+      }
+    },
+    {},
+    [
+      {
+        "source": "a",
+        "api": "tasks",
+        "documents": []
+      },
+      {
+        "source": "b",
+        "api": "tasks",
+        "documents": []
+      }
+    ]
+  ],
+  "result": {
+    "status": "refused",
+    "problems": [
+      {
+        "code": "config.openapi.ambiguous-api",
+        "message": "The api 'tasks' exists in the sources 'a', 'b', and 'openapi' names an api alone.",
+        "fix": "An `openapi` key names an api alone: rename the api in the `workspace.yaml` of one of these sources, or remove one of them from the config that defines it (this app config or its root config).",
+        "where": "openapi.tasks"
+      }
+    ]
+  }
+}

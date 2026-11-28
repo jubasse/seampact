@@ -1,0 +1,23 @@
+api:
+  name: tasks
+  version: 1
+  kind: product
+  maturity: provisional
+  summary: A small api.
+  documents:
+    public: { surfaces: [app] }
+    full: {}
+schemas:
+  Health:
+    type: object
+    required: [status]
+    properties: { status: { type: string } }
+
+surfaces:
+  app:
+    prefix: /v{version}
+    access: { public: "Anyone may call this api: it has no accounts." }
+    routes:
+      health:
+        method: get
+        output: Health

@@ -1,0 +1,7 @@
+{
+  "exit": 1,
+  "stdout": "",
+  "stderr": "config.openapi.path-conflict: openapi.second: The documents 'first' and 'second' are both written to <root>/all.yaml. Fix: Give each document its own path.\n",
+  "written": {},
+  "removed": []
+}
