@@ -1,0 +1,5 @@
+sources:
+  a: { path: ./a }
+openapi: none
+targets:
+  - { id: server, use: probe-server, api: tasks, options: { echo: true } }

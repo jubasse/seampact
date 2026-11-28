@@ -1,0 +1,16 @@
+{
+  "exit": 0,
+  "stdout": "entry 'server', api 'tasks': 1 written, 0 unchanged, 0 removed (<root>/__generated__/server).\n",
+  "stderr": "",
+  "written": {
+    "__generated__/server/.seampact-manifest.json": {
+      "sha256": "e9cd875b317eee04dc30b0122d4bffda676c32c0d693d7310b34b48babefe3a8",
+      "text": "{\n  \"owner\": \"server\",\n  \"files\": [\n    {\n      \"path\": \"request.json\",\n      \"sha256\": \"046aa303f01a1f580bd45d469e39e8fd363503c12d0d497ad0565d754c80342d\"\n    }\n  ]\n}\n"
+    },
+    "__generated__/server/request.json": {
+      "sha256": "046aa303f01a1f580bd45d469e39e8fd363503c12d0d497ad0565d754c80342d",
+      "text": "{\n  \"api\": \"tasks\",\n  \"operations\": [\"health\"],\n  \"links\": {},\n  \"artefacts\": [\"routes\"],\n  \"frameworkRoutes\": {\n    \"status\": \"on\",\n    \"allowed\": [],\n    \"scope\": \"contract\"\n  },\n  \"hookCheck\": \"error\",\n  \"mount\": \"\",\n  \"importSpecifiers\": \"js\",\n  \"installedRuntimes\": {\n    \"probe-runtime\": \"\"\n  }\n}\n"
+    }
+  },
+  "removed": []
+}

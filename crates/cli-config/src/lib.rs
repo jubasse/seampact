@@ -79,6 +79,7 @@ pub use find_root_config::{RootDiscovery, find_root_config};
 pub use framework_route_entry::{FrameworkRouteEntry, HttpMethod};
 pub use installed_version::{
     InstalledPackageRole, InstalledVersion, InstalledVersionOutcome, read_installed_version,
+    read_runtime_version,
 };
 pub use merged_document_plan::{
     MergedApp, MergedContribution, MergedPlanError, PlannedMergedDocument, plan_merged_documents,

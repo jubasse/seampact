@@ -48,9 +48,8 @@ pub(crate) fn validate_config(
     key_problems: Vec<KeyProblem>,
 ) -> Result<ValidateConfigOutcome, InternalError> {
     let validator = validator_of(schema)?;
-    let instance: serde_json::Value = from_json_value(value).map_err(|error| {
-        InternalError::new(format!("a config value does not convert: {error}"))
-    })?;
+    let instance: serde_json::Value = from_json_value(value)
+        .map_err(|error| InternalError::new(format!("a config value does not convert: {error}")))?;
     let is_valid = validator.is_valid(&instance);
     let failures = schema_failures(validator, &instance);
     let reported_paths: HashSet<String> = key_problems
