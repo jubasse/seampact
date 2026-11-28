@@ -94,12 +94,15 @@ pub fn finish_files(
     Err(Refused(refusals))
 }
 
-/// A control character ends a comment line, and a PHP close tag ends PHP mode even inside one.
+/// A control character or a Unicode line break ends a comment line, and a PHP close tag ends PHP
+/// mode even inside one.
 fn is_unsafe_header_field(value: &str) -> bool {
-    value
-        .chars()
-        .any(|character| matches!(character, '\u{0}'..='\u{1f}' | '\u{7f}'))
-        || value.contains(PHP_CLOSE_TAG)
+    value.chars().any(|character| {
+        matches!(
+            character,
+            '\u{0}'..='\u{1f}' | '\u{7f}' | '\u{85}' | '\u{2028}' | '\u{2029}'
+        )
+    }) || value.contains(PHP_CLOSE_TAG)
 }
 
 fn unsafe_header_refusal(header: &HeaderSource<'_>) -> Option<Refusal> {

@@ -179,6 +179,9 @@ fn a_header_field_that_would_leave_the_comment_line_is_refused_once() {
         ("2.0.0\n", "probe", "tasks", "version"),
         ("2.0.0", "pro\u{7f}be", "tasks", "short id"),
         ("2.0.0", "probe", "tasks?>", "api id"),
+        ("2.0.0\u{85}", "probe", "tasks", "version"),
+        ("2.0.0", "pro\u{2028}be", "tasks", "short id"),
+        ("2.0.0", "probe", "ta\u{2029}sks", "api id"),
     ] {
         let header = HeaderSource {
             version,
