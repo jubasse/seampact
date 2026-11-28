@@ -4,14 +4,16 @@ use seampact_cli_config::{
     CliProblem, PlannedAppDocument, Problems, TargetEntrySettings, entry_where, located_problem,
 };
 use seampact_diagnostics::InternalError;
-use seampact_json::JsonObject;
+use seampact_json::{JsonObject, JsonValue};
+use seampact_load::ResolvedScalar;
+use seampact_load::yaml::{YamlKind, YamlNode, parse_yaml};
 use seampact_openapi::{
     EmitOutcome, EmitterOptions, ParsedEmitterOptions, emit_documents, parse_emitter_options,
 };
+use seampact_span::SourceFiles;
 use seampact_target::NativeDocsDocument;
 
 use crate::filter_operations::is_in_document;
-use crate::not_ported::not_ported_yet;
 use crate::planned_entry::PlannedApi;
 use crate::refusal_problem::{problem_from_refusal, problems_at_api};
 use crate::stop::Stop;
@@ -56,8 +58,60 @@ pub(crate) fn native_docs_document_of(
 }
 
 /// The emitted YAML read back as the object the target receives.
-fn parse_emitted_document(_text: &str) -> Result<JsonObject, Stop> {
-    Err(not_ported_yet("parse").into())
+fn parse_emitted_document(text: &str) -> Result<JsonObject, Stop> {
+    let mut files = SourceFiles::new();
+    let file = files.add("emitted document", text).map_err(|error| {
+        InternalError::new(format!("the emitted document is too long: {error}"))
+    })?;
+    let normalised = files
+        .get(file)
+        .map(|source| source.text().to_owned())
+        .ok_or_else(|| InternalError::new("the emitted document is not registered"))?;
+    let parsed = parse_yaml(file, &normalised)?;
+
+    if let Some(problem) = parsed.problem {
+        return Err(InternalError::new(format!(
+            "the emitted document does not parse: {problem:?}"
+        ))
+        .into());
+    }
+
+    match parsed.root.as_ref().map(json_of_node).transpose()? {
+        Some(JsonValue::Object(document)) => Ok(document),
+        _ => Err(InternalError::new("the emitter wrote a document that is no object").into()),
+    }
+}
+
+fn json_of_node(node: &YamlNode) -> Result<JsonValue, InternalError> {
+    match &node.kind {
+        YamlKind::Scalar { .. } => node
+            .resolved_scalar()
+            .map(ResolvedScalar::into_json_value)
+            .ok_or_else(|| InternalError::new("a scalar of the emitted document did not resolve")),
+        YamlKind::Sequence(items) => items
+            .iter()
+            .map(json_of_node)
+            .collect::<Result<Vec<_>, _>>()
+            .map(JsonValue::Array),
+        YamlKind::Mapping(pairs) => {
+            let mut object = JsonObject::new();
+
+            for pair in pairs {
+                let key = pair.key.scalar_text().ok_or_else(|| {
+                    InternalError::new("a key of the emitted document is no text")
+                })?;
+                let value = match &pair.value {
+                    Some(value) => json_of_node(value)?,
+                    None => JsonValue::Null,
+                };
+
+                object.insert(key.to_owned(), value);
+            }
+
+            Ok(JsonValue::Object(object))
+        }
+        YamlKind::Alias(_) => Err(InternalError::new("the emitted document holds an alias")),
+    }
 }
 
 /// The document name the entry names, or the one document of the api that holds every route.
@@ -173,5 +227,43 @@ fn emitter_options_of(
             servers: Vec::new(),
             ..options
         }),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    type TestResult = Result<(), Stop>;
+
+    #[test]
+    fn integer_like_keys_come_first_in_ascending_order_as_javascript_lists_them() -> TestResult {
+        let document = parse_emitted_document("b: 1\n'200': ok\n'4': ok\na: 2\n")?;
+        let keys: Vec<&str> = document.keys().map(String::as_str).collect();
+
+        assert_eq!(keys, ["4", "200", "b", "a"]);
+
+        Ok(())
+    }
+
+    #[test]
+    fn quoted_scalars_stay_text_and_plain_ones_resolve() -> TestResult {
+        let document =
+            parse_emitted_document("code: '123'\nflag: true\nnothing: null\nbig: 1e+21\n")?;
+
+        assert_eq!(
+            document.get("code"),
+            Some(&JsonValue::String("123".to_owned()))
+        );
+        assert_eq!(document.get("flag"), Some(&JsonValue::Bool(true)));
+        assert_eq!(document.get("nothing"), Some(&JsonValue::Null));
+        assert!(matches!(document.get("big"), Some(JsonValue::Number(_))));
+
+        Ok(())
+    }
+
+    #[test]
+    fn a_document_that_is_no_object_is_a_bug() {
+        assert!(parse_emitted_document("- 1\n").is_err());
     }
 }
