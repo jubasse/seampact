@@ -1,0 +1,17 @@
+brief	function	file	lines	size	pairs
+1	requestBodyOf	targets/codegen-nestjs/src/nestjs-docs-module.ts	21-51	31	0/0
+1	isRecord	targets/codegen-nestjs/src/nestjs-docs-module.ts	53-55	3	0/0
+1	nestjsDocsModuleSource	targets/codegen-nestjs/src/nestjs-docs-module.ts	57-191	135	0/0
+1	moduleClassName	targets/codegen-nestjs/src/nestjs-module.ts	66-68	3	0/0
+1	operationSource	targets/codegen-nestjs/src/nestjs-module.ts	71-77	7	0/0
+1	memberDecorators	targets/codegen-nestjs/src/nestjs-module.ts	86-106	21	0/0
+1	decoratorDoc	targets/codegen-nestjs/src/nestjs-module.ts	109-116	8	0/0
+1	nestjsModuleSource	targets/codegen-nestjs/src/nestjs-module.ts	118-199	82	0/0
+1	parseNestjsOptions	targets/codegen-nestjs/src/nestjs-options.ts	20-31	12	0/0
+1	withoutReplyOption	targets/codegen-nestjs/src/nestjs-options.ts	34-38	5	0/0
+1	replyOptionOf	targets/codegen-nestjs/src/nestjs-options.ts	40-46	7	0/0
+1	isReplyMode	targets/codegen-nestjs/src/nestjs-options.ts	48-50	3	0/0
+1	invalidReplyRefusal	targets/codegen-nestjs/src/nestjs-options.ts	52-59	8	0/0
+1	nestjsTargetOf	targets/codegen-nestjs/src/target.ts	19-34	16	0/0
+1	target.generate	targets/codegen-nestjs/src/target.ts	44-53	10	0/0
+1	target.describe	targets/codegen-nestjs/src/target.ts	54-60	7	0/0

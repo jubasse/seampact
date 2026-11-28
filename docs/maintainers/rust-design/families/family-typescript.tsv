@@ -1,0 +1,9 @@
+brief	function	file	lines	size	pairs
+1	requireName	core/codegen-core/src/planned-names.ts	8-14	7	0/0
+1	declaredTypeIdentifier	core/codegen-core/src/planned-names.ts	17-31	15	0/0
+1	typeScriptIdentifier	core/codegen-core/src/planned-names.ts	34-41	8	0/0
+1	ExportNames.constructor	core/codegen-core/src/planned-names.ts	47-47	1	0/0
+1	ExportNames.claim	core/codegen-core/src/planned-names.ts	49-65	17	0/0
+1	apiIndexSource	core/codegen-core/src/api-index.ts	17-24	8	0/0
+1	indexLine	core/codegen-core/src/api-index.ts	26-45	20	0/0
+1	propertyKey	core/codegen-core/src/property-key.ts	5-9	5	0/0

@@ -1,0 +1,6 @@
+brief	function	file	lines	size	pairs
+1	nextModuleSource	targets/codegen-nextjs/src/next-module.ts	23-53	31	0/0
+1	nextEntryRefusals	targets/codegen-nextjs/src/target.ts	31-37	7	0/0
+1	frameworkRouteRefusals	targets/codegen-nextjs/src/target.ts	39-65	27	0/0
+1	emptyBasePathRefusals	targets/codegen-nextjs/src/target.ts	67-78	12	0/0
+1	catchAllRefusals	targets/codegen-nextjs/src/target.ts	80-91	12	0/0

@@ -1,0 +1,14 @@
+brief	function	file	lines	size	pairs
+1	adonisModuleSource	targets/codegen-adonis/src/adonis-module.ts	61-126	66	0/0
+1	adonisRefusals	targets/codegen-adonis/src/adonis-module.ts	129-156	28	0/0
+1	isMixedSegment	targets/codegen-adonis/src/adonis-module.ts	158-160	3	0/0
+1	isStrictJsonBody	targets/codegen-adonis/src/adonis-module.ts	162-170	9	0/0
+1	vineOwnValidators	targets/codegen-adonis/src/vinejs/own-validators.ts	15-33	19	0/0
+1	VINE_WIRE_NAME_LIMIT.description	targets/codegen-adonis/src/vinejs/path-keys.ts	9-10	2	0/0
+1	typeShape	targets/codegen-adonis/src/vinejs/shape.ts	60-86	27	0/0
+1	shapeCheck	targets/codegen-adonis/src/vinejs/shape.ts	88-94	7	0/0
+1	hasVineRule	targets/codegen-adonis/src/vinejs/shape.ts	96-98	3	0/0
+1	objectShape	targets/codegen-adonis/src/vinejs/shape.ts	100-110	11	0/0
+1	operationInputShape	targets/codegen-adonis/src/vinejs/shape.ts	113-134	22	0/0
+1	bodyShape	targets/codegen-adonis/src/vinejs/shape.ts	137-155	19	0/0
+1	requireSchema	targets/codegen-adonis/src/vinejs/shape.ts	157-165	9	0/0
