@@ -100,8 +100,20 @@ export const NATIVE_FAMILIES: readonly NativeFamilySpec[] = [
 ];
 
 const NATIVE_TABLE = "native.tsv";
-// A runtime package the generated code imports stays in its language; only the generator is ported.
-const RUNTIME_DIRECTORY = "/runtime/";
+// A runtime package the generated code imports stays in its language, and a native CLI entry point is a launcher
+// (layer 3.5); only the generator is ported.
+const NOT_GENERATOR_PATHS = [
+  "/runtime/",
+  "GenerateCommand.php",
+  "SeampactCommandsProvider.php",
+  "/management/commands/",
+];
+
+function isGeneratorFile(name: string, extension: string): boolean {
+  const path = `/${name}`;
+
+  return path.endsWith(extension) && !NOT_GENERATOR_PATHS.some((part) => path.includes(part));
+}
 
 function nativeTable(): string {
   const rows = ["crate\tfile\tlines"];
@@ -112,7 +124,7 @@ function nativeTable(): string {
     for (const directory of family.directories) {
       const root = join(REPO_ROOT, directory);
       const files = readdirSync(root, { recursive: true, encoding: "utf8" })
-        .filter((name) => name.endsWith(family.extension) && !name.includes(RUNTIME_DIRECTORY))
+        .filter((name) => isGeneratorFile(name, family.extension))
         .sort();
 
       for (const name of files) {

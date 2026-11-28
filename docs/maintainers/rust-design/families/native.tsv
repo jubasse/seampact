@@ -46,7 +46,6 @@ family-php	php/codegen/src/TypeNames.php	9
 gen-laravel	php/laravel/src/BoundaryClasses.php	85
 gen-laravel	php/laravel/src/EndpointsTypes.php	50
 gen-laravel	php/laravel/src/FormRequests.php	154
-gen-laravel	php/laravel/src/GenerateCommand.php	31
 gen-laravel	php/laravel/src/LaravelGenerator.php	132
 gen-laravel	php/laravel/src/LaravelOptions.php	44
 gen-laravel	php/laravel/src/LaravelReleases.php	24
@@ -55,13 +54,11 @@ gen-laravel	php/laravel/src/MemberRules.php	313
 gen-laravel	php/laravel/src/PhpLayout.php	121
 gen-laravel	php/laravel/src/RouteTable.php	211
 gen-laravel	php/laravel/src/RoutesForm.php	9
-gen-laravel	php/laravel/src/SeampactCommandsProvider.php	14
 gen-symfony	php/symfony/src/AccessTableFile.php	61
 gen-symfony	php/symfony/src/ApiIdentityFiles.php	49
 gen-symfony	php/symfony/src/BundleFiles.php	365
 gen-symfony	php/symfony/src/BundleWiredClass.php	17
 gen-symfony	php/symfony/src/EndpointsInterfaces.php	47
-gen-symfony	php/symfony/src/GenerateCommand.php	40
 gen-symfony	php/symfony/src/InputConstraintFiles.php	346
 gen-symfony	php/symfony/src/InputResolverFile.php	47
 gen-symfony	php/symfony/src/NumberBounds.php	59
@@ -117,9 +114,6 @@ family-django	python/django/src/seampact/django/emitters/settings_module.py	67
 family-django	python/django/src/seampact/django/emitters/target_options.py	171
 family-django	python/django/src/seampact/django/emitters/urls_module.py	57
 family-django	python/django/src/seampact/django/management/__init__.py	1
-family-django	python/django/src/seampact/django/management/commands/__init__.py	1
-family-django	python/django/src/seampact/django/management/commands/seampact_check.py	14
-family-django	python/django/src/seampact/django/management/commands/seampact_generate.py	25
 gen-drf	python/drf/src/seampact/drf/__init__.py	3
 gen-drf	python/drf/src/seampact/drf/api_layout.py	133
 gen-drf	python/drf/src/seampact/drf/dataclass_schemas.py	103
