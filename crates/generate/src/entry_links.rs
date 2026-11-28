@@ -187,11 +187,7 @@ pub fn unconsumed_kind_problems(planned: &[PlannedEntry]) -> Vec<CliProblem> {
                 continue;
             }
 
-            let consumed = kinds_text(
-                LinkKind::ALL
-                    .into_iter()
-                    .filter(|known| metadata.consumes.of(*known).is_some()),
-            );
+            let consumed = kinds_text(metadata.consumes.kinds().into_iter());
 
             problems.push(located_problem(
                 "link.kind.not-consumed",

@@ -16,8 +16,8 @@ pub use unsupported_kind_switch::UnsupportedKindSwitch;
 use seampact_ir::{IR_REVISION, IR_VERSION, IrSupport};
 use seampact_target::{
     ArtefactDeclaration, ArtefactDefault, ArtefactId, BasePathRouting, Generator,
-    ImportSpecifierStyle, LinkNeed, LinkNeeds, LinkOffers, LinkStyle, MissingNeed, NeedStyles,
-    OptionalNeed, TargetId, TargetMetadata, TargetRole, TunableBootCheck,
+    ImportSpecifierStyle, LinkKind, LinkNeed, LinkNeeds, LinkOffers, LinkStyle, MissingNeed,
+    NeedStyles, OptionalNeed, TargetId, TargetMetadata, TargetRole, TunableBootCheck,
 };
 
 /// The package version of every twin.
@@ -67,14 +67,13 @@ pub static PROBE_SERVER: Probe = Probe::new(TargetMetadata {
             missing_need: MissingNeed::LeaveOff,
         },
     ],
-    consumes: LinkNeeds {
-        validators: Some(LinkNeed {
+    consumes: LinkNeeds::new(&[(
+        LinkKind::Validators,
+        LinkNeed {
             styles: NeedStyles::Listed(&[LinkStyle::StandardSchema, LinkStyle::ClassValidator]),
             optional: Some(OptionalNeed { own_library: "ajv" }),
-        }),
-        types: None,
-        client: None,
-    },
+        },
+    )]),
     boot_checks: &[TunableBootCheck::FrameworkRoutes, TunableBootCheck::Hooks],
     framework_docs_off_fix: Some("Remove the `probe.docs()` call."),
     base_paths: BasePathRouting::Exclusive,
@@ -88,11 +87,11 @@ pub static PROBE_PROVIDER: Probe = Probe::new(TargetMetadata {
     version: PROBE_VERSION,
     role: TargetRole::Provider,
     ir_support: support(ALL_KINDS),
-    provides: LinkOffers {
-        validators: Some(LinkStyle::StandardSchema),
-        types: Some(LinkStyle::Typescript),
-        client: Some(LinkStyle::Fetch),
-    },
+    provides: LinkOffers::new(&[
+        (LinkKind::Validators, LinkStyle::StandardSchema),
+        (LinkKind::Types, LinkStyle::Typescript),
+        (LinkKind::Client, LinkStyle::Fetch),
+    ]),
     ..TargetMetadata::BASE
 });
 
@@ -116,19 +115,24 @@ const fn client_metadata(kinds: &'static [&'static str]) -> TargetMetadata {
                 missing_need: MissingNeed::Refuse,
             },
         ],
-        consumes: LinkNeeds {
-            validators: None,
-            types: Some(LinkNeed {
-                styles: NeedStyles::Listed(&[LinkStyle::Typescript]),
-                optional: Some(OptionalNeed {
-                    own_library: "probe-types",
-                }),
-            }),
-            client: Some(LinkNeed {
-                styles: NeedStyles::Listed(&[LinkStyle::Fetch]),
-                optional: None,
-            }),
-        },
+        consumes: LinkNeeds::new(&[
+            (
+                LinkKind::Client,
+                LinkNeed {
+                    styles: NeedStyles::Listed(&[LinkStyle::Fetch]),
+                    optional: None,
+                },
+            ),
+            (
+                LinkKind::Types,
+                LinkNeed {
+                    styles: NeedStyles::Listed(&[LinkStyle::Typescript]),
+                    optional: Some(OptionalNeed {
+                        own_library: "probe-types",
+                    }),
+                },
+            ),
+        ]),
         import_specifiers: Some(ImportSpecifierStyle::Extensionless),
         ..TargetMetadata::BASE
     }
