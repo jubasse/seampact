@@ -55,7 +55,7 @@ fn the_version_is_read_as_a_javascript_number() {
     );
     assert_eq!(
         invalid_reason(r#"{"version":"2","owner":"n","files":[]}"#),
-        "it is version 2, which this seampact does not read"
+        "it is version \"2\", which this seampact does not read"
     );
 }
 

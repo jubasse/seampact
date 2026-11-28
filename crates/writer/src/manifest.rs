@@ -4,7 +4,9 @@ use std::collections::HashSet;
 
 use camino::Utf8Path;
 use seampact_js::cmp_utf16;
-use seampact_json::{JsonNumber, JsonObject, JsonValue, indented_json, js_text_of};
+use seampact_json::{
+    JsonNumber, JsonObject, JsonValue, indented_json, js_text_of, write_json_string,
+};
 use seampact_paths::RelativeOutputPath;
 
 use crate::WriterError;
@@ -142,9 +144,21 @@ fn layout_of(parsed: &JsonObject) -> Result<ManifestLayout, String> {
         }
         _ => Err(format!(
             "it is version {}, which this seampact does not read",
-            js_text_of(Some(version))
+            version_text(version)
         )),
     }
+}
+
+/// The version as written: a string keeps its quotes, so `"2"` is not read as the number 2.
+fn version_text(version: &JsonValue) -> String {
+    let JsonValue::String(text) = version else {
+        return js_text_of(Some(version));
+    };
+    let mut quoted = String::new();
+
+    write_json_string(&mut quoted, text);
+
+    quoted
 }
 
 fn entries_of(parsed: &JsonValue) -> ManifestRead {
