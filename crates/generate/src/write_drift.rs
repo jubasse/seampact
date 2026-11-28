@@ -6,8 +6,9 @@ use seampact_openapi::find_document_drift;
 use seampact_target::{Refusal, Refused, refusal_code};
 use seampact_writer::{PlannedWrite, read_file_if_present};
 
+use crate::GenerateError;
 use crate::app_entry_where::app_entry_where;
-use crate::{GenerateError, PlannedWrites};
+use crate::write_plan::PlannedWrites;
 
 /// A drift at `error` fails, at `warning` is reported, `disabled` is not looked for.
 #[derive(Debug, Clone, Default, PartialEq)]

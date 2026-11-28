@@ -3,8 +3,8 @@
 use std::collections::HashMap;
 
 use seampact_cli_config::{
-    CheckLevel, CliProblem, HookBootCheckLevel, PlannedAppDocument, Problems, TargetEntrySettings, entry_where,
-    hook_check_level_of, located_problem,
+    CheckLevel, CliProblem, HookBootCheckLevel, PlannedAppDocument, Problems, TargetEntrySettings,
+    entry_where, hook_check_level_of, located_problem,
 };
 use seampact_diagnostics::InternalError;
 use seampact_json::JsonValue;

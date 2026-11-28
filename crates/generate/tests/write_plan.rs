@@ -131,8 +131,18 @@ fn documents_are_written_then_unchanged_then_removed_with_their_directory_swept(
     let mut unchanged = RecordingIo::default();
     let mut removed = RecordingIo::default();
 
-    committed(Vec::new(), std::slice::from_ref(&document), &[], &mut written)?;
-    committed(Vec::new(), std::slice::from_ref(&document), &[], &mut unchanged)?;
+    committed(
+        Vec::new(),
+        std::slice::from_ref(&document),
+        &[],
+        &mut written,
+    )?;
+    committed(
+        Vec::new(),
+        std::slice::from_ref(&document),
+        &[],
+        &mut unchanged,
+    )?;
     committed(Vec::new(), &[], std::slice::from_ref(&swept), &mut removed)?;
 
     assert_eq!(

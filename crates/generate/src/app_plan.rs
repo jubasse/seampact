@@ -54,7 +54,7 @@ pub struct AppPlan<'run> {
 pub fn plan_app<'run>(
     config: &'run LoadedAppConfig,
     io: &mut dyn CliIo,
-    inputs: &PlanInputs<'_>,
+    inputs: PlanInputs<'_>,
     registry: &Registry,
     matrix: &CompatibilityMatrix,
 ) -> Result<AppPlan<'run>, Stop> {
