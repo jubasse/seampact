@@ -111,7 +111,10 @@ pub fn plan_writes(
     for mut output in outputs {
         // The files move into the writer's plan, which holds them from here on.
         let files = mem::take(&mut output.files);
-        let check = check_write(&output.root, &output.entry_id, files, policy)?;
+        let check = match plan_generated_write(&output.root, &output.entry_id, files, policy) {
+            Ok(write) => Ok(write),
+            Err(stop) => Err(refused_of(stop)?),
+        };
 
         planned.entries.push(EntryWrite { output, check });
     }
@@ -125,7 +128,10 @@ pub fn plan_writes(
                 contents: document.text.clone(),
             })
             .collect();
-        let check = check_write(&directory, DOCUMENT_OWNER, files, policy)?;
+        let check = match plan_generated_write(&directory, DOCUMENT_OWNER, files, policy) {
+            Ok(write) => Ok(write),
+            Err(stop) => Err(refused_of(stop)?),
+        };
 
         planned.documents.push(DocumentDirectoryWrite {
             directory,
@@ -282,21 +288,15 @@ fn document_problem(directory: &Utf8Path, refusal: &Refusal) -> CliProblem {
     }
 }
 
-/// The writer's plan for `files` in `directory`, or its refusals.
+/// The refusals the run reports with the others.
 ///
 /// # Errors
 ///
-/// [`GenerateError::Io`] or [`GenerateError::Internal`] when the writer cannot check.
-fn check_write(
-    directory: &Utf8Path,
-    owner: &str,
-    files: Vec<GeneratedFile>,
-    policy: HandEditPolicy,
-) -> Result<Result<PlannedWrite, Refused>, GenerateError> {
-    match plan_generated_write(directory, owner, files, policy) {
-        Ok(write) => Ok(Ok(write)),
-        Err(WriteStop::Refused(refused)) => Ok(Err(refused)),
-        Err(WriteStop::Failed(error)) => Err(error.into()),
+/// [`GenerateError::Io`] or [`GenerateError::Internal`] when the writer could not check.
+fn refused_of(stop: WriteStop) -> Result<Refused, GenerateError> {
+    match stop {
+        WriteStop::Refused(refused) => Ok(refused),
+        WriteStop::Failed(error) => Err(error.into()),
     }
 }
 
