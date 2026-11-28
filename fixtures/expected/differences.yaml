@@ -60,6 +60,22 @@ differences:
       output: cli-stderr
       pointer: /stderr/0
     change: value
+  - id: cli-generate-extension-unsupported-text
+    reason: The Rust writer names itself where the TS CLI names codegen-core when a target generates a file with an extension it cannot format.
+    decision: docs/adr/0031-rust-core.md#bytes-that-change-once
+    applies:
+      fixtures: ["converted/cli/generated-files/extension-unsupported"]
+      output: cli-stderr
+      pointer: /stderr/0
+    change: value
+  - id: cli-generate-format-failed-text
+    reason: The Rust formatter reports its parser's message where the TS CLI reports Prettier's for a generated file it cannot format.
+    decision: docs/adr/0031-rust-core.md#bytes-that-change-once
+    applies:
+      fixtures: ["converted/cli/generated-files/format-failed"]
+      output: cli-stderr
+      pointer: /stderr/0
+    change: value
   - id: cli-diff-baseline-not-json-text
     reason: The Rust CLI reads a baseline IR with serde_json, whose parse error wording replaces V8's `JSON.parse` message.
     decision: docs/adr/0031-rust-core.md#bytes-that-change-once
