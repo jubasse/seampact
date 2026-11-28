@@ -5,6 +5,7 @@ use indexmap::IndexMap;
 use seampact_diagnostics::InternalError;
 use seampact_json::{JsonObject, JsonValue, items_of, object_of, text_of};
 
+use crate::app_checks_settings::AppChecksSettings;
 use crate::config_file::{ParseConfigOutcome, parse_config_file};
 use crate::config_kind::ConfigKind;
 use crate::config_names::APP_CONFIG_FILE_NAME;
@@ -70,6 +71,8 @@ pub struct LoadedRootConfig {
     pub openapi: Vec<LoadedMergedDocument>,
     /// The root's `checks` as written; an empty mapping when absent.
     pub checks: JsonValue,
+    /// The root's `checks` read into their levels, once at load.
+    pub checks_settings: AppChecksSettings,
 }
 
 /// The config read, or the problems that stop it.
@@ -182,6 +185,12 @@ fn resolve_root_config(
         _ => None,
     };
 
+    let checks = object
+        .get("checks")
+        .cloned()
+        .unwrap_or_else(|| JsonValue::Object(JsonObject::new()));
+    let checks_settings = AppChecksSettings::from_value(Some(&checks))?;
+
     Ok(ReadRootConfigOutcome::Read(Box::new(LoadedRootConfig {
         file: file.to_path_buf(),
         display_name: parsed.display_name.clone(),
@@ -189,10 +198,8 @@ fn resolve_root_config(
         sources: resolved_sources(&directory, object.get("sources"))?,
         allow_local,
         openapi,
-        checks: object
-            .get("checks")
-            .cloned()
-            .unwrap_or_else(|| JsonValue::Object(JsonObject::new())),
+        checks,
+        checks_settings,
     })))
 }
 

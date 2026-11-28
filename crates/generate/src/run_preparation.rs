@@ -17,10 +17,8 @@ use crate::entry_generation::generate_entries;
 use crate::in_app::in_app;
 use crate::merged_documents::emit_merged_documents;
 use crate::stop::{Stop, gather};
-use crate::write_plan::plan_writes;
-use crate::{
-    EmittedAppDocument, GenerateError, GeneratedOutput, LocalBundles, PlannedWrites, SweptDirectory,
-};
+use crate::write_plan::{PlannedWrites, plan_writes};
+use crate::{EmittedAppDocument, GenerateError, GeneratedOutput, LocalBundles, SweptDirectory};
 
 /// The app or root config a run reads: its file, the name problems give it, and the file its
 /// text is read from when a host hands it over.
@@ -214,13 +212,13 @@ fn prepare_apps(
             directory: directory.to_owned(),
             level: workspace
                 .root
-                .checks_settings()?
+                .checks_settings
                 .openapi
                 .unwrap_or(DEFAULT_DRIFT_CHECK_LEVEL),
         });
     }
 
-    Ok(plan_writes(&outputs, &documents, &swept, run.policy)?)
+    Ok(plan_writes(outputs, &documents, &swept, run.policy)?)
 }
 
 fn plan_each_app<'run>(
@@ -235,7 +233,7 @@ fn plan_each_app<'run>(
         let step = plan_app(
             app.config,
             &mut *run.io,
-            run.inputs,
+            *run.inputs,
             run.registry,
             run.matrix,
         );

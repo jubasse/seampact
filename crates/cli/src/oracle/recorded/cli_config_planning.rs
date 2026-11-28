@@ -352,6 +352,10 @@ fn workspace_of(value: &JsonValue) -> Result<LoadedWorkspace, String> {
         })
         .collect::<Result<Vec<_>, String>>()?;
 
+    let checks = member_value(&root, "checks")?;
+    let checks_settings =
+        AppChecksSettings::from_value(Some(&checks)).map_err(|error| error.to_string())?;
+
     Ok(LoadedWorkspace {
         root: LoadedRootConfig {
             file: path_member(&root, "file")?,
@@ -360,7 +364,8 @@ fn workspace_of(value: &JsonValue) -> Result<LoadedWorkspace, String> {
             sources: sources_of(root.get("sources"))?,
             allow_local: None,
             openapi: merged,
-            checks: member_value(&root, "checks")?,
+            checks_settings,
+            checks,
         },
         apps,
     })

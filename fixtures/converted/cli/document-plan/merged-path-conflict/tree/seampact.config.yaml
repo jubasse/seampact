@@ -1,0 +1,4 @@
+apps: [apps/api]
+openapi:
+  first: { path: all.yaml }
+  second: { path: all.yaml }

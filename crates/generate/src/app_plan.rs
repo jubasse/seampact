@@ -3,10 +3,9 @@
 
 use camino::Utf8PathBuf;
 use seampact_cli_config::{
-    CliIo, CliProblem, ConfiguredTargetEntry, EntryTarget, InstalledPackageRole,
-    InstalledVersionOutcome, LoadedAppConfig, Problems, TargetEntrySettings,
-    check_app_compatibility, default_document_directory, entry_where, located_problem,
-    open_api_api_names, print_warnings, read_installed_version, select_artefacts,
+    CliIo, CliProblem, ConfiguredTargetEntry, EntryTarget, LoadedAppConfig, Problems,
+    TargetEntrySettings, check_app_compatibility, default_document_directory, entry_where,
+    located_problem, open_api_api_names, print_warnings, read_runtime_version, select_artefacts,
 };
 use seampact_target::{
     CompatibilityMatrix, InstalledRuntimes, Registry, TargetMetadata, resolve_link_needs,
@@ -54,7 +53,7 @@ pub struct AppPlan<'run> {
 pub fn plan_app<'run>(
     config: &'run LoadedAppConfig,
     io: &mut dyn CliIo,
-    inputs: &PlanInputs<'_>,
+    inputs: PlanInputs<'_>,
     registry: &Registry,
     matrix: &CompatibilityMatrix,
 ) -> Result<AppPlan<'run>, Stop> {
@@ -142,25 +141,15 @@ fn select_entry_artefacts(
 }
 
 /// The version of each runtime package of the target installed from the entry's output
-/// directory upward; a package that is not installed or not readable is recorded as absent.
+/// directory upward, as its `package.json` writes it; `None` for a package that is not installed.
 fn installed_runtimes_of(
     entry: &ConfiguredTargetEntry,
     metadata: &TargetMetadata,
 ) -> Result<InstalledRuntimes, GenerateError> {
     let mut runtimes = InstalledRuntimes::default();
-    let location = entry_where(&entry.settings.id, None);
 
     for package in metadata.runtime_packages {
-        let outcome = read_installed_version(
-            &entry.root,
-            package,
-            InstalledPackageRole::Library,
-            &location,
-        )?;
-        let version = match outcome {
-            InstalledVersionOutcome::Installed(installed) => Some(installed.version),
-            InstalledVersionOutcome::Refused(_) => None,
-        };
+        let version = read_runtime_version(&entry.root, package)?;
 
         runtimes.insert((*package).to_owned(), version);
     }

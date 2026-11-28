@@ -22,6 +22,22 @@ pub enum HttpMethod {
     Options,
 }
 
+impl HttpMethod {
+    /// The method as the config and the generators write it: upper case.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Get => "GET",
+            Self::Head => "HEAD",
+            Self::Post => "POST",
+            Self::Put => "PUT",
+            Self::Patch => "PATCH",
+            Self::Delete => "DELETE",
+            Self::Options => "OPTIONS",
+        }
+    }
+}
+
 /// A path or pattern, for one method or every method, with its reason.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Deserialize)]
 pub struct FrameworkRouteEntry {

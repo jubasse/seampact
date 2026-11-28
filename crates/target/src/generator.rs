@@ -48,25 +48,36 @@ impl fmt::Display for Refused {
 
 impl std::error::Error for Refused {}
 
-/// The version of each runtime package of a target installed for the entry, by package name;
-/// `None` when not installed. Read by the run planning, so a generator does no file I/O.
-#[derive(Debug, Clone, Default, PartialEq, Eq, Hash, Serialize)]
-pub struct InstalledRuntimes(BTreeMap<String, Option<String>>);
+/// The `version` of each runtime package of a target installed for the entry, by package name,
+/// as its `package.json` writes it; `null` when the package is not installed or writes none. Read
+/// by the run planning, so a generator does no file I/O.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
+pub struct InstalledRuntimes(BTreeMap<String, JsonValue>);
 
 impl InstalledRuntimes {
     /// No runtime package.
     pub const NONE: Self = Self(BTreeMap::new());
 
-    /// Records the installed version of `package`.
-    pub fn insert(&mut self, package: String, version: Option<String>) {
+    /// Records the `version` `package` writes, `null` for none.
+    pub fn insert(&mut self, package: String, version: JsonValue) {
         self.0.insert(package, version);
     }
 
-    /// The installed version of `package`: `None` when the package was not read, `Some(None)`
-    /// when it is not installed.
+    /// The version of `package` as written: `None` when the package was not read, `null` when it
+    /// is not installed.
     #[must_use]
-    pub fn version(&self, package: &str) -> Option<Option<&str>> {
-        self.0.get(package).map(Option::as_deref)
+    pub fn written(&self, package: &str) -> Option<&JsonValue> {
+        self.0.get(package)
+    }
+
+    /// The installed version of `package` as text: `None` when the package was not read, not
+    /// installed, or writes a version that is not text (see [`Self::written`]).
+    #[must_use]
+    pub fn version(&self, package: &str) -> Option<&str> {
+        match self.0.get(package) {
+            Some(JsonValue::String(version)) => Some(version),
+            _ => None,
+        }
     }
 }
 

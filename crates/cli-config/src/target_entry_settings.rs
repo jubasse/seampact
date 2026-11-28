@@ -3,7 +3,7 @@
 use camino::Utf8PathBuf;
 use indexmap::IndexMap;
 use seampact_diagnostics::InternalError;
-use seampact_json::JsonValue;
+use seampact_json::{JsonValue, from_json_value};
 use serde::Deserialize;
 
 use crate::artefact_switch::ArtefactSwitches;
@@ -83,11 +83,7 @@ impl TargetEntrySettings {
     ///
     /// [`InternalError`] when the value does not read as a target entry.
     pub fn from_json(entry: &JsonValue) -> Result<Self, InternalError> {
-        let value = serde_json::to_value(entry).map_err(|error| {
-            InternalError::new(format!("a target entry does not serialise: {error}"))
-        })?;
-
-        serde_json::from_value(value).map_err(|error| {
+        from_json_value(entry).map_err(|error| {
             InternalError::new(format!(
                 "a target entry that passed the schema does not read: {error}"
             ))

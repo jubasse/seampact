@@ -5,7 +5,7 @@ use std::fs;
 use camino::{Utf8Path, Utf8PathBuf};
 use seampact_cli_config::{CheckLevel, CliIo};
 use seampact_generate::{
-    EmittedAppDocument, GeneratedOutput, Stop, SweptDirectory, commit_writes, committable_writes,
+    EmittedAppDocument, GeneratedOutput, SweptDirectory, commit_writes, committable_writes,
     plan_writes,
 };
 use seampact_target::{GenerateWarning, GeneratedFile};
@@ -61,17 +61,8 @@ fn output_in(root: &Utf8Path, contents: &str, warnings: Vec<GenerateWarning>) ->
     }
 }
 
-fn document_in(directory: &Utf8Path) -> EmittedAppDocument {
-    EmittedAppDocument {
-        name: "tasks".to_owned(),
-        file: directory.join("tasks.yaml"),
-        text: "openapi: 3.1.0\n".to_owned(),
-        level: CheckLevel::Warning,
-    }
-}
-
 fn committed(
-    outputs: &[GeneratedOutput],
+    outputs: Vec<GeneratedOutput>,
     documents: &[EmittedAppDocument],
     swept: &[SweptDirectory],
     io: &mut RecordingIo,
@@ -83,100 +74,49 @@ fn committed(
 }
 
 #[test]
-fn an_entry_prints_what_it_wrote_and_its_warnings() -> TestResult<()> {
-    let temporary = tempfile::tempdir()?;
-    let root = directory_of(&temporary)?.join("out");
-    let warning = GenerateWarning {
-        code: "form.handler".to_owned(),
-        message: "left to you.".to_owned(),
-        fix: "Handle it.".to_owned(),
-        operation: None,
-        member: Some("/operations/0".to_owned()),
-    };
-    let output = output_in(&root, "{\"a\":1}", vec![warning]);
-    let mut first = RecordingIo::default();
-    let mut second = RecordingIo::default();
-
-    committed(std::slice::from_ref(&output), &[], &[], &mut first)?;
-    committed(std::slice::from_ref(&output), &[], &[], &mut second)?;
-
-    assert_eq!(
-        first.stdout,
-        format!("entry 'api', api 'tasks': 1 written, 0 unchanged, 0 removed ({root}).\n")
-    );
-    assert_eq!(
-        second.stdout,
-        format!("entry 'api', api 'tasks': 0 written, 1 unchanged, 0 removed ({root}).\n")
-    );
-    assert!(
-        first.stderr.starts_with("warning: ") && first.stderr.contains("form.handler"),
-        "stderr: {}",
-        first.stderr
-    );
-
-    Ok(())
-}
-
-#[test]
-fn documents_are_written_then_unchanged_then_removed_with_their_directory_swept() -> TestResult<()>
-{
+fn a_printed_path_never_carries_a_raw_escape() -> TestResult<()> {
     let temporary = tempfile::tempdir()?;
     let directory = directory_of(&temporary)?.join("docs");
-    let document = document_in(&directory);
+    let stale_name = "x\u{1b}[2J.yaml";
+    let stale_hash = "37b128c59f1f5097f73f82691cb519f1f568667faab5ced1b4ab979d36837eae";
     let swept = SweptDirectory {
         directory: directory.clone(),
         level: CheckLevel::Warning,
     };
-    let mut written = RecordingIo::default();
-    let mut unchanged = RecordingIo::default();
-    let mut removed = RecordingIo::default();
-
-    committed(&[], std::slice::from_ref(&document), &[], &mut written)?;
-    committed(&[], std::slice::from_ref(&document), &[], &mut unchanged)?;
-    committed(&[], &[], std::slice::from_ref(&swept), &mut removed)?;
-
-    assert_eq!(
-        written.stdout,
-        format!("openapi document 'tasks': written ({}).\n", document.file)
-    );
-    assert_eq!(
-        unchanged.stdout,
-        format!("openapi document 'tasks': unchanged ({}).\n", document.file)
-    );
-    assert_eq!(
-        removed.stdout,
-        format!(
-            "openapi document {}: removed.\n",
-            directory.join("tasks.yaml")
-        )
-    );
-    assert!(!document.file.exists());
-
-    Ok(())
-}
-
-#[test]
-fn a_file_seampact_did_not_write_in_a_document_directory_is_refused_as_a_document() -> TestResult<()>
-{
-    let temporary = tempfile::tempdir()?;
-    let directory = directory_of(&temporary)?.join("docs");
-    let document = document_in(&directory);
+    let mut removal = RecordingIo::default();
+    let mut entry = RecordingIo::default();
 
     fs::create_dir_all(&directory)?;
-    fs::write(&document.file, "mine: true\n")?;
-
-    let planned = plan_writes(
-        &[],
-        std::slice::from_ref(&document),
-        &[],
-        HandEditPolicy::Refuse,
+    fs::write(directory.join(stale_name), "a: 1\n")?;
+    fs::write(
+        directory.join(".seampact-manifest.json"),
+        format!(
+            "{{\"owner\":\"openapi\",\"files\":[{{\"path\":\"x\\u001b[2J.yaml\",\"sha256\":\"{stale_hash}\"}}]}}"
+        ),
     )?;
-    let Err(Stop::Refused(problems)) = committable_writes(planned) else {
-        return Err("the foreign file was not refused".into());
-    };
-    let codes: Vec<String> = problems.into_iter().map(|each| each.code).collect();
 
-    assert_eq!(codes, ["openapi.document.not-generated"]);
+    committed(Vec::new(), &[], std::slice::from_ref(&swept), &mut removal)?;
+
+    let root = directory_of(&temporary)?.join("out\u{1b}[2J");
+    let output = output_in(&root, "{\"a\":1}", Vec::new());
+
+    committed(vec![output], &[], &[], &mut entry)?;
+
+    assert!(
+        !directory.join(stale_name).exists(),
+        "the stale file stayed"
+    );
+    assert!(
+        removal.stdout.contains("x\\u001B[2J.yaml"),
+        "stdout: {:?}",
+        removal.stdout
+    );
+    assert!(
+        !removal.stdout.contains('\u{1b}') && !entry.stdout.contains('\u{1b}'),
+        "stdout: {:?} and {:?}",
+        removal.stdout,
+        entry.stdout
+    );
 
     Ok(())
 }

@@ -1,0 +1,7 @@
+{
+  "exit": 1,
+  "stdout": "",
+  "stderr": "config.openapi.unknown-document: openapi.tasks.internal: The api 'tasks' declares no document 'internal' (full, public). Fix: Map the documents the api's `documents` declares.\n",
+  "written": {},
+  "removed": []
+}

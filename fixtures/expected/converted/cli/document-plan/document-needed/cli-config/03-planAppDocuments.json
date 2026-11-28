@@ -1,0 +1,41 @@
+{
+  "function": "planAppDocuments",
+  "args": [
+    {
+      "file": "<root>/seampact.config.yaml",
+      "outDir": "<root>/__generated__",
+      "sources": {
+        "a": {
+          "kind": "path",
+          "directory": "<root>/a"
+        }
+      },
+      "entries": [],
+      "openapi": {
+        "tasks": "docs/tasks.yaml"
+      }
+    },
+    {},
+    [
+      {
+        "source": "a",
+        "api": "tasks",
+        "documents": [
+          "full",
+          "public"
+        ]
+      }
+    ]
+  ],
+  "result": {
+    "status": "refused",
+    "problems": [
+      {
+        "code": "config.openapi.document-needed",
+        "message": "The api 'tasks' declares the documents full, public, and 'openapi.tasks' gives one path.",
+        "fix": "Map each document to its path: 'tasks: { full: openapi/tasks.full.yaml }'.",
+        "where": "openapi.tasks"
+      }
+    ]
+  }
+}

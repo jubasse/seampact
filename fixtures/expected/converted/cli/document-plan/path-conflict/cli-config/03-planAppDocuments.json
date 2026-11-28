@@ -1,0 +1,44 @@
+{
+  "function": "planAppDocuments",
+  "args": [
+    {
+      "file": "<root>/seampact.config.yaml",
+      "outDir": "<root>/__generated__",
+      "sources": {
+        "a": {
+          "kind": "path",
+          "directory": "<root>/a"
+        }
+      },
+      "entries": [],
+      "openapi": {
+        "tasks": {
+          "public": "docs/same.yaml",
+          "full": "docs/same.yaml"
+        }
+      }
+    },
+    {},
+    [
+      {
+        "source": "a",
+        "api": "tasks",
+        "documents": [
+          "full",
+          "public"
+        ]
+      }
+    ]
+  ],
+  "result": {
+    "status": "refused",
+    "problems": [
+      {
+        "code": "config.openapi.path-conflict",
+        "message": "The documents 'tasks.public' and 'tasks.full' are both written to <root>/docs/same.yaml.",
+        "fix": "Give each document its own path.",
+        "where": "openapi.tasks.full"
+      }
+    ]
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "function": "planAppDocuments",
+  "args": [
+    {
+      "file": "<root>/apps/api/seampact.config.yaml",
+      "outDir": "<root>/apps/api/__generated__",
+      "sources": {
+        "a": {
+          "kind": "path",
+          "directory": "<root>/a"
+        }
+      },
+      "entries": [],
+      "rootFile": "<root>/seampact.config.yaml"
+    },
+    {},
+    []
+  ],
+  "result": {
+    "status": "planned",
+    "documents": []
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "function": "planAppDocuments",
+  "args": [
+    {
+      "file": "<root>/seampact.config.yaml",
+      "outDir": "<root>/__generated__",
+      "sources": {
+        "a": {
+          "kind": "path",
+          "directory": "<root>/a"
+        }
+      },
+      "entries": [
+        {
+          "entry": {
+            "id": "server",
+            "use": "probe-server",
+            "api": "tasks"
+          },
+          "root": "<root>/__generated__/server"
+        }
+      ],
+      "openapi": {
+        "tasks": {
+          "public": "__generated__/server/tasks.public.yaml",
+          "full": "docs/tasks.full.yaml"
+        }
+      }
+    },
+    {
+      "server": "server"
+    },
+    [
+      {
+        "source": "a",
+        "api": "tasks",
+        "documents": [
+          "full",
+          "public"
+        ]
+      }
+    ]
+  ],
+  "result": {
+    "status": "refused",
+    "problems": [
+      {
+        "code": "config.openapi.inside-output",
+        "message": "The document <root>/__generated__/server/tasks.public.yaml lies inside the output directory of the entry 'server'.",
+        "fix": "Write the document outside every entry's `out` directory, as the default `openapi/` does.",
+        "where": "openapi.tasks.public"
+      }
+    ]
+  }
+}

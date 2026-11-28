@@ -1,0 +1,7 @@
+{
+  "exit": 1,
+  "stdout": "",
+  "stderr": "config.openapi.inside-output: openapi.tasks.public: The document <root>/__generated__/server/tasks.public.yaml lies inside the output directory of the entry 'server'. Fix: Write the document outside every entry's `out` directory, as the default `openapi/` does.\n",
+  "written": {},
+  "removed": []
+}

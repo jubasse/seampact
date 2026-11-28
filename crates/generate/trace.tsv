@@ -38,7 +38,7 @@ src/drift_level.rs#strictest_level	packages/core/cli/src/commands/drift-level.ts
 src/write_plan.rs#entry_write_problems	packages/core/cli/src/commands/write-plan.ts#entryWriteProblems
 src/entry_generation.rs#memoized_describe	packages/core/cli/src/commands/entry-generation.ts#memoizedDescribe
 src/exclusive_base_paths.rs#exclusive_base_path_problems	packages/core/cli/src/commands/exclusive-base-paths.ts#exclusiveBasePathProblems
-src/write_plan.rs#check_write	packages/core/cli/src/commands/write-plan.ts#checkWrite
+src/write_plan.rs#refused_of	packages/core/cli/src/commands/write-plan.ts#checkWrite
 src/framework_route_check.rs#framework_route_check_of	packages/core/cli/src/commands/framework-route-check.ts#frameworkRouteCheckOf
 src/import_specifier_styles.rs#import_specifier_styles	packages/core/cli/src/commands/import-specifier-styles.ts#importSpecifierStyles
 src/write_plan.rs#committable_writes	packages/core/cli/src/commands/write-plan.ts#committableWrites

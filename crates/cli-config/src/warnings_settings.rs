@@ -1,7 +1,7 @@
 //! The `warnings` of an app config read into their typed members.
 
 use seampact_diagnostics::InternalError;
-use seampact_json::JsonValue;
+use seampact_json::{JsonValue, from_json_value};
 use serde::Deserialize;
 
 /// The members of the app config's `warnings`.
@@ -23,12 +23,10 @@ impl WarningsSettings {
             return Ok(Self::default());
         };
 
-        serde_json::to_value(warnings)
-            .and_then(serde_json::from_value)
-            .map_err(|error| {
-                InternalError::new(format!(
-                    "warnings that passed the schema do not read: {error}"
-                ))
-            })
+        from_json_value(warnings).map_err(|error| {
+            InternalError::new(format!(
+                "warnings that passed the schema do not read: {error}"
+            ))
+        })
     }
 }

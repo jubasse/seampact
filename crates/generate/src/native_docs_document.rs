@@ -1,12 +1,12 @@
 //! The OpenAPI document the `nativeDocs` artefact of an entry follows, emitted for its api.
 
 use seampact_cli_config::{
-    CliProblem, PlannedAppDocument, Problems, TargetEntrySettings, entry_where, located_problem,
+    CliProblem, PlannedAppDocument, Problems, TargetEntrySettings, config_value, entry_where,
+    located_problem,
 };
 use seampact_diagnostics::InternalError;
 use seampact_json::{JsonObject, JsonValue};
-use seampact_load::ResolvedScalar;
-use seampact_load::yaml::{YamlKind, YamlNode, parse_yaml};
+use seampact_load::yaml::parse_yaml;
 use seampact_openapi::{
     EmitOutcome, EmitterOptions, ParsedEmitterOptions, emit_documents, parse_emitter_options,
 };
@@ -76,41 +76,16 @@ fn parse_emitted_document(text: &str) -> Result<JsonObject, Stop> {
         .into());
     }
 
-    match parsed.root.as_ref().map(json_of_node).transpose()? {
-        Some(JsonValue::Object(document)) => Ok(document),
+    let value = config_value(parsed.root.as_ref()).map_err(|error| {
+        InternalError::new(format!(
+            "the emitted document does not read: {}",
+            error.message()
+        ))
+    })?;
+
+    match value {
+        JsonValue::Object(document) => Ok(document),
         _ => Err(InternalError::new("the emitter wrote a document that is no object").into()),
-    }
-}
-
-fn json_of_node(node: &YamlNode) -> Result<JsonValue, InternalError> {
-    match &node.kind {
-        YamlKind::Scalar { .. } => node
-            .resolved_scalar()
-            .map(ResolvedScalar::into_json_value)
-            .ok_or_else(|| InternalError::new("a scalar of the emitted document did not resolve")),
-        YamlKind::Sequence(items) => items
-            .iter()
-            .map(json_of_node)
-            .collect::<Result<Vec<_>, _>>()
-            .map(JsonValue::Array),
-        YamlKind::Mapping(pairs) => {
-            let mut object = JsonObject::new();
-
-            for pair in pairs {
-                let key = pair.key.scalar_text().ok_or_else(|| {
-                    InternalError::new("a key of the emitted document is no text")
-                })?;
-                let value = match &pair.value {
-                    Some(value) => json_of_node(value)?,
-                    None => JsonValue::Null,
-                };
-
-                object.insert(key.to_owned(), value);
-            }
-
-            Ok(JsonValue::Object(object))
-        }
-        YamlKind::Alias(_) => Err(InternalError::new("the emitted document holds an alias")),
     }
 }
 

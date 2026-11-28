@@ -1,0 +1,43 @@
+{
+  "function": "planAppDocuments",
+  "args": [
+    {
+      "file": "<root>/seampact.config.yaml",
+      "outDir": "<root>/__generated__",
+      "sources": {
+        "a": {
+          "kind": "path",
+          "directory": "<root>/a"
+        }
+      },
+      "entries": [],
+      "openapi": {
+        "tasks": {
+          "internal": "docs/tasks.internal.yaml"
+        }
+      }
+    },
+    {},
+    [
+      {
+        "source": "a",
+        "api": "tasks",
+        "documents": [
+          "full",
+          "public"
+        ]
+      }
+    ]
+  ],
+  "result": {
+    "status": "refused",
+    "problems": [
+      {
+        "code": "config.openapi.unknown-document",
+        "message": "The api 'tasks' declares no document 'internal' (full, public).",
+        "fix": "Map the documents the api's `documents` declares.",
+        "where": "openapi.tasks.internal"
+      }
+    ]
+  }
+}

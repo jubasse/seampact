@@ -3,8 +3,8 @@
 use std::collections::HashMap;
 
 use seampact_cli_config::{
-    CliProblem, HookBootCheckLevel, PlannedAppDocument, Problems, TargetEntrySettings, entry_where,
-    hook_check_level_of, located_problem,
+    CheckLevel, CliProblem, HookBootCheckLevel, PlannedAppDocument, Problems, TargetEntrySettings,
+    entry_where, hook_check_level_of, located_problem,
 };
 use seampact_diagnostics::InternalError;
 use seampact_json::JsonValue;
@@ -19,7 +19,6 @@ use crate::drift_level::DEFAULT_DRIFT_CHECK_LEVEL;
 use crate::entry_links::{links_of, paired_api};
 use crate::exclusive_base_paths::exclusive_base_path_problems;
 use crate::framework_route_check::framework_route_check_of;
-use crate::generated_output::GeneratedApi;
 use crate::import_specifier_styles::import_specifier_styles;
 use crate::link_set::{add_link, is_link_kind, relative_location};
 use crate::native_docs_document::native_docs_document_of;
@@ -118,10 +117,10 @@ pub fn generate_entries(
         let style = styles.get(consumer.settings.id.as_str()).copied();
 
         for planned_api in &consumer.apis {
-            let step = generate_api(consumer, planned_api, style, &mut generation);
+            let step = generate_api(consumer, planned_api, style, level, app, &mut generation);
 
             if let Some(generated) = gather(step, &mut problems)? {
-                outputs.push(generated.into_output(level, app));
+                outputs.push(generated);
             }
         }
     }
@@ -135,8 +134,10 @@ fn generate_api(
     consumer: &PlannedEntry,
     planned_api: &PlannedApi,
     style: Option<ImportSpecifierStyle>,
+    level: CheckLevel,
+    app: Option<&str>,
     generation: &mut EntryGeneration<'_>,
-) -> Result<GeneratedApi, Stop> {
+) -> Result<GeneratedOutput, Stop> {
     let settings = &consumer.settings;
     let links = build_links(consumer, planned_api, generation)?;
     let native_docs = if consumer.artefacts.is_on(NATIVE_DOCS_ARTEFACT) {
@@ -193,7 +194,7 @@ fn generate_api(
         Err(refused) => return Err(refusal_stop(&refused.0, settings, planned_api)?),
     };
 
-    Ok(GeneratedApi {
+    Ok(GeneratedOutput {
         entry_id: settings.id.clone(),
         api: planned_api.api.clone(),
         root: planned_api.root.clone(),
@@ -203,6 +204,8 @@ fn generate_api(
             .into_iter()
             .filter(|warning| !is_ignored_warning(warning, generation.ignored_warnings))
             .collect(),
+        level,
+        app: app.map(str::to_owned),
     })
 }
 

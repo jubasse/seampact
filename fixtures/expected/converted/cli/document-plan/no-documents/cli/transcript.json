@@ -1,0 +1,7 @@
+{
+  "exit": 1,
+  "stdout": "",
+  "stderr": "config.openapi.no-documents: openapi.tasks: The api 'tasks' declares no `documents`, and 'openapi.tasks' maps document ids. Fix: Give the path of the api's one document instead of a mapping.\n",
+  "written": {},
+  "removed": []
+}

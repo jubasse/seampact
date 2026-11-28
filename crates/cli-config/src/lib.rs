@@ -62,13 +62,14 @@ pub use bundle_source::bundle_source_of;
 pub use check_level::{CheckLevel, MatrixCheckLevel};
 pub use cli_io::{CliIo, print_problems, print_warnings};
 pub use cli_problem::{
-    CliProblem, PROBLEM_FIELD_LIMIT, entry_where, format_problem, located_problem,
+    CliProblem, PROBLEM_FIELD_LIMIT, entry_where, format_problem, located_problem, printable_field,
     unlocated_problem,
 };
 pub use compatibility_check::{
     CompatibilityEntry, CompatibilityInput, CompatibilityOutcome, EntryTarget, InstalledVersions,
     check_app_compatibility, check_compatibility,
 };
+pub use config_value::{ConfigValueError, config_value};
 pub use diff_settings::DiffSettings;
 pub use document_plan::{
     ApiDocuments, PlannedAppDocument, default_document_directory, open_api_api_names,
@@ -79,6 +80,7 @@ pub use find_root_config::{RootDiscovery, find_root_config};
 pub use framework_route_entry::{FrameworkRouteEntry, HttpMethod};
 pub use installed_version::{
     InstalledPackageRole, InstalledVersion, InstalledVersionOutcome, read_installed_version,
+    read_runtime_version,
 };
 pub use merged_document_plan::{
     MergedApp, MergedContribution, MergedPlanError, PlannedMergedDocument, plan_merged_documents,

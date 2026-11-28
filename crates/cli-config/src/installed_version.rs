@@ -2,7 +2,7 @@
 //! `node_modules` directories from a lookup directory up, as Node's resolution searches them.
 
 use camino::Utf8Path;
-use seampact_json::{object_of, text_of};
+use seampact_json::{JsonValue, object_of, text_of};
 
 use crate::package_json::{PackageJsonRead, read_package_json};
 use crate::package_manager::{DependencyKind, install_fix};
@@ -110,6 +110,39 @@ pub fn read_installed_version(
             }))
         }
     }
+}
+
+/// The `version` the `package.json` of `package_name` declares, from `lookup_directory` up, as the
+/// file writes it, whatever its JSON type: a generator compares it itself. `null` when the
+/// package is not installed or declares no `version`.
+///
+/// # Errors
+///
+/// [`CliConfigError::Io`] when the `package.json` cannot be read or is not JSON.
+pub fn read_runtime_version(
+    lookup_directory: &Utf8Path,
+    package_name: &str,
+) -> Result<JsonValue, CliConfigError> {
+    let Some(package_directory) = node_path::node_modules_lookup(lookup_directory, package_name)
+    else {
+        return Ok(JsonValue::Null);
+    };
+    let package_json_file = package_directory.join(PACKAGE_MANIFEST);
+
+    let value = match read_package_json(&package_json_file)? {
+        PackageJsonRead::Parsed(value) => value,
+        PackageJsonRead::Syntax { message } => {
+            return Err(CliConfigError::Io {
+                path: package_json_file.to_string(),
+                message: format!("not valid JSON ({message})"),
+            });
+        }
+    };
+
+    Ok(object_of(Some(&value))
+        .and_then(|object| object.get("version"))
+        .cloned()
+        .unwrap_or(JsonValue::Null))
 }
 
 fn missing_package_problem(

@@ -1,0 +1,40 @@
+{
+  "function": "planAppDocuments",
+  "args": [
+    {
+      "file": "<root>/seampact.config.yaml",
+      "outDir": "<root>/__generated__",
+      "sources": {
+        "a": {
+          "kind": "path",
+          "directory": "<root>/a"
+        }
+      },
+      "entries": [],
+      "openapi": {
+        "tasks": {
+          "full": "docs/tasks.full.yaml"
+        }
+      }
+    },
+    {},
+    [
+      {
+        "source": "a",
+        "api": "tasks",
+        "documents": []
+      }
+    ]
+  ],
+  "result": {
+    "status": "refused",
+    "problems": [
+      {
+        "code": "config.openapi.no-documents",
+        "message": "The api 'tasks' declares no `documents`, and 'openapi.tasks' maps document ids.",
+        "fix": "Give the path of the api's one document instead of a mapping.",
+        "where": "openapi.tasks"
+      }
+    ]
+  }
+}

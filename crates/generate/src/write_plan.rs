@@ -1,9 +1,11 @@
 //! Every write of a run, each checked by the writer before the first one is committed.
 
+use std::mem;
+
 use camino::{Utf8Path, Utf8PathBuf};
 use indexmap::IndexMap;
 use seampact_cli_config::{
-    CheckLevel, CliIo, CliProblem, Problems, located_problem, print_warnings,
+    CheckLevel, CliIo, CliProblem, Problems, located_problem, print_warnings, printable_field,
 };
 use seampact_paths::node_path;
 use seampact_target::{GenerateWarning, GeneratedFile, Refusal, Refused, refusal_code};
@@ -99,20 +101,22 @@ pub struct CommittableWrites {
 ///
 /// [`GenerateError::Io`] or [`GenerateError::Internal`] when the writer cannot check.
 pub fn plan_writes(
-    outputs: &[GeneratedOutput],
+    outputs: Vec<GeneratedOutput>,
     documents: &[EmittedAppDocument],
     swept: &[SweptDirectory],
     policy: HandEditPolicy,
 ) -> Result<PlannedWrites, GenerateError> {
     let mut planned = PlannedWrites::default();
 
-    for output in outputs {
-        let check = check_write(&output.root, &output.entry_id, &output.files, policy)?;
+    for mut output in outputs {
+        // The files move into the writer's plan, which holds them from here on.
+        let files = mem::take(&mut output.files);
+        let check = match plan_generated_write(&output.root, &output.entry_id, files, policy) {
+            Ok(write) => Ok(write),
+            Err(stop) => Err(refused_of(stop)?),
+        };
 
-        planned.entries.push(EntryWrite {
-            output: output.clone(),
-            check,
-        });
+        planned.entries.push(EntryWrite { output, check });
     }
 
     for (directory, group) in document_directories(documents, swept)? {
@@ -124,7 +128,10 @@ pub fn plan_writes(
                 contents: document.text.clone(),
             })
             .collect();
-        let check = check_write(&directory, DOCUMENT_OWNER, &files, policy)?;
+        let check = match plan_generated_write(&directory, DOCUMENT_OWNER, files, policy) {
+            Ok(write) => Ok(write),
+            Err(stop) => Err(refused_of(stop)?),
+        };
 
         planned.documents.push(DocumentDirectoryWrite {
             directory,
@@ -281,21 +288,15 @@ fn document_problem(directory: &Utf8Path, refusal: &Refusal) -> CliProblem {
     }
 }
 
-/// The writer's plan for `files` in `directory`, or its refusals.
+/// The refusals the run reports with the others.
 ///
 /// # Errors
 ///
-/// [`GenerateError::Io`] or [`GenerateError::Internal`] when the writer cannot check.
-fn check_write(
-    directory: &Utf8Path,
-    owner: &str,
-    files: &[GeneratedFile],
-    policy: HandEditPolicy,
-) -> Result<Result<PlannedWrite, Refused>, GenerateError> {
-    match plan_generated_write(directory, owner, files.to_vec(), policy) {
-        Ok(write) => Ok(Ok(write)),
-        Err(WriteStop::Refused(refused)) => Ok(Err(refused)),
-        Err(WriteStop::Failed(error)) => Err(error.into()),
+/// [`GenerateError::Io`] or [`GenerateError::Internal`] when the writer could not check.
+fn refused_of(stop: WriteStop) -> Result<Refused, GenerateError> {
+    match stop {
+        WriteStop::Refused(refused) => Ok(refused),
+        WriteStop::Failed(error) => Err(error.into()),
     }
 }
 
@@ -321,6 +322,12 @@ fn warning_problem(warning: &GenerateWarning, location: &str) -> CliProblem {
     problem_from_refusal(&refusal, location.to_owned(), None)
 }
 
+/// One summary line, its text cut and written inert as a problem's fields are: it carries paths
+/// and names read from the config and from manifests on disk.
+fn print_line(io: &mut dyn CliIo, line: &str) {
+    io.stdout(&format!("{}\n", printable_field(line)));
+}
+
 /// Commits every write: each entry's files, then each document directory, printing what each
 /// wrote and its warnings.
 ///
@@ -332,13 +339,16 @@ pub fn commit_writes(writes: CommittableWrites, io: &mut dyn CliIo) -> Result<()
         let written = commit_generated_write(write)?;
         let location = app_entry_where(output.app.as_deref(), &output.entry_id, Some(&output.api));
 
-        io.stdout(&format!(
-            "{location}: {} written, {} unchanged, {} removed ({}).\n",
-            written.written.len(),
-            written.unchanged.len(),
-            written.removed.len(),
-            output.root
-        ));
+        print_line(
+            io,
+            &format!(
+                "{location}: {} written, {} unchanged, {} removed ({}).",
+                written.written.len(),
+                written.unchanged.len(),
+                written.removed.len(),
+                output.root
+            ),
+        );
 
         let warnings: Vec<CliProblem> = output
             .warnings
@@ -368,17 +378,23 @@ pub fn commit_writes(writes: CommittableWrites, io: &mut dyn CliIo) -> Result<()
                 "unchanged"
             };
 
-            io.stdout(&format!(
-                "openapi document '{}': {state} ({}).\n",
-                document.name, document.file
-            ));
+            print_line(
+                io,
+                &format!(
+                    "openapi document '{}': {state} ({}).",
+                    document.name, document.file
+                ),
+            );
         }
 
         for removed in &written.removed {
-            io.stdout(&format!(
-                "openapi document {}: removed.\n",
-                node_path::join(&directory, Utf8Path::new(removed))
-            ));
+            print_line(
+                io,
+                &format!(
+                    "openapi document {}: removed.",
+                    node_path::join(&directory, Utf8Path::new(removed))
+                ),
+            );
         }
     }
 
