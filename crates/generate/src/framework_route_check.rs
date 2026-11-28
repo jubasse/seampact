@@ -84,7 +84,6 @@ fn allowance_of(route: &FrameworkRouteEntry) -> FrameworkRouteAllowance {
 
 /// The framework-route check `entry` asks for: off, or on with its allowances and scope.
 #[must_use]
-#[expect(dead_code, reason = "called by generate_api, brief 2")]
 pub(crate) fn framework_route_check_of(entry: &TargetEntrySettings) -> FrameworkRouteCheck {
     if is_framework_route_check_switched_off(entry.artefacts.as_ref()) {
         return FrameworkRouteCheck::Off;

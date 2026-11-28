@@ -48,6 +48,33 @@ struct PlannedFile {
     sha256: String,
 }
 
+impl PlannedWrite {
+    /// The output directory the paths of the files are relative to.
+    #[must_use]
+    pub fn root_directory(&self) -> &Utf8Path {
+        &self.root_directory
+    }
+
+    /// Each file the write holds, its path and its final bytes.
+    pub fn files(&self) -> impl Iterator<Item = (&str, &[u8])> {
+        self.files
+            .iter()
+            .map(|file| (file.path.as_str(), file.bytes.as_slice()))
+    }
+
+    /// The paths of the files already holding these bytes.
+    #[must_use]
+    pub fn unchanged(&self) -> &[String] {
+        &self.unchanged
+    }
+
+    /// The paths of the files an earlier write generated and this one does not.
+    #[must_use]
+    pub fn removable(&self) -> &[String] {
+        &self.removable
+    }
+}
+
 /// Plans then commits the write of `files` into `out_directory` under `owner`.
 ///
 /// # Errors

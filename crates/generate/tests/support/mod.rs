@@ -6,7 +6,7 @@ use camino::Utf8PathBuf;
 use seampact_cli_config::{ConfiguredTargetEntry, TargetEntrySettings};
 use seampact_generate::{PlannedApi, PlannedEntry};
 use seampact_ir::ContractIr;
-use seampact_target::{ArtefactSet, Generator};
+use seampact_target::{ArtefactSet, Generator, InstalledRuntimes, ResolvedLinkNeeds};
 
 pub type TestResult<Value> = Result<Value, Box<dyn std::error::Error>>;
 
@@ -46,6 +46,8 @@ pub fn planned_entry(
         },
         target,
         ArtefactSet::new(std::iter::empty::<String>()),
+        ResolvedLinkNeeds::NONE,
+        InstalledRuntimes::NONE,
     );
 
     planned.apis = apis;

@@ -49,36 +49,36 @@ src/entry_generation.rs#with_docs	packages/core/cli/src/commands/entry-generatio
 src/entry_generation.rs#generate_entries	packages/core/cli/src/commands/entry-generation.ts#generateEntries
 src/document_emission.rs#emit_app_documents	packages/core/cli/src/commands/document-emission.ts#emitAppDocuments
 src/entry_generation.rs#build_links	packages/core/cli/src/commands/entry-generation.ts#buildLinks
-src/entry_generation.rs#generate_api	packages/core/cli/src/commands/entry-generation.ts#generateApi	pending: brief 2
-src/import_specifier_styles.rs#record_ask	packages/core/cli/src/commands/import-specifier-styles.ts#recordAsk	pending: brief 2
-src/link_set.rs#is_link_kind	packages/core/cli/src/commands/link-set.ts#isLinkKind	pending: brief 2
--	packages/core/cli/src/commands/write-plan.ts#documentDirectories	pending: brief 2
-src/write_plan.rs#commit_writes	packages/core/cli/src/commands/write-plan.ts#commitWrites	pending: brief 2
-src/write_plan.rs#plan_writes	packages/core/cli/src/commands/write-plan.ts#planWrites	pending: brief 2
--	packages/core/cli/src/commands/entry-generation.ts#isIgnoredWarning	pending: brief 2
-src/exclusive_base_paths.rs#shared_base_path_problems	packages/core/cli/src/commands/exclusive-base-paths.ts#sharedBasePathProblems	pending: brief 2
--	packages/core/cli/src/commands/exclusive-base-paths.ts#overlaps	pending: brief 2
--	packages/core/cli/src/commands/write-drift.ts#driftItems	pending: brief 2
-src/write_drift.rs#find_write_drift	packages/core/cli/src/commands/write-drift.ts#findWriteDrift	pending: brief 2
--	packages/core/cli/src/commands/write-drift.ts#addDrift	pending: brief 2
--	packages/core/cli/src/commands/write-drift.ts#plannedDrift	pending: brief 2
--	packages/core/cli/src/commands/write-drift.ts#refusalProblem	pending: brief 2
--	packages/core/cli/src/commands/write-drift.ts#fileDrift	pending: brief 2
--	packages/core/cli/src/commands/write-drift.ts#readCommitted	pending: brief 2
-src/write_plan.rs#document_problem	packages/core/cli/src/commands/write-plan.ts#documentProblem	pending: brief 2
-src/link_set.rs#relative_location	packages/core/cli/src/commands/link-set.ts#relativeLocation	pending: brief 2
--	packages/core/cli/src/commands/exclusive-base-paths.ts#sharedBasePathProblem	pending: brief 2
-src/link_set.rs#add_link	packages/core/cli/src/commands/link-set.ts#addLink	pending: brief 2
--	packages/core/cli/src/commands/link-set.ts#addLinkByKind.validators	pending: brief 2
-src/import_specifier_styles.rs#mixed_styles_problem	packages/core/cli/src/commands/import-specifier-styles.ts#mixedStylesProblem	pending: brief 2
--	packages/core/cli/src/commands/link-set.ts#addLinkByKind.types	pending: brief 2
--	packages/core/cli/src/commands/link-set.ts#addLinkByKind.client	pending: brief 2
--	packages/core/cli/src/commands/native-docs-document.ts#quoted	pending: brief 2
--	packages/core/cli/src/commands/native-docs-document.ts#chosenDocumentName	pending: brief 2
--	packages/core/cli/src/commands/native-docs-document.ts#emitterOptionsOf	pending: brief 2
--	packages/core/cli/src/commands/native-docs-document.ts#nativeDocsDocumentOf	pending: brief 2
--	packages/core/cli/src/commands/native-docs-document.ts#ambiguousDocumentProblem	pending: brief 2
-src/merged_documents.rs#emit_merged_documents	packages/core/cli/src/commands/merged-documents.ts#emitMergedDocuments	pending: brief 2
--	packages/core/cli/src/commands/merged-documents.ts#mergeInput	pending: brief 2
--	packages/core/cli/src/commands/merged-documents.ts#mergedText	pending: brief 2
+src/entry_generation.rs#generate_api	packages/core/cli/src/commands/entry-generation.ts#generateApi
+src/import_specifier_styles.rs#record_ask	packages/core/cli/src/commands/import-specifier-styles.ts#recordAsk
+src/link_set.rs#is_link_kind	packages/core/cli/src/commands/link-set.ts#isLinkKind
+src/write_plan.rs#document_directories	packages/core/cli/src/commands/write-plan.ts#documentDirectories
+src/write_plan.rs#commit_writes	packages/core/cli/src/commands/write-plan.ts#commitWrites
+src/write_plan.rs#plan_writes	packages/core/cli/src/commands/write-plan.ts#planWrites
+src/entry_generation.rs#is_ignored_warning	packages/core/cli/src/commands/entry-generation.ts#isIgnoredWarning
+src/exclusive_base_paths.rs#shared_base_path_problems	packages/core/cli/src/commands/exclusive-base-paths.ts#sharedBasePathProblems
+src/exclusive_base_paths.rs#overlaps	packages/core/cli/src/commands/exclusive-base-paths.ts#overlaps
+src/write_drift.rs#drift_items	packages/core/cli/src/commands/write-drift.ts#driftItems
+src/write_drift.rs#find_write_drift	packages/core/cli/src/commands/write-drift.ts#findWriteDrift
+src/write_drift.rs#add_drift	packages/core/cli/src/commands/write-drift.ts#addDrift
+src/write_drift.rs#planned_drift	packages/core/cli/src/commands/write-drift.ts#plannedDrift
+src/write_drift.rs#refusal_problem	packages/core/cli/src/commands/write-drift.ts#refusalProblem
+src/write_drift.rs#file_drift	packages/core/cli/src/commands/write-drift.ts#fileDrift
+-	packages/core/cli/src/commands/write-drift.ts#readCommitted	merged: ../writer/src/file_presence.rs#read_file_if_present
+src/write_plan.rs#document_problem	packages/core/cli/src/commands/write-plan.ts#documentProblem
+src/link_set.rs#relative_location	packages/core/cli/src/commands/link-set.ts#relativeLocation
+src/exclusive_base_paths.rs#shared_base_path_problem	packages/core/cli/src/commands/exclusive-base-paths.ts#sharedBasePathProblem
+src/link_set.rs#add_link	packages/core/cli/src/commands/link-set.ts#addLink
+-	packages/core/cli/src/commands/link-set.ts#addLinkByKind.validators	merged: src/link_set.rs#add_link
+src/import_specifier_styles.rs#mixed_styles_problem	packages/core/cli/src/commands/import-specifier-styles.ts#mixedStylesProblem
+-	packages/core/cli/src/commands/link-set.ts#addLinkByKind.types	merged: src/link_set.rs#add_link
+-	packages/core/cli/src/commands/link-set.ts#addLinkByKind.client	merged: src/link_set.rs#add_link
+src/native_docs_document.rs#quoted	packages/core/cli/src/commands/native-docs-document.ts#quoted
+src/native_docs_document.rs#chosen_document_name	packages/core/cli/src/commands/native-docs-document.ts#chosenDocumentName
+src/native_docs_document.rs#emitter_options_of	packages/core/cli/src/commands/native-docs-document.ts#emitterOptionsOf
+src/native_docs_document.rs#native_docs_document_of	packages/core/cli/src/commands/native-docs-document.ts#nativeDocsDocumentOf
+src/native_docs_document.rs#ambiguous_document_problem	packages/core/cli/src/commands/native-docs-document.ts#ambiguousDocumentProblem
+src/merged_documents.rs#emit_merged_documents	packages/core/cli/src/commands/merged-documents.ts#emitMergedDocuments
+src/merged_documents.rs#merge_input	packages/core/cli/src/commands/merged-documents.ts#mergeInput
+src/merged_documents.rs#merged_text	packages/core/cli/src/commands/merged-documents.ts#mergedText
 src/mounted_base_paths.rs#mounted_base_paths	packages/core/codegen-core/src/mounted-base-paths.ts#mountedBasePaths

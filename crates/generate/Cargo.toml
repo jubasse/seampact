@@ -23,6 +23,7 @@ seampact-js.workspace = true
 seampact-json.workspace = true
 seampact-load.workspace = true
 seampact-openapi.workspace = true
+seampact-paths.workspace = true
 seampact-pipeline.workspace = true
 seampact-span.workspace = true
 seampact-target.workspace = true
@@ -32,6 +33,7 @@ thiserror.workspace = true
 [dev-dependencies]
 seampact-gen-probe.workspace = true
 serde_json.workspace = true
+tempfile.workspace = true
 
 [lints]
 workspace = true

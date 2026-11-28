@@ -1,10 +1,12 @@
 //! The problem a target's refusal prints, with the operation, IR member and contract position it names.
 
 use seampact_cli_config::CliProblem;
+use seampact_diagnostics::InternalError;
 use seampact_ir::OperationId;
 use seampact_target::Refusal;
 
 use crate::contract_position::{ContractPositions, contract_position};
+use crate::planned_entry::PlannedApi;
 
 /// Whether `message` writes `pointer` as a whole: not followed by `/` or a word character.
 fn names_pointer(message: &str, pointer: &str) -> bool {
@@ -67,6 +69,32 @@ pub fn problem_from_refusal(
         position,
         docs: refusal.docs.clone(),
     }
+}
+
+/// The problems of `refusals` of the contract of `api`, each at the location `location_of` gives
+/// and at the position in the contract it names.
+///
+/// # Errors
+///
+/// [`InternalError`] when the IR of `api` cannot be written as JSON.
+pub(crate) fn problems_at_api(
+    refusals: &[Refusal],
+    location_of: impl Fn(&Refusal) -> String,
+    api: &PlannedApi,
+) -> Result<Vec<CliProblem>, InternalError> {
+    let ir = api
+        .ir
+        .to_json_value()
+        .map_err(|error| InternalError::new(error.to_string()))?;
+    let positions = ContractPositions {
+        ir: &ir,
+        locations: api.located.as_ref(),
+    };
+
+    Ok(refusals
+        .iter()
+        .map(|refusal| problem_from_refusal(refusal, location_of(refusal), Some(&positions)))
+        .collect())
 }
 
 #[cfg(test)]

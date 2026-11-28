@@ -1998,11 +1998,13 @@ dependencies = [
  "seampact-json",
  "seampact-load",
  "seampact-openapi",
+ "seampact-paths",
  "seampact-pipeline",
  "seampact-span",
  "seampact-target",
  "seampact-writer",
  "serde_json",
+ "tempfile",
  "thiserror",
 ]
 

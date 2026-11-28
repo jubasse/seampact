@@ -8,6 +8,7 @@ use seampact_js::js_key_order;
 use seampact_target::LinkKind;
 
 use crate::PlannedApi;
+use crate::link_set::is_link_kind;
 use crate::planned_entry::PlannedEntry;
 
 /// The links of `entry` as kind and provider id, in the order JavaScript lists object keys.
@@ -127,10 +128,6 @@ fn cycle_problem(visiting: &[&str], cycle_start: usize, entry_id: &str) -> CliPr
     )
 }
 
-fn link_kind_named(kind: &str) -> Option<LinkKind> {
-    LinkKind::ALL.into_iter().find(|each| each.as_str() == kind)
-}
-
 fn kinds_text(kinds: impl Iterator<Item = LinkKind>) -> String {
     let names: Vec<&str> = kinds.map(LinkKind::as_str).collect();
 
@@ -155,7 +152,7 @@ pub fn unprovided_kind_problems(planned: &[PlannedEntry]) -> Vec<CliProblem> {
             };
             let metadata = provider.target.metadata();
 
-            if link_kind_named(kind).is_some_and(|known| metadata.provides.of(known).is_some()) {
+            if is_link_kind(kind).is_some_and(|known| metadata.provides.of(known).is_some()) {
                 continue;
             }
 
@@ -186,7 +183,7 @@ pub fn unconsumed_kind_problems(planned: &[PlannedEntry]) -> Vec<CliProblem> {
         let metadata = consumer.target.metadata();
 
         for (kind, provider_id) in links_of(entry) {
-            if link_kind_named(kind).is_some_and(|known| metadata.consumes.of(known).is_some()) {
+            if is_link_kind(kind).is_some_and(|known| metadata.consumes.of(known).is_some()) {
                 continue;
             }
 

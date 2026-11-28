@@ -3,13 +3,15 @@
 
 use camino::Utf8PathBuf;
 use seampact_cli_config::{
-    CliIo, CliProblem, ConfiguredTargetEntry, EntryTarget, LoadedAppConfig, Problems,
-    TargetEntrySettings, check_app_compatibility, default_document_directory, entry_where,
-    located_problem, open_api_api_names, print_warnings, select_artefacts,
+    CliIo, CliProblem, ConfiguredTargetEntry, EntryTarget, InstalledPackageRole,
+    InstalledVersionOutcome, LoadedAppConfig, Problems, TargetEntrySettings,
+    check_app_compatibility, default_document_directory, entry_where, located_problem,
+    open_api_api_names, print_warnings, read_installed_version, select_artefacts,
 };
-use seampact_target::{CompatibilityMatrix, Registry};
+use seampact_target::{
+    CompatibilityMatrix, InstalledRuntimes, Registry, TargetMetadata, resolve_link_needs,
+};
 
-use crate::PlanInputs;
 use crate::api_refs::{
     add_qualify_fix, entry_api_refs, resolve_entry_apis, sources_holding_refs,
     unknown_source_problems,
@@ -25,6 +27,7 @@ use crate::framework_route_check::unread_framework_route_key_problems;
 use crate::planned_document::{PlannedDocument, plan_documents};
 use crate::planned_entry::{PlannedApi, PlannedEntry};
 use crate::stop::Stop;
+use crate::{GenerateError, PlanInputs};
 
 /// What one app generates, planned and checked in memory.
 #[derive(Debug, Clone)]
@@ -65,7 +68,7 @@ pub fn plan_app<'run>(
         .map(|entry| entry.id.as_str())
         .collect();
     let targets = resolve_targets(&config.entries, registry)?;
-    let (mut planned, mut config_problems) = select_entry_artefacts(&targets);
+    let (mut planned, mut config_problems) = select_entry_artefacts(&targets, matrix)?;
     let compatibility =
         check_app_compatibility(&targets, config.checks.matrix.unwrap_or_default(), matrix)?;
 
@@ -106,24 +109,63 @@ pub fn plan_app<'run>(
     })
 }
 
-/// Each entry with the artefacts its switches select, in config order, and the problems of the
-/// entries whose switches the target refuses.
-fn select_entry_artefacts(targets: &[EntryTarget<'_>]) -> (Vec<PlannedEntry>, Vec<CliProblem>) {
+/// Each entry with the artefacts its switches select, its needs read and its runtime packages
+/// looked up, in config order, and the problems of the entries whose switches the target refuses.
+fn select_entry_artefacts(
+    targets: &[EntryTarget<'_>],
+    matrix: &CompatibilityMatrix,
+) -> Result<(Vec<PlannedEntry>, Vec<CliProblem>), Stop> {
     let mut planned = Vec::with_capacity(targets.len());
     let mut problems = Vec::new();
 
     for each in targets {
         match select_artefacts(&each.entry.settings, each.target) {
             Ok(artefacts) => {
-                let entry = PlannedEntry::resolved(each.entry, each.target, artefacts);
+                let metadata = each.target.metadata();
+                let needs = resolve_link_needs(&metadata.consumes, metadata.compatibility, matrix)
+                    .map_err(GenerateError::from)?;
+                let installed_runtimes = installed_runtimes_of(each.entry, metadata)?;
 
-                planned.push(entry);
+                planned.push(PlannedEntry::resolved(
+                    each.entry,
+                    each.target,
+                    artefacts,
+                    needs,
+                    installed_runtimes,
+                ));
             }
             Err(refused) => problems.extend(refused),
         }
     }
 
-    (planned, problems)
+    Ok((planned, problems))
+}
+
+/// The version of each runtime package of the target installed from the entry's output
+/// directory upward; a package that is not installed or not readable is recorded as absent.
+fn installed_runtimes_of(
+    entry: &ConfiguredTargetEntry,
+    metadata: &TargetMetadata,
+) -> Result<InstalledRuntimes, GenerateError> {
+    let mut runtimes = InstalledRuntimes::default();
+    let location = entry_where(&entry.settings.id, None);
+
+    for package in metadata.runtime_packages {
+        let outcome = read_installed_version(
+            &entry.root,
+            package,
+            InstalledPackageRole::Library,
+            &location,
+        )?;
+        let version = match outcome {
+            InstalledVersionOutcome::Installed(installed) => Some(installed.version),
+            InstalledVersionOutcome::Refused(_) => None,
+        };
+
+        runtimes.insert((*package).to_owned(), version);
+    }
+
+    Ok(runtimes)
 }
 
 fn resolve_targets<'config>(
