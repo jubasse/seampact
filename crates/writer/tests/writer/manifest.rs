@@ -149,3 +149,35 @@ fn a_malformed_manifest_is_refused_with_its_reason() {
 
     assert!(invalid_reason("{not json").starts_with("it is not JSON ("));
 }
+
+#[test]
+fn a_link_in_place_of_the_manifest_is_invalid_and_not_followed() {
+    let (_guard, root) = temporary_directory();
+
+    std::os::unix::fs::symlink("/dev/zero", root.join(".seampact-manifest.json")).expect("a link");
+
+    assert_eq!(
+        read_manifest(&root).expect("an answer"),
+        ManifestRead::Invalid {
+            reason: "it is not a regular file".to_owned()
+        }
+    );
+}
+
+#[test]
+fn a_manifest_above_four_mebibytes_is_invalid() {
+    let (_guard, root) = temporary_directory();
+
+    std::fs::write(
+        root.join(".seampact-manifest.json"),
+        vec![b' '; 5 * 1024 * 1024],
+    )
+    .expect("a large manifest");
+
+    assert_eq!(
+        read_manifest(&root).expect("an answer"),
+        ManifestRead::Invalid {
+            reason: "it is larger than 4194304 bytes".to_owned()
+        }
+    );
+}
