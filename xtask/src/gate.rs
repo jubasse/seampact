@@ -9,6 +9,7 @@ use crate::deps::{DEPS_STEP, deps_gate_step};
 use crate::oracle::oracle_gate_step;
 use crate::outcome::{StepOutcome, StepReport};
 use crate::prerequisite::missing_node_modules_problem;
+use crate::release_gate::{RELEASE_STEP, release_gate_step};
 
 /// Whether a step only reads the workspace or builds and runs it: fail-fast runs the first kind
 /// before starting the second.
@@ -104,6 +105,7 @@ enum Step {
     Command(&'static CommandStep),
     Deps,
     Oracle,
+    Release,
 }
 
 impl Step {
@@ -112,6 +114,7 @@ impl Step {
             Self::Command(step) => step.name,
             Self::Deps => DEPS_STEP,
             Self::Oracle => ORACLE_STEP,
+            Self::Release => RELEASE_STEP,
         }
     }
 
@@ -119,7 +122,7 @@ impl Step {
         match self {
             Self::Command(step) => step.phase,
             Self::Deps => StepPhase::Checks,
-            Self::Oracle => StepPhase::Tests,
+            Self::Oracle | Self::Release => StepPhase::Tests,
         }
     }
 
@@ -128,12 +131,13 @@ impl Step {
             Self::Command(step) => run_command_step(step, workspace_root),
             Self::Deps => deps_gate_step(workspace_root),
             Self::Oracle => oracle_gate_step(workspace_root),
+            Self::Release => release_gate_step(workspace_root),
         }
     }
 }
 
-/// Runs the gate steps and returns their reports in step order, the deps step then the oracle
-/// last.
+/// Runs the gate steps and returns their reports in step order, the deps step, the oracle, then
+/// the release step last.
 ///
 /// The steps of one batch run at the same time: the command steps are separate processes and the
 /// oracle runs in this one, so a slow build waits on cargo's own lock, not on this code. A failed
@@ -142,7 +146,7 @@ pub fn run_gate(workspace_root: &Utf8Path, mode: GateMode) -> Vec<StepReport> {
     let steps: Vec<Step> = COMMAND_STEPS
         .iter()
         .map(Step::Command)
-        .chain([Step::Deps, Step::Oracle])
+        .chain([Step::Deps, Step::Oracle, Step::Release])
         .collect();
 
     match mode {

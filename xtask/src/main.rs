@@ -12,6 +12,7 @@ mod gate_stamp;
 mod oracle;
 mod outcome;
 mod prerequisite;
+mod release_gate;
 
 use std::path::Path;
 use std::process::ExitCode;
