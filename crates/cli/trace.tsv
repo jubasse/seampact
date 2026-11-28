@@ -135,8 +135,8 @@ src/explain_origin.rs#provenance	packages/core/cli/src/commands/explain-view.ts#
 src/explain_origin.rs#origin_text	packages/core/cli/src/commands/explain-view.ts#originText
 src/explain_flow.rs#flow	packages/core/cli/src/commands/explain-view.ts#flow
 -	packages/core/cli/src/commands/local-bundle.ts#verifyLocalBundle	merged: ../generate/src/local_bundle.rs#verify_local_bundle
-src/generate_command.rs#generate_command	packages/core/cli/src/commands/generate-command.ts#generateCommand	pending: brief 1
-src/check_command.rs#check_command	packages/core/cli/src/commands/check-command.ts#checkCommand	pending: brief 1
+src/generate_command.rs#generate_command	packages/core/cli/src/commands/generate-command.ts#generateCommand
+src/check_command.rs#check_command	packages/core/cli/src/commands/check-command.ts#checkCommand
 -	packages/core/cli/src/commands/contract-position.ts#contractPosition	merged: ../generate/src/contract_position.rs#contract_position
 -	packages/core/cli/src/commands/contract-position.ts#nodesAlong	merged: ../generate/src/contract_position.rs#nodes_along
 -	packages/core/cli/src/commands/contract-position.ts#childOf	merged: ../generate/src/contract_position.rs#child_of

@@ -10,16 +10,9 @@ use seampact_oracle::{
     CASE_TODAY, CliCase, CliCommand, GIT_SOURCE_REPOSITORY, ROOT_TOKEN, SubjectAnswer, Transcript,
 };
 
-use crate::CliError;
+use crate::oracle::failed_answer::failed_answer;
 use crate::oracle::generator_registry::oracle_registry;
-use crate::oracle::stub_answer::{StubError, failed_answer};
 use crate::run_cli::run_command_with;
-
-impl StubError for CliError {
-    fn is_not_ported(&self) -> bool {
-        matches!(self, Self::NotPortedYet { .. })
-    }
-}
 
 /// The variable naming the bundle cache directory.
 const CACHE_DIRECTORY_VARIABLE: &str = "SEAMPACT_CACHE_DIR";

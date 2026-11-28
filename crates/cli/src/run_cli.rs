@@ -1,11 +1,10 @@
-//! The two entries of the CLI: [`run_command`] dispatches one command line, [`run_cli`] answers
-//! a function not ported yet with `cli.not-ported`.
+//! The two entries of the CLI: [`run_command`] dispatches one command line, [`run_cli`] prints a
+//! bug as the binary does.
 
 use std::ffi::OsString;
 
 use camino::Utf8PathBuf;
 use seampact_bundle::BundleNamedVersionOverride;
-use seampact_cli_config::CliProblem;
 use seampact_cli_config::unlocated_problem;
 use seampact_cli_config::{CliIo, print_problems};
 use seampact_generate::LocalBundles;
@@ -41,7 +40,7 @@ const HELP_ARGUMENTS: [&str; 3] = ["help", "--help", "-h"];
 ///
 /// # Errors
 ///
-/// [`CliError::NotPortedYet`] when the command reaches a stub, [`CliError::Internal`] on a bug.
+/// [`CliError::Internal`] on a bug, [`CliError::Io`] when the system refuses a file.
 pub fn run_command(argv: &[OsString], io: &mut dyn CliIo) -> Result<i32, CliError> {
     run_command_with(argv, io, &seampact_generators::registry())
 }
@@ -99,34 +98,17 @@ pub(crate) fn run_command_with(
     }
 }
 
-/// [`run_command`] as the binary runs it: a function not ported yet prints `cli.not-ported` and
-/// exits with 2, a bug prints its message and exits with 1, as an uncaught error ends Node.
+/// [`run_command`] as the binary runs it: an error prints its message and exits with 1, as an
+/// uncaught error ends Node.
 pub fn run_cli(argv: &[OsString], io: &mut dyn CliIo) -> i32 {
     match run_command(argv, io) {
         Ok(exit_code) => exit_code,
-        Err(CliError::NotPortedYet { function }) => {
-            let command = argv.first().map_or_else(String::new, |command| {
-                command.to_string_lossy().into_owned()
-            });
-
-            print_problems(io, &[not_ported_problem(&command, function)]);
-
-            EXIT_USAGE
-        }
         Err(error) => {
             io.stderr(&format!("{error}\n"));
 
             EXIT_REFUSED
         }
     }
-}
-
-fn not_ported_problem(command: &str, function: &str) -> CliProblem {
-    unlocated_problem(
-        "cli.not-ported",
-        format!("`seampact {command}` is not ported to this build yet ({function})."),
-        &format!("Use the 1.x CLI for `{command}` until the generator layer lands."),
-    )
 }
 
 fn run_compile(args: &[String], io: &mut dyn CliIo) -> Result<i32, CliError> {

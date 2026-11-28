@@ -26,7 +26,6 @@ mod init_starter;
 mod line_end;
 mod lint_command;
 mod modelines;
-mod not_ported;
 #[cfg(feature = "oracle")]
 pub mod oracle;
 mod run_cli;

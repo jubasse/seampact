@@ -3,20 +3,14 @@
 use seampact_ir::{ContractIr, DocumentId, OperationId};
 use seampact_json::{JsonValue, canonical_document};
 use seampact_openapi::{
-    EmitOutcome, MergeInput, MergeOptions, MergeOutcome, OpenApiError, ParsedEmitterOptions,
-    emit_documents, merge_documents, parse_emitter_options,
+    EmitOutcome, MergeInput, MergeOptions, MergeOutcome, ParsedEmitterOptions, emit_documents,
+    merge_documents, parse_emitter_options,
 };
 use seampact_oracle::{MergeCase, OpenApiAnswer, SubjectAnswer};
 use seampact_target::Refusal;
 
+use crate::oracle::failed_answer::failed_answer;
 use crate::oracle::json::{array_of, coded_problem_json};
-
-/// The answer of an emitter that failed: a bug, never a stub.
-fn failed_answer(error: &OpenApiError) -> SubjectAnswer<OpenApiAnswer> {
-    SubjectAnswer::InternalError {
-        message: error.to_string(),
-    }
-}
 
 /// The document name of an api that declares none, as `openapi/default.yaml` names it.
 const DEFAULT_DOCUMENT_NAME: &str = "default";
