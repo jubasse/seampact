@@ -167,6 +167,10 @@ fn file_mismatches(
             return line_mismatches_below(pointer, &expected_manifest, &actual_manifest);
         }
 
+        if is_openapi_document(path, expected_text) {
+            return yaml_document_mismatches(pointer, expected_text, actual_text);
+        }
+
         return line_mismatches_below(pointer, expected_text, actual_text);
     }
 
@@ -182,6 +186,32 @@ fn file_mismatches(
         expected: Some(Value::String(expected.sha256.clone())),
         actual: Some(Value::String(actual_sha256)),
     }]
+}
+
+/// The first line of an OpenAPI document the emitters write.
+const OPENAPI_DOCUMENT_START: &str = "openapi: ";
+
+/// Whether the written file is an OpenAPI YAML document, which compares parsed.
+fn is_openapi_document(path: &str, text: &str) -> bool {
+    path.ends_with(".yaml") && text.starts_with(OPENAPI_DOCUMENT_START)
+}
+
+/// The mismatches of two OpenAPI documents, parsed, each below `pointer`.
+fn yaml_document_mismatches(
+    pointer: &str,
+    expected_text: &str,
+    actual_text: &str,
+) -> Vec<Mismatch> {
+    match yaml_mismatches(expected_text, actual_text) {
+        Ok(mismatches) => mismatches
+            .into_iter()
+            .map(|mismatch| Mismatch {
+                pointer: mismatch.pointer.map(|inner| format!("{pointer}{inner}")),
+                ..mismatch
+            })
+            .collect(),
+        Err(_) => line_mismatches_below(pointer, expected_text, actual_text),
+    }
 }
 
 /// The archive's listing against the expected one, each mismatch below `<pointer>/ustar`.
@@ -286,6 +316,33 @@ b: 1
             manifest_mismatches(typescript, r#"{"name":"b","files":[]}"#).unwrap(),
             []
         );
+    }
+
+    #[test]
+    fn an_openapi_document_written_with_another_layout_matches_by_value() {
+        let expected_text = "openapi: 3.1.0\npaths:\n  /a/{id}: {}\n";
+        let actual_text = "openapi: 3.1.0\npaths:\n  \"/a/{id}\": {}\n\n";
+        let written = |text: &str| {
+            let expected: IndexMap<String, ExpectedWrittenFile> = [(
+                "docs/a.yaml".to_owned(),
+                ExpectedWrittenFile {
+                    sha256: sha256_hex(text.as_bytes()),
+                    text: Some(text.to_owned()),
+                    ustar: None,
+                },
+            )]
+            .into_iter()
+            .collect();
+            let actual: IndexMap<String, Vec<u8>> =
+                [("docs/a.yaml".to_owned(), actual_text.as_bytes().to_vec())]
+                    .into_iter()
+                    .collect();
+
+            written_mismatches(&expected, &actual)
+        };
+
+        assert_eq!(written(expected_text), []);
+        assert_ne!(written("openapi: 3.0.0\npaths: {}\n"), []);
     }
 
     #[test]
