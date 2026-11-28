@@ -10,8 +10,8 @@ use serde::{Deserialize, Serialize};
 use crate::{
     ArtefactSet, DescriptorSet, FrameworkRouteCheck, GenerateWarning, HookBootCheck,
     ImportSpecifierStyle, LinkSet, NO_MOUNT, NativeDocsDocument, Refusal, ResolvedLinkNeeds,
-    TargetFailure, TargetMetadata, meets_every_need, refuse_undeclared_artefacts,
-    refuse_unmet_links, refuse_unsupported_ir,
+    TargetFailure, TargetMetadata, refuse_undeclared_artefacts, refuse_unmet_links,
+    refuse_unsupported_ir,
 };
 
 /// One file a generator writes; the writer checks the path.
@@ -313,11 +313,11 @@ impl<Definition: TargetDefinition> Generator for Definition {
         let options = self.parse_options(request.options)?;
         let declared_artefacts = refuse_undeclared_artefacts(request.artefacts, metadata.artefacts);
 
-        if !meets_every_need(request.links, request.needs) || !declared_artefacts.is_empty() {
-            let mut refusals = refuse_unmet_links(request.needs, request.links);
+        let mut refusals = refuse_unmet_links(request.needs, request.links);
 
-            refusals.extend(declared_artefacts);
+        refusals.extend(declared_artefacts);
 
+        if !refusals.is_empty() {
             return Err(Refused(refusals).into());
         }
 
