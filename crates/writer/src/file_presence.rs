@@ -1,19 +1,32 @@
 //! Reads of a file that may be missing: a missing file is `None`, any other failure an error.
 
 use std::fs::{self, Metadata};
-use std::io::{ErrorKind, Read};
+use std::io::{self, ErrorKind, Read};
 
 use camino::Utf8Path;
+use seampact_paths::lstat_if_present;
 
 use crate::WriterError;
 
+const NOT_A_REGULAR_FILE: &str = "it is not a regular file";
+
 /// The text of `file`, `None` when there is no file there; bytes that are not UTF-8 read as
-/// U+FFFD, as Node's `readFile` does.
+/// U+FFFD, as Node's `readFile` does. A symbolic link or any entry that is not a regular file is
+/// refused, never followed or opened.
 ///
 /// # Errors
 ///
-/// [`WriterError::Io`] for any failure but a missing file.
+/// [`WriterError::Io`] for an entry that is not a regular file, and for any failure but a missing
+/// file.
 pub fn read_file_if_present(file: &Utf8Path) -> Result<Option<String>, WriterError> {
+    let Some(metadata) = lstat_entry(file)? else {
+        return Ok(None);
+    };
+
+    if !metadata.is_file() {
+        return Err(WriterError::io(file, &io::Error::other(NOT_A_REGULAR_FILE)));
+    }
+
     match fs::read(file) {
         Ok(bytes) => Ok(Some(String::from_utf8_lossy(&bytes).into_owned())),
         Err(error) if error.kind() == ErrorKind::NotFound => Ok(None),
@@ -26,12 +39,8 @@ pub fn read_file_if_present(file: &Utf8Path) -> Result<Option<String>, WriterErr
 /// # Errors
 ///
 /// [`WriterError::Io`] for any failure but a missing file.
-pub fn lstat_if_present(file: &Utf8Path) -> Result<Option<Metadata>, WriterError> {
-    match fs::symlink_metadata(file) {
-        Ok(metadata) => Ok(Some(metadata)),
-        Err(error) if error.kind() == ErrorKind::NotFound => Ok(None),
-        Err(error) => Err(WriterError::io(file, &error)),
-    }
+pub(crate) fn lstat_entry(file: &Utf8Path) -> Result<Option<Metadata>, WriterError> {
+    lstat_if_present(file).map_err(|error| WriterError::io(file, &error))
 }
 
 /// What [`read_regular_file_capped`] found at a path that holds something.
@@ -55,7 +64,7 @@ pub fn read_regular_file_capped(
     file: &Utf8Path,
     max_bytes: u64,
 ) -> Result<Option<CappedRead>, WriterError> {
-    let Some(metadata) = lstat_if_present(file)? else {
+    let Some(metadata) = lstat_entry(file)? else {
         return Ok(None);
     };
 

@@ -14,6 +14,7 @@ seampact-cli = { workspace = true, features = ["oracle"] }
 seampact-compiler = { workspace = true, features = ["oracle"] }
 seampact-json.workspace = true
 seampact-oracle.workspace = true
+tempfile.workspace = true
 
 [lints]
 workspace = true

@@ -1,7 +1,7 @@
 //! The checks on the paths a target generates: unsafe, duplicate and reserved paths.
 
 use seampact_js::cmp_utf16;
-use seampact_paths::{OutputPathSet, RelativeOutputPath};
+use seampact_paths::{OutputPathSet, RelativeOutputPath, case_folded};
 use seampact_target::{GeneratedFile, Refusal, Refused, refusal_code};
 
 /// The file in each output directory that lists what the writer wrote there.
@@ -51,7 +51,8 @@ fn remembered_path_problem(path: &RelativeOutputPath, seen: &mut OutputPathSet) 
         return Some(clash.to_string());
     }
 
-    if path.file_name() == MANIFEST_FILE_NAME {
+    // A case-insensitive file system reads `.SEAMPACT-MANIFEST.JSON` as the manifest.
+    if case_folded(path.file_name()) == case_folded(MANIFEST_FILE_NAME) {
         return Some(format!("'{MANIFEST_FILE_NAME}' is the writer's manifest"));
     }
 

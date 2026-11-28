@@ -5,6 +5,7 @@ use std::fs;
 use std::process::Command;
 
 use camino::{Utf8Path, Utf8PathBuf};
+use tempfile::TempDir;
 
 use crate::outcome::{StepOutcome, StepReport};
 
@@ -40,13 +41,16 @@ fn refusal_problem(workspace_root: &Utf8Path) -> Result<Option<String>, String> 
     let project = scratch_project()?;
     let output = Command::new(binary.as_str())
         .arg("generate")
-        .current_dir(&project)
+        .current_dir(project.path())
         .output()
         .map_err(|error| format!("cannot start {binary}: {error}"))?;
     let stderr = String::from_utf8_lossy(&output.stderr).into_owned();
 
-    fs::remove_dir_all(&project)
-        .map_err(|error| format!("cannot remove the scratch project {project}: {error}"))?;
+    let scratch = project.path().display().to_string();
+
+    project
+        .close()
+        .map_err(|error| format!("cannot remove the scratch project {scratch}: {error}"))?;
 
     if output.status.code() == Some(REFUSED_EXIT_CODE) && stderr.contains(EXPECTED_RULE) {
         return Ok(None);
@@ -84,18 +88,21 @@ fn build_release_binary(workspace_root: &Utf8Path) -> Result<Utf8PathBuf, String
     Ok(target.join("release").join("seampact"))
 }
 
-/// A directory holding a config with a probe target and one api, unique to this process.
-fn scratch_project() -> Result<Utf8PathBuf, String> {
-    let project = Utf8PathBuf::from_path_buf(std::env::temp_dir())
-        .map_err(|path| format!("the temporary directory {} is not UTF-8", path.display()))?
-        .join(format!("xtask-release-{}", std::process::id()));
+/// A fresh, unpredictable directory holding a config with a probe target and one api; it is
+/// removed when dropped, so a failed step leaves nothing behind.
+fn scratch_project() -> Result<TempDir, String> {
+    let project = tempfile::Builder::new()
+        .prefix("xtask-release-")
+        .tempdir()
+        .map_err(|error| format!("cannot create the scratch project: {error}"))?;
+    let root = project.path();
 
-    fs::create_dir_all(project.join("a"))
-        .map_err(|error| format!("cannot create {project}: {error}"))?;
-    fs::write(project.join("seampact.config.yaml"), CONFIG)
-        .map_err(|error| format!("cannot write the config in {project}: {error}"))?;
-    fs::write(project.join("a").join("api.yaml"), API)
-        .map_err(|error| format!("cannot write the api in {project}: {error}"))?;
+    fs::create_dir(root.join("a"))
+        .map_err(|error| format!("cannot create {}: {error}", root.display()))?;
+    fs::write(root.join("seampact.config.yaml"), CONFIG)
+        .map_err(|error| format!("cannot write the config in {}: {error}", root.display()))?;
+    fs::write(root.join("a").join("api.yaml"), API)
+        .map_err(|error| format!("cannot write the api in {}: {error}", root.display()))?;
 
     Ok(project)
 }

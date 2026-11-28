@@ -30,72 +30,65 @@ pub struct LinkNeed {
     pub optional: Option<OptionalNeed>,
 }
 
-/// A consumer's needs, one optional field per kind.
+/// A consumer's needs, one per consumed kind, in the order the target declares them: the order
+/// the refusals list the kinds in.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
-pub struct LinkNeeds {
-    /// The validators need.
-    pub validators: Option<LinkNeed>,
-    /// The types need.
-    pub types: Option<LinkNeed>,
-    /// The client need.
-    pub client: Option<LinkNeed>,
-}
+pub struct LinkNeeds(&'static [(LinkKind, LinkNeed)]);
 
 impl LinkNeeds {
     /// No consumed kind.
-    pub const NONE: Self = Self {
-        validators: None,
-        types: None,
-        client: None,
-    };
+    pub const NONE: Self = Self(&[]);
+
+    /// The needs `declared`, each kind at most once.
+    #[must_use]
+    pub const fn new(declared: &'static [(LinkKind, LinkNeed)]) -> Self {
+        Self(declared)
+    }
 
     /// The need of `kind`, if the target consumes it.
     #[must_use]
-    pub const fn of(&self, kind: LinkKind) -> Option<&LinkNeed> {
-        match kind {
-            LinkKind::Validators => self.validators.as_ref(),
-            LinkKind::Types => self.types.as_ref(),
-            LinkKind::Client => self.client.as_ref(),
-        }
+    pub fn of(&self, kind: LinkKind) -> Option<&LinkNeed> {
+        self.0
+            .iter()
+            .find(|(declared, _)| *declared == kind)
+            .map(|(_, need)| need)
+    }
+
+    /// The consumed kinds, in declaration order.
+    #[must_use]
+    pub fn kinds(&self) -> Vec<LinkKind> {
+        self.0.iter().map(|(kind, _)| *kind).collect()
     }
 }
 
-/// What a provider offers, one optional style per kind.
+/// What a provider offers, one style per provided kind, in the order the target declares them:
+/// the order the refusals list the kinds in.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
-pub struct LinkOffers {
-    /// The validators style offered.
-    pub validators: Option<LinkStyle>,
-    /// The types style offered.
-    pub types: Option<LinkStyle>,
-    /// The client style offered.
-    pub client: Option<LinkStyle>,
-}
+pub struct LinkOffers(&'static [(LinkKind, LinkStyle)]);
 
 impl LinkOffers {
     /// No provided kind.
-    pub const NONE: Self = Self {
-        validators: None,
-        types: None,
-        client: None,
-    };
+    pub const NONE: Self = Self(&[]);
+
+    /// The offers `declared`, each kind at most once.
+    #[must_use]
+    pub const fn new(declared: &'static [(LinkKind, LinkStyle)]) -> Self {
+        Self(declared)
+    }
 
     /// The style offered for `kind`, if the target provides it.
     #[must_use]
-    pub const fn of(&self, kind: LinkKind) -> Option<LinkStyle> {
-        match kind {
-            LinkKind::Validators => self.validators,
-            LinkKind::Types => self.types,
-            LinkKind::Client => self.client,
-        }
+    pub fn of(&self, kind: LinkKind) -> Option<LinkStyle> {
+        self.0
+            .iter()
+            .find(|(declared, _)| *declared == kind)
+            .map(|(_, style)| *style)
     }
 
-    /// The provided kinds, in [`LinkKind::ALL`] order.
+    /// The provided kinds, in declaration order.
     #[must_use]
     pub fn kinds(&self) -> Vec<LinkKind> {
-        LinkKind::ALL
-            .into_iter()
-            .filter(|kind| self.of(*kind).is_some())
-            .collect()
+        self.0.iter().map(|(kind, _)| *kind).collect()
     }
 }
 
@@ -208,5 +201,37 @@ impl LinkSet {
         };
 
         *slot = Some(link);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const NEED: LinkNeed = LinkNeed {
+        styles: NeedStyles::FromCompatibility,
+        optional: None,
+    };
+
+    #[test]
+    fn needs_list_their_kinds_in_declaration_order() {
+        let needs = LinkNeeds::new(&[(LinkKind::Client, NEED), (LinkKind::Types, NEED)]);
+
+        assert_eq!(needs.kinds(), [LinkKind::Client, LinkKind::Types]);
+        assert!(needs.of(LinkKind::Types).is_some());
+        assert!(needs.of(LinkKind::Validators).is_none());
+        assert_eq!(LinkNeeds::NONE.kinds(), []);
+    }
+
+    #[test]
+    fn offers_list_their_kinds_in_declaration_order() {
+        let offers = LinkOffers::new(&[
+            (LinkKind::Types, LinkStyle::Typescript),
+            (LinkKind::Validators, LinkStyle::StandardSchema),
+        ]);
+
+        assert_eq!(offers.kinds(), [LinkKind::Types, LinkKind::Validators]);
+        assert_eq!(offers.of(LinkKind::Types), Some(LinkStyle::Typescript));
+        assert_eq!(offers.of(LinkKind::Client), None);
     }
 }

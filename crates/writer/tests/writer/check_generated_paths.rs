@@ -90,3 +90,15 @@ fn the_manifest_name_is_reserved_in_every_directory() {
         ]
     );
 }
+
+#[test]
+fn the_manifest_name_is_reserved_whatever_its_letter_case() {
+    let messages = refusal_messages(&[file("nested/.Seampact-Manifest.JSON", "{}")]);
+
+    assert_eq!(
+        messages,
+        [
+            "The target generated the path 'nested/.Seampact-Manifest.JSON', and '.seampact-manifest.json' is the writer's manifest."
+        ]
+    );
+}

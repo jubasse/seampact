@@ -8,17 +8,18 @@ mod generated_paths;
 mod generated_write;
 mod hand_edit_policy;
 mod manifest;
+mod repeated_json_key;
 mod root_directory;
 mod sha256;
 mod write_stop;
 
 pub use error::WriterError;
-pub use file_presence::{lstat_if_present, read_file_if_present};
+pub use file_presence::read_file_if_present;
 pub use finish_files::{HeaderSource, finish_files, generated_header};
 pub use generated_paths::{MANIFEST_FILE_NAME, check_generated_paths};
 pub use generated_write::{
-    PlannedWrite, WrittenFiles, commit_generated_write, plan_generated_write, write_generated_files,
+    PlannedWrite, WrittenFiles, commit_generated_write, plan_generated_write,
 };
 pub use hand_edit_policy::HandEditPolicy;
-pub use manifest::{ManifestEntry, ManifestRead, read_manifest, serialize_manifest};
+pub use manifest::{ManifestEntry, ManifestRead, read_manifest};
 pub use write_stop::WriteStop;

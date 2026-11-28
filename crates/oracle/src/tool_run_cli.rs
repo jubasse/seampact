@@ -3,6 +3,7 @@
 
 use camino::Utf8Path;
 use indexmap::IndexMap;
+use seampact_js::cmp_utf16;
 use seampact_json::indented_json;
 use serde_json::Value;
 
@@ -119,9 +120,7 @@ impl ToolRun<'_> {
         let root_text = root.as_str();
         let stdout = without_rust_version(&transcript.stdout.replace(root_text, ROOT_TOKEN));
         let stderr = without_rust_version(&transcript.stderr.replace(root_text, ROOT_TOKEN));
-        let mut removed = transcript.removed.clone();
-
-        removed.sort();
+        let removed = in_utf16_order(&transcript.removed);
 
         let short_id_of = |package_name: &str| self.subject.target_short_id(package_name);
         let split = split_generated(&expected.written, &transcript.written, root, &short_id_of)?;
@@ -614,6 +613,15 @@ fn read_text(path: &Utf8Path) -> Result<String, OracleError> {
     })
 }
 
+/// `paths` in UTF-16 code unit order, as the TypeScript harness sorts the removed files.
+fn in_utf16_order(paths: &[String]) -> Vec<String> {
+    let mut sorted = paths.to_vec();
+
+    sorted.sort_by(|left, right| cmp_utf16(left, right));
+
+    sorted
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -666,5 +674,18 @@ mod tests {
         assert!(split.expected_rest.is_empty());
 
         Ok(())
+    }
+
+    #[test]
+    fn removed_paths_sort_by_utf16_unit_not_by_utf8_byte() {
+        let paths: Vec<String> = ["a.ts", "\u{ff5a}.ts", "\u{1d49c}.ts"]
+            .into_iter()
+            .map(str::to_owned)
+            .collect();
+
+        assert_eq!(
+            in_utf16_order(&paths),
+            ["a.ts", "\u{1d49c}.ts", "\u{ff5a}.ts"]
+        );
     }
 }

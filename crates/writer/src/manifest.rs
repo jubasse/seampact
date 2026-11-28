@@ -4,7 +4,9 @@ use std::collections::HashSet;
 
 use camino::Utf8Path;
 use seampact_js::cmp_utf16;
-use seampact_json::{JsonNumber, JsonObject, JsonValue, indented_json, js_text_of};
+use seampact_json::{
+    JsonNumber, JsonObject, JsonValue, indented_json, js_text_of, write_json_string,
+};
 use seampact_paths::RelativeOutputPath;
 
 use crate::WriterError;
@@ -86,7 +88,7 @@ pub fn read_manifest(root_directory: &Utf8Path) -> Result<ManifestRead, WriterEr
 /// The manifest text of `owner` and its entries, version 2, written with `indented_json`; the
 /// entries go in UTF-16 order of path and `formatter` is left out of an entry without one.
 #[must_use]
-pub fn serialize_manifest(owner: &str, entries: &[ManifestEntry]) -> String {
+pub(crate) fn serialize_manifest(owner: &str, entries: &[ManifestEntry]) -> String {
     let mut sorted: Vec<&ManifestEntry> = entries.iter().collect();
 
     sorted.sort_by(|left, right| cmp_utf16(&left.path, &right.path));
@@ -142,9 +144,21 @@ fn layout_of(parsed: &JsonObject) -> Result<ManifestLayout, String> {
         }
         _ => Err(format!(
             "it is version {}, which this seampact does not read",
-            js_text_of(Some(version))
+            version_text(version)
         )),
     }
+}
+
+/// The version as written: a string keeps its quotes, so `"2"` is not read as the number 2.
+fn version_text(version: &JsonValue) -> String {
+    let JsonValue::String(text) = version else {
+        return js_text_of(Some(version));
+    };
+    let mut quoted = String::new();
+
+    write_json_string(&mut quoted, text);
+
+    quoted
 }
 
 fn entries_of(parsed: &JsonValue) -> ManifestRead {
@@ -256,4 +270,73 @@ fn is_sha256_hex(text: &str) -> bool {
         && text
             .bytes()
             .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const HASH: &str = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+
+    fn entry(path: &str) -> ManifestEntry {
+        ManifestEntry {
+            path: path.to_owned(),
+            source: HASH.to_owned(),
+            sha256: HASH.to_owned(),
+            formatter: None,
+        }
+    }
+
+    #[test]
+    fn a_manifest_lists_its_members_in_javascript_key_order_and_its_files_in_utf16_order() {
+        let mut with_formatter = entry("a");
+
+        with_formatter.formatter = Some("biome".to_owned());
+
+        let text = serialize_manifest(
+            "openapi",
+            &[entry("\u{ff5e}"), entry("\u{10000}"), with_formatter],
+        );
+
+        let expected = format!(
+            "{{\n  \"version\": 2,\n  \"owner\": \"openapi\",\n  \"files\": [\n    {{\n      \"path\": \"a\",\n      \"source\": \"{HASH}\",\n      \"sha256\": \"{HASH}\",\n      \"formatter\": \"biome\"\n    }},\n    {{\n      \"path\": \"\u{10000}\",\n      \"source\": \"{HASH}\",\n      \"sha256\": \"{HASH}\"\n    }},\n    {{\n      \"path\": \"\u{ff5e}\",\n      \"source\": \"{HASH}\",\n      \"sha256\": \"{HASH}\"\n    }}\n  ]\n}}\n"
+        );
+
+        assert_eq!(text, expected);
+    }
+
+    #[test]
+    fn a_written_manifest_reads_back_and_a_missing_one_is_empty() {
+        let directory = tempfile::tempdir().expect("a temporary directory");
+        let root = Utf8Path::from_path(directory.path()).expect("a UTF-8 temporary path");
+
+        assert_eq!(
+            read_manifest(root).expect("a missing manifest"),
+            ManifestRead::Read {
+                owner: None,
+                entries: Vec::new()
+            }
+        );
+
+        let entries = [entry("a.ts"), entry("b/c.ts")];
+
+        std::fs::write(
+            root.join(".seampact-manifest.json"),
+            serialize_manifest("node", &entries),
+        )
+        .expect("a written manifest");
+
+        assert_eq!(
+            read_manifest(root).expect("a readable manifest"),
+            ManifestRead::Read {
+                owner: Some("node".to_owned()),
+                entries: entries.to_vec()
+            }
+        );
+        assert!(
+            std::fs::read_to_string(root.join(".seampact-manifest.json"))
+                .expect("a readable manifest")
+                .ends_with("}\n")
+        );
+    }
 }
