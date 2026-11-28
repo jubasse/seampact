@@ -266,15 +266,7 @@ At most four cargo lanes at once; one PR per brief; port lanes N2.
 
 ### What the 3.4 note decides
 
-- `seampact-plan`, the shared per-operation planning, its member of the request (section 2) and its shape, designed with the first family (`codegen-ts`) and built before the second.
-- The measured sharing criterion: a new Node server or front framework is framework table rows plus under about 150 lines of its own; a new PHP-, Python- or Java-like language is its rules in the shared code model and printer. The 3.4 note costs a fictional target of each kind on paper and says with numbers how TypeScript shares (family libraries or a code model).
-- Whether the Node module options (`import_specifiers`, `framework_docs_off_fix`, `native_docs_document`) group into one optional `typescript` member of the request when the code-model languages land.
-- Where the four language-neutral `codegen-core` helpers go, and the `family-*` crates of the four TypeScript libraries.
-- A family adapter is a `static` over a `&'static` framework table. The probe holds its metadata inline, which is fine for a probe but does not show the table indirection: the first family (`codegen-ts`) is the reference to copy, not the probe.
-- `GenerateInput` carries Node-only members (`mount`, `import_specifiers`, `framework_routes`, `native_docs_document`). Decide the optional `typescript` group before the PHP, Python and Kotlin families, or they receive defaulted Node fields.
-- Internal invariants: a family's `throw new Error` ports as `TargetFailure::Internal`. Budget it in the per-family line costs (about 97 throws across the TypeScript families).
-- Families emit JSON as values or compact text; the writer owns the layout.
-- Measure line ratios as code lines without blanks and docs, so 3.4 budgets compare with the TypeScript function lines of the TSV.
+Decided in the [families](families.md) note.
 
 ## 10. PORTING.md and docs
 
