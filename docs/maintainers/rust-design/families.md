@@ -181,6 +181,24 @@ These signatures freeze in seam F, before `gen-ts`.
 - **`LinkLocation::Relative.path`** (input 13) is free text from `out`. A TypeScript family writes any module specifier through `family_typescript::module_specifier_literal(specifier) -> String` (the JSON string text, a valid JavaScript string literal), never through `format!` with quotes. A code-model family writes it as the code model's string-literal node, escaped by `LanguageRules`. The ADR sentence goes to the lead (section 10).
 - **Reviewed shapes taken as given** (inputs 6 and 7, landing in a fix lane): `ArtefactSet::contains(ArtefactId)` and link kinds in declaration order.
 
+### The layer 3.3 review inputs
+
+| Input | Place |
+|---|---|
+| 1 const constructors and a `const fn` from a framework table | section 3, seam F |
+| 2 budget at 2 times, code lines as measured here | section 7 |
+| 3 `parse_options` default method | section 5, seam F |
+| 4 request members, setters, the `typescript` group | section 5, seam F: private fields, one setter per member, no group |
+| 5 `GeneratedFile::json` | section 5, seam F |
+| 6 `ArtefactSet::contains(ArtefactId)`, 7 link kinds in declaration order | taken as given from the fix lane |
+| 8 refusal codes | section 5: per-family `refusal_code` modules, the unified-list test in seam F |
+| 9 the probe is not the reference | section 1 |
+| 10 per-family edits outside the crate | section 4: five, named in each brief |
+| 11 `legacy_names` | section 4: `FIRST_PARTY_TARGETS`, the metadata field removed in seam F |
+| 12 probe cases and twins | section 6 |
+| 13 `LinkLocation::Relative.path` | section 5, `module_specifier_literal`; the ADR sentence to the lead |
+| 14 internal-error arms | section 5, measured |
+
 ## 6. The oracle
 
 What exists: the `steps` CLI cases, the `generated` token comparison and its normalisations, manifest version 2 (seam G), the probes. What 3.4 adds:
