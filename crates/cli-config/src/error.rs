@@ -2,15 +2,9 @@
 
 use seampact_diagnostics::InternalError;
 
-/// What stops the config reading: a stub reached, a bug or the environment.
+/// What stops the config reading: a bug or the environment.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum CliConfigError {
-    /// A stub was reached: the TypeScript function `function` is not ported yet.
-    #[error("not ported yet: {function}")]
-    NotPortedYet {
-        /// The TypeScript function name.
-        function: &'static str,
-    },
     /// A bug.
     #[error(transparent)]
     Internal(#[from] InternalError),

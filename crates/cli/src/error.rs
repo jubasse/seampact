@@ -1,4 +1,4 @@
-//! The error of a command: a function not ported yet, a bug, or the environment refusing a file.
+//! The error of a command: a bug, or the environment refusing a file.
 
 use seampact_bundle::BundleError;
 use seampact_bundle_fetch::BundleFetchError;
@@ -11,16 +11,10 @@ use seampact_lint::LintError;
 use seampact_openapi::OpenApiError;
 use seampact_target::CompatibilityError;
 
-/// What stops a command before it answers an exit code: a stub reached, a bug, or a file the
-/// system refused.
+/// What stops a command before it answers an exit code: a bug, or a file the system
+/// refused.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum CliError {
-    /// A stub was reached: the TypeScript function `function` is not ported yet.
-    #[error("not ported yet: {function}")]
-    NotPortedYet {
-        /// The TypeScript function name.
-        function: &'static str,
-    },
     /// A bug.
     #[error(transparent)]
     Internal(#[from] InternalError),
@@ -61,7 +55,6 @@ pub enum CliError {
 impl From<GenerateError> for CliError {
     fn from(error: GenerateError) -> Self {
         match error {
-            GenerateError::NotPortedYet { function } => Self::NotPortedYet { function },
             GenerateError::Io { path, message } => Self::Io { path, message },
             GenerateError::Internal(internal) => Self::Internal(internal),
             GenerateError::Fetch(fetch) => Self::Fetch(fetch),

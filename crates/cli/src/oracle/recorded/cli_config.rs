@@ -5,26 +5,17 @@ use camino::{Utf8Path, Utf8PathBuf};
 use indexmap::IndexMap;
 use seampact_bundle_source::{BundleSource, BundleSourceForm};
 use seampact_cli_config::{
-    CliConfigError, CliProblem, LoadedAppConfig, LoadedMergedDocument, LoadedRootConfig,
-    LoadedWorkspace, ReadAppConfigOutcome, ReadRootConfigOutcome, ReadRunConfigOutcome,
-    ReadWorkspaceOutcome, ResolvedSource, RunConfig, WorkspaceApp, read_app_config,
-    read_root_config, read_run_config, read_workspace_configs,
+    CliProblem, LoadedAppConfig, LoadedMergedDocument, LoadedRootConfig, LoadedWorkspace,
+    ReadAppConfigOutcome, ReadRootConfigOutcome, ReadRunConfigOutcome, ReadWorkspaceOutcome,
+    ResolvedSource, RunConfig, WorkspaceApp, read_app_config, read_root_config, read_run_config,
+    read_workspace_configs,
 };
 use seampact_json::{JsonValue, items_of, object_of};
 use seampact_oracle::{ROOT_TOKEN, RecordedAnswer, RecordedToolCall, SubjectAnswer};
 
 use super::cli_config_planning as planning;
+use crate::oracle::failed_answer::failed_answer;
 use crate::oracle::json::{array_of, coded_problem_json, push_present_texts};
-use crate::oracle::stub_answer::{StubError, failed_answer};
-
-impl StubError for CliConfigError {
-    fn is_not_ported(&self) -> bool {
-        match self {
-            Self::NotPortedYet { .. } => true,
-            Self::Internal(_) | Self::Io { .. } => false,
-        }
-    }
-}
 
 /// Replays a recorded call of the CLI config readers on the case root.
 pub(super) fn cli_config_answer(
