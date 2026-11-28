@@ -2,7 +2,7 @@
 
 use seampact_diagnostics::InternalError;
 use seampact_diff_table::{DiffExemption, DiffGateScope, DiffOptions};
-use seampact_json::JsonValue;
+use seampact_json::{JsonValue, from_json_value};
 use serde::Deserialize;
 
 /// The `gate` and `exempt` members of an app's `diff` settings; a member the config does not
@@ -30,13 +30,11 @@ impl DiffSettings {
     /// [`InternalError`] when the value is no mapping, or holds a gate or an exemption the
     /// schema does not allow.
     pub fn from_value(value: &JsonValue) -> Result<Self, InternalError> {
-        let written: WrittenDiffSettings = serde_json::to_value(value)
-            .and_then(serde_json::from_value)
-            .map_err(|error| {
-                InternalError::new(format!(
-                    "diff settings outside the schema's passed it: {error}"
-                ))
-            })?;
+        let written: WrittenDiffSettings = from_json_value(value).map_err(|error| {
+            InternalError::new(format!(
+                "diff settings outside the schema's passed it: {error}"
+            ))
+        })?;
         let gate = written
             .gate
             .map(|text| {

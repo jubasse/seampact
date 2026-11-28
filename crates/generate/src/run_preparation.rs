@@ -214,7 +214,7 @@ fn prepare_apps(
             directory: directory.to_owned(),
             level: workspace
                 .root
-                .checks_settings()?
+                .checks_settings
                 .openapi
                 .unwrap_or(DEFAULT_DRIFT_CHECK_LEVEL),
         });

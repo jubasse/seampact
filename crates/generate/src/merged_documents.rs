@@ -51,7 +51,7 @@ pub fn emit_merged_documents(
     })?;
     let level = workspace
         .root
-        .checks_settings()?
+        .checks_settings
         .openapi
         .unwrap_or(DEFAULT_DRIFT_CHECK_LEVEL);
     let mut emitted = Vec::new();
