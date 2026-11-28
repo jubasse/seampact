@@ -1,0 +1,16 @@
+brief	function	file	lines	size	pairs
+1	typeSchema	targets/codegen-fastify/src/ajv/json-schema.ts	35-57	23	0/0
+1	objectSchema	targets/codegen-fastify/src/ajv/json-schema.ts	61-73	13	0/0
+1	operationInputSchema	targets/codegen-fastify/src/ajv/json-schema.ts	76-92	17	0/0
+1	bodySchema	targets/codegen-fastify/src/ajv/json-schema.ts	95-108	14	0/0
+1	requireSchema	targets/codegen-fastify/src/ajv/json-schema.ts	110-118	9	0/0
+1	scalarSchema	targets/codegen-fastify/src/ajv/json-schema.ts	120-132	13	0/0
+1	checkMessages	targets/codegen-fastify/src/ajv/json-schema.ts	135-139	5	0/0
+1	scalarRule	targets/codegen-fastify/src/ajv/json-schema.ts	141-158	18	0/0
+1	withoutBounds	targets/codegen-fastify/src/ajv/json-schema.ts	160-162	3	0/0
+1	safeIntegerBounds	targets/codegen-fastify/src/ajv/json-schema.ts	166-177	12	0/0
+1	ajvOwnValidators	targets/codegen-fastify/src/ajv/own-validators.ts	10-23	14	0/0
+1	generatedRoutePath	targets/codegen-fastify/src/fastify-docs-module.ts	12-20	9	0/0
+1	basePathWildcards	targets/codegen-fastify/src/fastify-docs-module.ts	22-26	5	0/0
+1	fastifyDocsModuleSource	targets/codegen-fastify/src/fastify-docs-module.ts	28-98	71	0/0
+1	fastifyModuleSource	targets/codegen-fastify/src/fastify-module.ts	16-45	30	0/0

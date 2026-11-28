@@ -1,0 +1,5 @@
+brief	function	file	lines	size	pairs
+1	clientFilledHeadersOf	core/codegen-core/src/client-filled-headers.ts	16-34	19	0/0
+1	queryListWireOf	core/codegen-core/src/query-list-wire.ts	4-6	3	0/0
+1	refuseResponseShape	core/codegen-core/src/not-generated-forms.ts	11-15	5	0/0
+1	refuseBracketsQueryList	core/codegen-core/src/not-generated-forms.ts	18-24	7	0/0
