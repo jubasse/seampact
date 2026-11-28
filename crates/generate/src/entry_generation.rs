@@ -10,7 +10,8 @@ use seampact_diagnostics::InternalError;
 use seampact_json::JsonValue;
 use seampact_target::{
     DescriptorSet, GENERATE_TROUBLESHOOTING_URL, GenerateRequest, GenerateWarning, HookBootCheck,
-    ImportSpecifierStyle, LINK_TROUBLESHOOTING_URL, LinkSet, Refusal, TargetFailure,
+    ImportSpecifierStyle, LINK_TROUBLESHOOTING_URL, LinkSet, NATIVE_DOCS_ARTEFACT, Refusal,
+    TargetFailure,
 };
 use seampact_writer::{HeaderSource, check_generated_paths, finish_files};
 
@@ -28,9 +29,6 @@ use crate::stop::{Stop, gather};
 use crate::{AppPlan, GeneratedOutput};
 
 const LINK_CODE_PREFIX: &str = "link.";
-
-/// The artefact whose document the target follows, as `entry-generation.ts` names it.
-const NATIVE_DOCS_ARTEFACT: &str = "nativeDocs";
 
 /// The suffix of the code of a warning a form's own code stands for.
 const HANDLER_WARNING_SUFFIX: &str = ".handler";
@@ -141,7 +139,7 @@ fn generate_api(
 ) -> Result<GeneratedApi, Stop> {
     let settings = &consumer.settings;
     let links = build_links(consumer, planned_api, generation)?;
-    let native_docs = if consumer.artefacts.contains(NATIVE_DOCS_ARTEFACT) {
+    let native_docs = if consumer.artefacts.is_on(NATIVE_DOCS_ARTEFACT) {
         Some(native_docs_document_of(
             settings,
             planned_api,

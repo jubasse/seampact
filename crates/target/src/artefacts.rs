@@ -49,6 +49,9 @@ impl fmt::Display for ArtefactId {
     }
 }
 
+/// The artefact whose document the target follows, `nativeDocs`.
+pub const NATIVE_DOCS_ARTEFACT: ArtefactId = ArtefactId::new("nativeDocs");
+
 /// One artefact a target can write, switched by the app config's `artefacts` entry.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct ArtefactDeclaration {
@@ -86,10 +89,17 @@ impl ArtefactSet {
         set
     }
 
-    /// True when `id` is on.
+    /// True when the artefact named `name` is on; for a name read from data, such as the
+    /// support matrix.
     #[must_use]
-    pub fn contains(&self, id: &str) -> bool {
-        self.ids.iter().any(|on| on == id)
+    pub fn contains(&self, name: &str) -> bool {
+        self.ids.iter().any(|on| on == name)
+    }
+
+    /// True when the declared artefact `id` is on.
+    #[must_use]
+    pub fn is_on(&self, id: ArtefactId) -> bool {
+        self.contains(id.as_str())
     }
 
     /// The ids, in selection order.
@@ -224,6 +234,16 @@ mod tests {
 
     const DOCS: ArtefactId = ArtefactId::new("docs");
     const MISSING: ArtefactId = ArtefactId::new("missing");
+
+    #[test]
+    fn is_on_answers_for_a_declared_id_only_when_the_set_holds_it() {
+        let set = ArtefactSet::new(["nativeDocs".to_owned(), "routes".to_owned()]);
+
+        assert!(set.is_on(NATIVE_DOCS_ARTEFACT));
+        assert!(set.is_on(ArtefactId::new("routes")));
+        assert!(!set.is_on(DOCS));
+        assert!(!ArtefactSet::NONE.is_on(NATIVE_DOCS_ARTEFACT));
+    }
 
     #[test]
     fn names_every_declaration_problem() {

@@ -32,7 +32,7 @@ mod unknown_value;
 
 pub use artefacts::{
     ArtefactDeclaration, ArtefactDefault, ArtefactId, ArtefactSet, MissingNeed,
-    artefact_declaration_problems, refuse_undeclared_artefacts,
+    NATIVE_DOCS_ARTEFACT, artefact_declaration_problems, refuse_undeclared_artefacts,
 };
 pub use compatibility::{
     CompatibilityError, CompatibilityKey, CompatibilityMatrix, FirstPartyProvider,
