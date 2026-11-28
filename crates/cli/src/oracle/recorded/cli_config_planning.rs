@@ -353,8 +353,8 @@ fn workspace_of(value: &JsonValue) -> Result<LoadedWorkspace, String> {
         .collect::<Result<Vec<_>, String>>()?;
 
     let checks = member_value(&root, "checks")?;
-    let checks_settings = AppChecksSettings::from_value(Some(&checks))
-        .map_err(|error| error.to_string())?;
+    let checks_settings =
+        AppChecksSettings::from_value(Some(&checks)).map_err(|error| error.to_string())?;
 
     Ok(LoadedWorkspace {
         root: LoadedRootConfig {
