@@ -8,6 +8,7 @@
 )]
 
 mod check_generated_paths;
+mod file_presence;
 mod finish_files;
 mod generated_write;
 mod manifest;

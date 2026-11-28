@@ -5,9 +5,10 @@ use std::fs;
 
 use camino::{Utf8Path, Utf8PathBuf};
 use seampact_diagnostics::InternalError;
+use seampact_paths::is_inside_or_equal;
 
 use crate::WriterError;
-use crate::file_presence::lstat_if_present;
+use crate::file_presence::lstat_entry;
 
 fn real_path(path: &Utf8Path) -> Result<Utf8PathBuf, WriterError> {
     let resolved = fs::canonicalize(path).map_err(|error| WriterError::io(path, &error))?;
@@ -19,7 +20,7 @@ fn real_path(path: &Utf8Path) -> Result<Utf8PathBuf, WriterError> {
 /// The real path of `directory`, or, when it is missing, of its nearest existing parent with the
 /// missing names joined back.
 pub(crate) fn real_path_of_missing(directory: &Utf8Path) -> Result<Utf8PathBuf, WriterError> {
-    if lstat_if_present(directory)?.is_some() {
+    if lstat_entry(directory)?.is_some() {
         return real_path(directory);
     }
 
@@ -29,16 +30,11 @@ pub(crate) fn real_path_of_missing(directory: &Utf8Path) -> Result<Utf8PathBuf, 
     }
 }
 
-/// Whether `path` is not `root` or below it.
-pub(crate) fn is_outside(root: &Utf8Path, path: &Utf8Path) -> bool {
-    !path.starts_with(root)
-}
-
 /// Whether the nearest existing directory of `file_path` resolves outside `root`, through a link.
 pub(crate) fn leaves_root(root: &Utf8Path, file_path: &Utf8Path) -> Result<bool, WriterError> {
     let mut directory = parent_of(file_path)?;
 
-    while lstat_if_present(directory)?.is_none() {
+    while lstat_entry(directory)?.is_none() {
         // The output directory itself is not created yet, so nothing below it is a link.
         if directory == root {
             return Ok(false);
@@ -47,7 +43,7 @@ pub(crate) fn leaves_root(root: &Utf8Path, file_path: &Utf8Path) -> Result<bool,
         directory = parent_of(directory)?;
     }
 
-    Ok(is_outside(root, &real_path(directory)?))
+    Ok(!is_inside_or_equal(root, &real_path(directory)?))
 }
 
 fn parent_of(path: &Utf8Path) -> Result<&Utf8Path, WriterError> {
@@ -63,7 +59,7 @@ pub(crate) fn remove_empty_directories(
 ) -> Result<(), WriterError> {
     let mut current = directory;
 
-    while current != root && !is_outside(root, current) {
+    while current != root && is_inside_or_equal(root, current) {
         let mut entries =
             fs::read_dir(current).map_err(|error| WriterError::io(current, &error))?;
 

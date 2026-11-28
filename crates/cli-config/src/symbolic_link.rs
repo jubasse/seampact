@@ -1,9 +1,7 @@
 //! Whether a path is a symbolic link, the check before a write that would follow it.
 
-use std::fs;
-use std::io::ErrorKind;
-
 use camino::Utf8Path;
+use seampact_paths::{is_symbolic_link as is_link_on_disk, lstat_if_present};
 
 use crate::CliConfigError;
 use crate::config_file::io_error;
@@ -15,11 +13,7 @@ use crate::config_file::io_error;
 /// [`CliConfigError::Io`] when the system refuses the check for another reason than a missing
 /// path.
 pub fn is_symbolic_link(path: &Utf8Path) -> Result<bool, CliConfigError> {
-    match fs::symlink_metadata(path) {
-        Ok(stats) => Ok(stats.is_symlink()),
-        Err(error) if error.kind() == ErrorKind::NotFound => Ok(false),
-        Err(error) => Err(io_error(path, &error)),
-    }
+    is_link_on_disk(path).map_err(|error| io_error(path, &error))
 }
 
 /// Whether anything is at `path`, a dangling symbolic link included.
@@ -29,9 +23,7 @@ pub fn is_symbolic_link(path: &Utf8Path) -> Result<bool, CliConfigError> {
 /// [`CliConfigError::Io`] when the system refuses the check for another reason than a missing
 /// path.
 pub fn is_path_taken(path: &Utf8Path) -> Result<bool, CliConfigError> {
-    match fs::symlink_metadata(path) {
-        Ok(_) => Ok(true),
-        Err(error) if error.kind() == ErrorKind::NotFound => Ok(false),
-        Err(error) => Err(io_error(path, &error)),
-    }
+    lstat_if_present(path)
+        .map(|metadata| metadata.is_some())
+        .map_err(|error| io_error(path, &error))
 }

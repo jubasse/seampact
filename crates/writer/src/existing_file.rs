@@ -5,9 +5,10 @@ use std::fs;
 use camino::Utf8Path;
 use seampact_target::{Refusal, refusal_code};
 
+use crate::file_presence::lstat_entry;
 use crate::root_directory::leaves_root;
 use crate::sha256::sha256_hex;
-use crate::{HandEditPolicy, WriterError, lstat_if_present};
+use crate::{HandEditPolicy, WriterError};
 
 const HAND_EDIT_FIX: &str = "Move the hand-written code next to the generated files, then delete the edited file and generate again, or run `seampact generate --force` to overwrite it.";
 
@@ -44,7 +45,7 @@ pub(crate) fn existing_file_state(
         ));
     }
 
-    let Some(metadata) = lstat_if_present(&file_path)? else {
+    let Some(metadata) = lstat_entry(&file_path)? else {
         return Ok(ExistingFileState::Absent);
     };
 

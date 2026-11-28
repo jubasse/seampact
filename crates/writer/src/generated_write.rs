@@ -10,11 +10,12 @@ use seampact_paths::node_path::resolve_from_working_directory;
 use seampact_target::{GeneratedFile, Refusal, Refused, refusal_code};
 
 use crate::existing_file::{ExistingFileState, existing_file_state};
+use crate::file_presence::lstat_entry;
 use crate::generated_paths::MANIFEST_FILE_NAME;
 use crate::manifest::{ManifestEntry, ManifestRead, read_manifest, serialize_manifest};
 use crate::root_directory::{real_path_of_missing, remove_empty_directories};
 use crate::sha256::sha256_hex;
-use crate::{HandEditPolicy, WriteStop, WriterError, check_generated_paths, lstat_if_present};
+use crate::{HandEditPolicy, WriteStop, WriterError, check_generated_paths};
 
 const BYTE_ORDER_MARK: char = '\u{feff}';
 
@@ -246,7 +247,7 @@ fn classify_files(
 fn manifest_file_refusal(root_directory: &Utf8Path) -> Result<Option<Refusal>, WriterError> {
     let manifest_path = root_directory.join(MANIFEST_FILE_NAME);
 
-    let Some(metadata) = lstat_if_present(&manifest_path)? else {
+    let Some(metadata) = lstat_entry(&manifest_path)? else {
         return Ok(None);
     };
 

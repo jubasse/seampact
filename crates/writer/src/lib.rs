@@ -13,7 +13,7 @@ mod sha256;
 mod write_stop;
 
 pub use error::WriterError;
-pub use file_presence::{lstat_if_present, read_file_if_present};
+pub use file_presence::read_file_if_present;
 pub use finish_files::{HeaderSource, finish_files, generated_header};
 pub use generated_paths::{MANIFEST_FILE_NAME, check_generated_paths};
 pub use generated_write::{
