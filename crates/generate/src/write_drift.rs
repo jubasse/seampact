@@ -1,5 +1,7 @@
 //! What `check` finds when the files a run would write differ from the committed ones.
 
+use std::collections::HashSet;
+
 use camino::Utf8Path;
 use seampact_cli_config::{CheckLevel, CliProblem, located_problem};
 use seampact_openapi::find_document_drift;
@@ -171,8 +173,10 @@ fn refusal_problem(refusal: &Refusal, location: &str) -> CliProblem {
 fn planned_drift(write: &PlannedWrite) -> Result<Vec<String>, GenerateError> {
     let mut items = Vec::new();
 
+    let unchanged: HashSet<&str> = write.unchanged().iter().map(String::as_str).collect();
+
     for (path, bytes) in write.files() {
-        if write.unchanged().iter().any(|unchanged| unchanged == path) {
+        if unchanged.contains(path) {
             continue;
         }
 
