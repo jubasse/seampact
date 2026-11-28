@@ -1,7 +1,7 @@
 //! The public API of `seampact-paths`: output path checks, clashes and untrusted entries.
 
 use seampact_paths::{
-    OutputPathClash, OutputPathSet, ParseOutputPathError, RelativeOutputPath, UnsafePathReason,
+    OutputPathSet, ParseOutputPathError, RelativeOutputPath, UnsafePathReason,
     untrusted_entry_problem,
 };
 
