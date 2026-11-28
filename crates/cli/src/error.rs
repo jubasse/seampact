@@ -57,6 +57,7 @@ impl From<GenerateError> for CliError {
         match error {
             GenerateError::Io { path, message } => Self::Io { path, message },
             GenerateError::Internal(internal) => Self::Internal(internal),
+            GenerateError::Config(config) => Self::Config(config),
             GenerateError::Fetch(fetch) => Self::Fetch(fetch),
             GenerateError::Bundle(bundle) => Self::Bundle(bundle),
             GenerateError::OpenApi(openapi) => Self::OpenApi(openapi),

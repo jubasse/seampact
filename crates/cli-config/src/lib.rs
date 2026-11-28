@@ -69,6 +69,7 @@ pub use compatibility_check::{
     CompatibilityEntry, CompatibilityInput, CompatibilityOutcome, EntryTarget, InstalledVersions,
     check_app_compatibility, check_compatibility,
 };
+pub use config_value::{ConfigValueError, config_value};
 pub use diff_settings::DiffSettings;
 pub use document_plan::{
     ApiDocuments, PlannedAppDocument, default_document_directory, open_api_api_names,

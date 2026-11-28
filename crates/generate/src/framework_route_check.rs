@@ -2,9 +2,9 @@
 //! check its `artefacts` and `frameworkRoutes` ask for.
 
 use seampact_cli_config::{
-    CliProblem, FrameworkRouteEntry, HttpMethod, TargetEntrySettings, entry_where,
-    framework_routes_switch_in, hook_check_switch_of, is_framework_route_check_strict,
-    is_framework_route_check_switched_off, located_problem,
+    CliProblem, FrameworkRouteEntry, TargetEntrySettings, entry_where, framework_routes_switch_in,
+    hook_check_switch_of, is_framework_route_check_strict, is_framework_route_check_switched_off,
+    located_problem,
 };
 use seampact_target::{
     FrameworkRouteAllowance, FrameworkRouteCheck, FrameworkRouteScope, Generator, RouteCheckOrigin,
@@ -62,21 +62,9 @@ pub fn unread_framework_route_key_problems(
         .collect()
 }
 
-const fn method_text(method: HttpMethod) -> &'static str {
-    match method {
-        HttpMethod::Get => "GET",
-        HttpMethod::Head => "HEAD",
-        HttpMethod::Post => "POST",
-        HttpMethod::Put => "PUT",
-        HttpMethod::Patch => "PATCH",
-        HttpMethod::Delete => "DELETE",
-        HttpMethod::Options => "OPTIONS",
-    }
-}
-
 fn allowance_of(route: &FrameworkRouteEntry) -> FrameworkRouteAllowance {
     FrameworkRouteAllowance {
-        method: route.method.map(|method| method_text(method).to_owned()),
+        method: route.method.map(|method| method.as_str().to_owned()),
         path: route.path.clone(),
         reason: route.reason.clone(),
     }

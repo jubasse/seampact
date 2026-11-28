@@ -12,7 +12,7 @@ const MAX_ALIAS_COUNT: u64 = 100;
 
 /// Why a tree has no value: what the `yaml` package throws as a `ReferenceError`.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) enum ConfigValueError {
+pub enum ConfigValueError {
     /// An alias names an anchor that no earlier node sets.
     UnresolvedAlias(String),
     /// More aliases than [`MAX_ALIAS_COUNT`].
@@ -21,7 +21,8 @@ pub(crate) enum ConfigValueError {
 
 impl ConfigValueError {
     /// The one-line message of the thrown error.
-    pub(crate) fn message(&self) -> String {
+    #[must_use]
+    pub fn message(&self) -> String {
         match self {
             Self::UnresolvedAlias(name) => {
                 format!("Unresolved alias (the anchor must be set before the alias): {name}")
@@ -34,7 +35,12 @@ impl ConfigValueError {
 }
 
 /// The value of the document's root: `null` for an empty document.
-pub(crate) fn config_value(root: Option<&YamlNode>) -> Result<JsonValue, ConfigValueError> {
+///
+/// # Errors
+///
+/// [`ConfigValueError`] for an alias with no earlier anchor, or more aliases than the `yaml`
+/// package expands.
+pub fn config_value(root: Option<&YamlNode>) -> Result<JsonValue, ConfigValueError> {
     let Some(root) = root else {
         return Ok(JsonValue::Null);
     };

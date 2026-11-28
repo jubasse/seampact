@@ -22,6 +22,9 @@ pub enum GenerateError {
     /// A bug.
     #[error(transparent)]
     Internal(#[from] InternalError),
+    /// The config reading stopped.
+    #[error(transparent)]
+    Config(#[from] CliConfigError),
     /// A bundle could not be fetched or compiled with its imports.
     #[error(transparent)]
     Fetch(#[from] BundleFetchError),
@@ -41,15 +44,6 @@ impl From<WriterError> for GenerateError {
         match error {
             WriterError::Io { path, message } => Self::Io { path, message },
             WriterError::Internal(internal) => Self::Internal(internal),
-        }
-    }
-}
-
-impl From<CliConfigError> for GenerateError {
-    fn from(error: CliConfigError) -> Self {
-        match error {
-            CliConfigError::Io { path, message } => Self::Io { path, message },
-            CliConfigError::Internal(internal) => Self::Internal(internal),
         }
     }
 }
