@@ -220,7 +220,7 @@ fn prepare_apps(
         });
     }
 
-    Ok(plan_writes(&outputs, &documents, &swept, run.policy)?)
+    Ok(plan_writes(outputs, &documents, &swept, run.policy)?)
 }
 
 fn plan_each_app<'run>(

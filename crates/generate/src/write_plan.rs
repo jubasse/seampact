@@ -1,5 +1,7 @@
 //! Every write of a run, each checked by the writer before the first one is committed.
 
+use std::mem;
+
 use camino::{Utf8Path, Utf8PathBuf};
 use indexmap::IndexMap;
 use seampact_cli_config::{
@@ -99,20 +101,19 @@ pub struct CommittableWrites {
 ///
 /// [`GenerateError::Io`] or [`GenerateError::Internal`] when the writer cannot check.
 pub fn plan_writes(
-    outputs: &[GeneratedOutput],
+    outputs: Vec<GeneratedOutput>,
     documents: &[EmittedAppDocument],
     swept: &[SweptDirectory],
     policy: HandEditPolicy,
 ) -> Result<PlannedWrites, GenerateError> {
     let mut planned = PlannedWrites::default();
 
-    for output in outputs {
-        let check = check_write(&output.root, &output.entry_id, &output.files, policy)?;
+    for mut output in outputs {
+        // The files move into the writer's plan, which holds them from here on.
+        let files = mem::take(&mut output.files);
+        let check = check_write(&output.root, &output.entry_id, files, policy)?;
 
-        planned.entries.push(EntryWrite {
-            output: output.clone(),
-            check,
-        });
+        planned.entries.push(EntryWrite { output, check });
     }
 
     for (directory, group) in document_directories(documents, swept)? {
@@ -124,7 +125,7 @@ pub fn plan_writes(
                 contents: document.text.clone(),
             })
             .collect();
-        let check = check_write(&directory, DOCUMENT_OWNER, &files, policy)?;
+        let check = check_write(&directory, DOCUMENT_OWNER, files, policy)?;
 
         planned.documents.push(DocumentDirectoryWrite {
             directory,
@@ -289,10 +290,10 @@ fn document_problem(directory: &Utf8Path, refusal: &Refusal) -> CliProblem {
 fn check_write(
     directory: &Utf8Path,
     owner: &str,
-    files: &[GeneratedFile],
+    files: Vec<GeneratedFile>,
     policy: HandEditPolicy,
 ) -> Result<Result<PlannedWrite, Refused>, GenerateError> {
-    match plan_generated_write(directory, owner, files.to_vec(), policy) {
+    match plan_generated_write(directory, owner, files, policy) {
         Ok(write) => Ok(Ok(write)),
         Err(WriteStop::Refused(refused)) => Ok(Err(refused)),
         Err(WriteStop::Failed(error)) => Err(error.into()),

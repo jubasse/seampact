@@ -71,7 +71,7 @@ fn document_in(directory: &Utf8Path) -> EmittedAppDocument {
 }
 
 fn committed(
-    outputs: &[GeneratedOutput],
+    outputs: Vec<GeneratedOutput>,
     documents: &[EmittedAppDocument],
     swept: &[SweptDirectory],
     io: &mut RecordingIo,
@@ -97,8 +97,8 @@ fn an_entry_prints_what_it_wrote_and_its_warnings() -> TestResult<()> {
     let mut first = RecordingIo::default();
     let mut second = RecordingIo::default();
 
-    committed(std::slice::from_ref(&output), &[], &[], &mut first)?;
-    committed(std::slice::from_ref(&output), &[], &[], &mut second)?;
+    committed(vec![output.clone()], &[], &[], &mut first)?;
+    committed(vec![output], &[], &[], &mut second)?;
 
     assert_eq!(
         first.stdout,
@@ -131,9 +131,9 @@ fn documents_are_written_then_unchanged_then_removed_with_their_directory_swept(
     let mut unchanged = RecordingIo::default();
     let mut removed = RecordingIo::default();
 
-    committed(&[], std::slice::from_ref(&document), &[], &mut written)?;
-    committed(&[], std::slice::from_ref(&document), &[], &mut unchanged)?;
-    committed(&[], &[], std::slice::from_ref(&swept), &mut removed)?;
+    committed(Vec::new(), std::slice::from_ref(&document), &[], &mut written)?;
+    committed(Vec::new(), std::slice::from_ref(&document), &[], &mut unchanged)?;
+    committed(Vec::new(), &[], std::slice::from_ref(&swept), &mut removed)?;
 
     assert_eq!(
         written.stdout,
@@ -166,7 +166,7 @@ fn a_file_seampact_did_not_write_in_a_document_directory_is_refused_as_a_documen
     fs::write(&document.file, "mine: true\n")?;
 
     let planned = plan_writes(
-        &[],
+        Vec::new(),
         std::slice::from_ref(&document),
         &[],
         HandEditPolicy::Refuse,

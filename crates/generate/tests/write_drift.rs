@@ -24,7 +24,7 @@ fn drift_at(level: CheckLevel) -> TestResult<(Utf8PathBuf, seampact_generate::Wr
         text: "openapi: 3.1.0\n".to_owned(),
         level,
     };
-    let planned = plan_writes(&[], &[document], &[], HandEditPolicy::Refuse)?;
+    let planned = plan_writes(Vec::new(), &[document], &[], HandEditPolicy::Refuse)?;
 
     // The temporary directory outlives the call: the plan holds no handle on it.
     Ok((directory, find_write_drift(&planned)?))
@@ -83,7 +83,7 @@ fn a_document_not_yet_committed_is_listed_as_missing() -> TestResult<()> {
         text: "openapi: 3.1.0\n".to_owned(),
         level: CheckLevel::Error,
     };
-    let planned = plan_writes(&[], &[document], &[], HandEditPolicy::Refuse)?;
+    let planned = plan_writes(Vec::new(), &[document], &[], HandEditPolicy::Refuse)?;
     let drift = find_write_drift(&planned)?;
 
     let [problem] = drift.errors.as_slice() else {

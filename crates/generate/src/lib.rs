@@ -58,7 +58,7 @@ pub use exclusive_base_paths::exclusive_base_path_problems;
 pub use filter_operations::{OperationSelection, filter_operations, is_in_document};
 pub use framework_docs::framework_docs_problems;
 pub use framework_route_check::unread_framework_route_key_problems;
-pub use generated_output::{GeneratedApi, GeneratedOutput};
+pub use generated_output::GeneratedOutput;
 pub use import_specifier_styles::import_specifier_styles;
 pub use in_app::in_app;
 pub use local_bundle::{LocalBundleOutcome, LocalBundles, verify_local_bundle};
