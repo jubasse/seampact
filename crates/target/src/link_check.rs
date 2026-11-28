@@ -86,7 +86,143 @@ fn provider_list(packages: &[String]) -> String {
 
 #[cfg(test)]
 mod tests {
+    use indexmap::IndexMap;
+
     use super::*;
+    use crate::{
+        Descriptor, Link, LinkLocation, LinkStyle, OptionalNeed, TypesDescriptor,
+        ValidatorsDescriptor,
+    };
+
+    fn link_of(descriptor: Descriptor) -> Link {
+        Link {
+            descriptor,
+            location: LinkLocation::Relative {
+                path: "../provider".to_owned(),
+            },
+        }
+    }
+
+    fn validators_link(style: LinkStyle) -> Link {
+        link_of(Descriptor::Validators(ValidatorsDescriptor {
+            style,
+            schemas: IndexMap::new(),
+            operations: IndexMap::new(),
+        }))
+    }
+
+    fn types_link() -> Link {
+        link_of(Descriptor::Types(TypesDescriptor {
+            style: LinkStyle::Typescript,
+            schemas: IndexMap::new(),
+            operations: IndexMap::new(),
+        }))
+    }
+
+    fn validators_need(optional: Option<OptionalNeed>) -> ResolvedLinkNeeds {
+        ResolvedLinkNeeds {
+            validators: Some(ResolvedLinkNeed {
+                styles: vec![LinkStyle::StandardSchema],
+                providers: vec!["@seampact/codegen-zod".to_owned()],
+                optional,
+            }),
+            ..ResolvedLinkNeeds::NONE
+        }
+    }
+
+    const OWN_AJV: OptionalNeed = OptionalNeed { own_library: "ajv" };
+
+    fn only_validators(link: Link) -> LinkSet {
+        LinkSet {
+            validators: Some(link),
+            ..LinkSet::NONE
+        }
+    }
+
+    fn codes_and_fixes(refusals: &[Refusal]) -> Vec<(&str, &str)> {
+        refusals
+            .iter()
+            .map(|refusal| (refusal.code.as_str(), refusal.fix.as_str()))
+            .collect()
+    }
+
+    #[test]
+    fn refuses_a_link_of_another_style_naming_both_styles() {
+        let links = only_validators(validators_link(LinkStyle::ClassValidator));
+
+        let refusals = refuse_unmet_links(&validators_need(None), &links);
+
+        assert_eq!(
+            refusals
+                .iter()
+                .map(|refusal| refusal.message.as_str())
+                .collect::<Vec<_>>(),
+            [
+                "The 'validators' link provides style 'class-validator'; this target reads standard-schema."
+            ]
+        );
+        assert_eq!(
+            codes_and_fixes(&refusals),
+            [("link.style.unsupported", "Link `@seampact/codegen-zod`.")]
+        );
+    }
+
+    #[test]
+    fn offers_the_own_library_when_an_optional_link_has_the_wrong_style() {
+        let links = only_validators(validators_link(LinkStyle::ClassValidator));
+
+        let refusals = refuse_unmet_links(&validators_need(Some(OWN_AJV)), &links);
+
+        assert_eq!(
+            codes_and_fixes(&refusals),
+            [(
+                "link.style.unsupported",
+                "Link `@seampact/codegen-zod`, or no `validators` link to use the target's own ajv validators."
+            )]
+        );
+    }
+
+    #[test]
+    fn refuses_a_descriptor_of_another_kind_than_its_slot() {
+        let links = only_validators(types_link());
+
+        let refusals = refuse_unmet_links(&validators_need(None), &links);
+
+        assert_eq!(
+            refusals
+                .iter()
+                .map(|refusal| refusal.message.as_str())
+                .collect::<Vec<_>>(),
+            ["The 'validators' link points at a 'types' descriptor."]
+        );
+        assert_eq!(
+            codes_and_fixes(&refusals),
+            [("link.kind.mismatch", "Link `@seampact/codegen-zod`.")]
+        );
+    }
+
+    #[test]
+    fn refuses_a_missing_mandatory_link_and_accepts_a_missing_optional_one() {
+        let refusals = refuse_unmet_links(&validators_need(None), &LinkSet::NONE);
+
+        assert_eq!(
+            codes_and_fixes(&refusals),
+            [(
+                "link.missing",
+                "Link `@seampact/codegen-zod` in the target's `link` entry."
+            )]
+        );
+        assert!(refuse_unmet_links(&validators_need(Some(OWN_AJV)), &LinkSet::NONE).is_empty());
+    }
+
+    #[test]
+    fn accepts_a_link_of_an_accepted_style_with_or_without_an_optional_need() {
+        let links = only_validators(validators_link(LinkStyle::StandardSchema));
+
+        assert!(meets_every_need(&links, &validators_need(None)));
+        assert!(meets_every_need(&links, &validators_need(Some(OWN_AJV))));
+        assert!(!meets_every_need(&LinkSet::NONE, &validators_need(None)));
+    }
 
     #[test]
     fn lists_providers_as_prose() {
